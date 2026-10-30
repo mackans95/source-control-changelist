@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri, Event, Disposable, ProviderResult, Command, CancellationToken, SourceControlHistoryItem } from 'vscode'
-export { ProviderResult } from 'vscode'
+import type { RefType, Status, ForcePushMode, GitErrorCodes } from '../constants'
+import type { Uri, Event, Disposable, ProviderResult, Command, CancellationToken } from 'vscode'
+export type { ProviderResult } from 'vscode'
 
 export interface Git {
 	readonly path: string
@@ -14,20 +15,8 @@ export interface InputBox {
 	value: string
 }
 
-export const enum ForcePushMode {
-	Force,
-	ForceWithLease,
-	ForceWithLeaseIfIncludes,
-}
-
-export const enum RefType {
-	Head,
-	RemoteHead,
-	Tag,
-}
-
 export interface Ref {
-	readonly type: RefType
+	readonly type: (typeof RefType)[keyof typeof RefType]
 	readonly name?: string
 	readonly commit?: string
 	readonly commitDetails?: Commit
@@ -84,30 +73,6 @@ export interface Worktree {
 	readonly detached: boolean
 }
 
-export const enum Status {
-	INDEX_MODIFIED,
-	INDEX_ADDED,
-	INDEX_DELETED,
-	INDEX_RENAMED,
-	INDEX_COPIED,
-
-	MODIFIED,
-	DELETED,
-	UNTRACKED,
-	IGNORED,
-	INTENT_TO_ADD,
-	INTENT_TO_RENAME,
-	TYPE_CHANGED,
-
-	ADDED_BY_US,
-	ADDED_BY_THEM,
-	DELETED_BY_US,
-	DELETED_BY_THEM,
-	BOTH_ADDED,
-	BOTH_DELETED,
-	BOTH_MODIFIED,
-}
-
 export interface Change {
 	/**
 	 * Returns either `originalUri` or `renameUri`, depending
@@ -117,7 +82,7 @@ export interface Change {
 	readonly uri: Uri
 	readonly originalUri: Uri
 	readonly renameUri: Uri | undefined
-	readonly status: Status
+	readonly status: (typeof Status)[keyof typeof Status]
 }
 
 export interface DiffChange extends Change {
@@ -310,7 +275,12 @@ export interface Repository {
 	fetch(options?: FetchOptions): Promise<void>
 	fetch(remote?: string, ref?: string, depth?: number): Promise<void>
 	pull(unshallow?: boolean): Promise<void>
-	push(remoteName?: string, branchName?: string, setUpstream?: boolean, force?: ForcePushMode): Promise<void>
+	push(
+		remoteName?: string,
+		branchName?: string,
+		setUpstream?: boolean,
+		force?: (typeof ForcePushMode)[keyof typeof ForcePushMode],
+	): Promise<void>
 	/** Pushes only the specified remote branch if it still points at expectedSha (all zeros if absent), without pushing tags. */
 	pushRefWithLease(remote: string, branch: string, newSha: string, expectedSha: string): Promise<void>
 
@@ -390,7 +360,7 @@ export interface PushErrorHandler {
 		repository: Repository,
 		remote: Remote,
 		refspec: string,
-		error: Error & { gitErrorCode: GitErrorCodes },
+		error: Error & { gitErrorCode: (typeof GitErrorCodes)[keyof typeof GitErrorCodes] },
 	): Promise<boolean>
 }
 
@@ -480,55 +450,4 @@ export interface GitExtension {
 	 * @returns API instance
 	 */
 	getAPI(version: 1): API
-}
-
-export const enum GitErrorCodes {
-	BadConfigFile = 'BadConfigFile',
-	BadRevision = 'BadRevision',
-	AuthenticationFailed = 'AuthenticationFailed',
-	NoUserNameConfigured = 'NoUserNameConfigured',
-	NoUserEmailConfigured = 'NoUserEmailConfigured',
-	NoRemoteRepositorySpecified = 'NoRemoteRepositorySpecified',
-	NotAGitRepository = 'NotAGitRepository',
-	NotASafeGitRepository = 'NotASafeGitRepository',
-	NotAtRepositoryRoot = 'NotAtRepositoryRoot',
-	Conflict = 'Conflict',
-	StashConflict = 'StashConflict',
-	UnmergedChanges = 'UnmergedChanges',
-	PushRejected = 'PushRejected',
-	ForcePushWithLeaseRejected = 'ForcePushWithLeaseRejected',
-	ForcePushWithLeaseIfIncludesRejected = 'ForcePushWithLeaseIfIncludesRejected',
-	RemoteConnectionError = 'RemoteConnectionError',
-	DirtyWorkTree = 'DirtyWorkTree',
-	CantOpenResource = 'CantOpenResource',
-	GitNotFound = 'GitNotFound',
-	CantCreatePipe = 'CantCreatePipe',
-	PermissionDenied = 'PermissionDenied',
-	CantAccessRemote = 'CantAccessRemote',
-	RepositoryNotFound = 'RepositoryNotFound',
-	RepositoryIsLocked = 'RepositoryIsLocked',
-	BranchNotFullyMerged = 'BranchNotFullyMerged',
-	NoRemoteReference = 'NoRemoteReference',
-	InvalidBranchName = 'InvalidBranchName',
-	BranchAlreadyExists = 'BranchAlreadyExists',
-	NoLocalChanges = 'NoLocalChanges',
-	NoStashFound = 'NoStashFound',
-	LocalChangesOverwritten = 'LocalChangesOverwritten',
-	NoUpstreamBranch = 'NoUpstreamBranch',
-	IsInSubmodule = 'IsInSubmodule',
-	WrongCase = 'WrongCase',
-	CantLockRef = 'CantLockRef',
-	CantRebaseMultipleBranches = 'CantRebaseMultipleBranches',
-	PatchDoesNotApply = 'PatchDoesNotApply',
-	NoPathFound = 'NoPathFound',
-	UnknownPath = 'UnknownPath',
-	EmptyCommitMessage = 'EmptyCommitMessage',
-	BranchFastForwardRejected = 'BranchFastForwardRejected',
-	BranchNotYetBorn = 'BranchNotYetBorn',
-	TagConflict = 'TagConflict',
-	CherryPickEmpty = 'CherryPickEmpty',
-	CherryPickConflict = 'CherryPickConflict',
-	WorktreeContainsChanges = 'WorktreeContainsChanges',
-	WorktreeAlreadyExists = 'WorktreeAlreadyExists',
-	WorktreeBranchAlreadyUsed = 'WorktreeBranchAlreadyUsed',
 }

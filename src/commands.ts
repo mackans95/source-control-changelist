@@ -1,17 +1,9 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
-import {
-	ChangelistProvider,
-	FolderNode,
-	GroupKind,
-	GroupNode,
-	RepositoryNode,
-	ResourceNode,
-	ViewMode,
-	getChanges,
-	repositoryName,
-} from './changelistView'
-import { API, Change, Status } from './typings/git'
+import { ChangelistProvider, getChanges, repositoryName } from './changelistView'
+import { Status } from './constants'
+import type { API, Change } from './types/git'
+import type { FolderNode, GroupKind, GroupNode, RepositoryNode, ResourceNode, ViewMode } from './types/view'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 

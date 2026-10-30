@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { ChangelistProvider } from './changelistView'
 import { registerCommands } from './commands'
-import { API, GitExtension } from './typings/git'
+import type { API, GitExtension } from './types/git'
 
 async function getGitAPI(): Promise<API | undefined> {
 	const extension = vscode.extensions.getExtension<GitExtension>('vscode.git')
