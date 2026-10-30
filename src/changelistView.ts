@@ -39,7 +39,7 @@ export type Node = RepositoryNode | GroupNode | FolderNode | ResourceNode;
 export type ViewMode = 'list' | 'tree';
 
 export function getViewMode(): ViewMode {
-	return vscode.workspace.getConfiguration('changelists').get<ViewMode>('viewMode', 'list');
+	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list');
 }
 
 const GROUP_LABELS: Record<GroupKind, string> = {
@@ -129,7 +129,7 @@ function buildTree(repository: Repository, kind: GroupKind, changes: readonly Ch
  * Source Control view. Clean repositories are left out entirely, so the
  * view is empty (and shows its welcome text) when nothing has changed.
  */
-export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscode.Disposable {
+export class ChangelistProvider implements vscode.TreeDataProvider<Node>, vscode.Disposable {
 
 	private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -138,6 +138,9 @@ export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscod
 	// Keyed by root URI: `git.repositories` returns new wrapper objects on every call.
 	private readonly repositoryListeners = new Map<string, vscode.Disposable>();
 	private refreshTimer: NodeJS.Timeout | undefined;
+	// Bumped to make VS Code forget remembered expand/collapse states (see setAllExpanded).
+	private generation = 0;
+	private defaultState = vscode.TreeItemCollapsibleState.Expanded
 
 	constructor(private readonly git: API) {
 		for (const repository of git.repositories) {
@@ -175,6 +178,12 @@ export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscod
 		this._onDidChangeTreeData.fire();
 	}
 
+	setAllExpanded(expanded: boolean): void {
+		this.defaultState = expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed
+		this.generation++
+		this._onDidChangeTreeData.fire()
+	}
+
 	getChildren(node?: Node): Node[] {
 		if (!node) {
 			return this.git.repositories
@@ -208,8 +217,8 @@ export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscod
 	getTreeItem(node: Node): vscode.TreeItem {
 		switch (node.type) {
 			case 'repository': {
-				const item = new vscode.TreeItem(repositoryName(node.repository), vscode.TreeItemCollapsibleState.Expanded);
-				item.id = node.repository.rootUri.toString();
+				const item = new vscode.TreeItem(repositoryName(node.repository), this.defaultState);
+				item.id = `${this.generation}#${node.repository.rootUri}`
 				const branch = node.repository.state.HEAD?.name;
 				item.description = [branch, `${countChanges(node.repository)}`].filter(Boolean).join(' · ');
 				item.tooltip = node.repository.rootUri.fsPath;
@@ -218,15 +227,15 @@ export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscod
 				return item;
 			}
 			case 'group': {
-				const item = new vscode.TreeItem(GROUP_LABELS[node.kind], vscode.TreeItemCollapsibleState.Expanded);
-				item.id = `${node.repository.rootUri}#${node.kind}`;
+				const item = new vscode.TreeItem(GROUP_LABELS[node.kind], this.defaultState);
+				item.id = `${this.generation}#${node.repository.rootUri}#${node.kind}`;
 				item.description = `${node.changes.length}`;
 				item.contextValue = `group:${node.kind}`;
 				return item;
 			}
 			case 'folder': {
-				const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Expanded);
-				item.id = `${node.repository.rootUri}#${node.kind}#${node.uri}`;
+				const item = new vscode.TreeItem(node.label, this.defaultState);
+				item.id = `${this.generation}#${node.repository.rootUri}#${node.kind}#${node.uri}`;
 				item.resourceUri = node.uri;
 				item.iconPath = vscode.ThemeIcon.Folder;
 				item.contextValue = `folder:${node.kind}`;
@@ -234,7 +243,7 @@ export class ChangelistsProvider implements vscode.TreeDataProvider<Node>, vscod
 			}
 			case 'resource': {
 				const item = new vscode.TreeItem(node.change.uri, vscode.TreeItemCollapsibleState.None);
-				item.id = `${node.repository.rootUri}#${node.kind}#${node.change.uri}`;
+				item.id = `${this.generation}#${node.repository.rootUri}#${node.kind}#${node.change.uri}`;
 				// Status letters and colors come from the Git extension's file decorations.
 				if (getViewMode() === 'list') {
 					const relativeDir = path.dirname(path.relative(node.repository.rootUri.fsPath, node.change.uri.fsPath));

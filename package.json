@@ -103,6 +103,18 @@
         "title": "Open File",
         "category": "Changelist",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "changelist.collapseAll",
+        "title": "Collapse All",
+        "category": "Changelist",
+        "icon": "$(collapse-all)"
+      },
+      {
+        "command": "changelist.expandAll",
+        "title": "Expand All",
+        "category": "Changelist",
+        "icon": "$(expand-all)"
       }
     ],
     "menus": {
@@ -121,6 +133,16 @@
           "command": "changelist.refresh",
           "when": "view == changelist.view",
           "group": "navigation@2"
+        },
+        {
+          "command": "changelist.collapseAll",
+          "when": "view == changelist.view && !changelist.allCollapsed",
+          "group": "navigation@3"
+        },
+        {
+          "command": "changelist.expandAll",
+          "when": "view == changelist.view && changelist.allCollapsed",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
