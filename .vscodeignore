@@ -1,0 +1,5 @@
+.vscode/**
+.claude/**
+src/**
+**/*.map
+tsconfig.json

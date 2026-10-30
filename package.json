@@ -1,0 +1,232 @@
+{
+  "name": "changelist-in-source-control",
+  "displayName": "Changelist",
+  "description": "PyCharm-style changelists in the Source Control view: only repositories with changes are shown.",
+  "version": "0.0.1",
+  "publisher": "marcusgustafsson",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "scm": [
+        {
+          "id": "changelist.view",
+          "name": "Changelist"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "changelist.view",
+        "contents": "No changes in any repository."
+      }
+    ],
+    "commands": [
+      {
+        "command": "changelist.refresh",
+        "title": "Refresh",
+        "category": "Changelist",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "changelist.viewAsTree",
+        "title": "View as Tree",
+        "category": "Changelist",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "changelist.viewAsList",
+        "title": "View as List",
+        "category": "Changelist",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "changelist.commit",
+        "title": "Commit",
+        "category": "Changelist",
+        "icon": "$(check)"
+      },
+      {
+        "command": "changelist.stageAll",
+        "title": "Stage All Changes",
+        "category": "Changelist",
+        "icon": "$(add)"
+      },
+      {
+        "command": "changelist.unstageAll",
+        "title": "Unstage All Changes",
+        "category": "Changelist",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "changelist.stage",
+        "title": "Stage Changes",
+        "category": "Changelist",
+        "icon": "$(add)"
+      },
+      {
+        "command": "changelist.unstage",
+        "title": "Unstage Changes",
+        "category": "Changelist",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "changelist.discard",
+        "title": "Discard Changes",
+        "category": "Changelist",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "changelist.openChange",
+        "title": "Open Changes",
+        "category": "Changelist",
+        "icon": "$(compare-changes)"
+      },
+      {
+        "command": "changelist.openFile",
+        "title": "Open File",
+        "category": "Changelist",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "changelist.viewAsTree",
+          "when": "view == changelist.view && config.changelist.viewMode == list",
+          "group": "navigation@1"
+        },
+        {
+          "command": "changelist.viewAsList",
+          "when": "view == changelist.view && config.changelist.viewMode == tree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "changelist.refresh",
+          "when": "view == changelist.view",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "changelist.commit",
+          "when": "view == changelist.view && viewItem == repository",
+          "group": "inline@1"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "view == changelist.view && viewItem == repository",
+          "group": "inline@2"
+        },
+        {
+          "command": "changelist.unstageAll",
+          "when": "view == changelist.view && viewItem =~ /^(group|folder):staged$/",
+          "group": "inline"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "view == changelist.view && viewItem =~ /^(group|folder):(changes|untracked|merge)$/",
+          "group": "inline"
+        },
+        {
+          "command": "changelist.openFile",
+          "when": "view == changelist.view && viewItem =~ /^resource:/",
+          "group": "inline@1"
+        },
+        {
+          "command": "changelist.discard",
+          "when": "view == changelist.view && viewItem =~ /^resource:(changes|untracked)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "changelist.stage",
+          "when": "view == changelist.view && viewItem =~ /^resource:(changes|untracked|merge)$/",
+          "group": "inline@3"
+        },
+        {
+          "command": "changelist.unstage",
+          "when": "view == changelist.view && viewItem == resource:staged",
+          "group": "inline@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "changelist.commit",
+          "when": "false"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "false"
+        },
+        {
+          "command": "changelist.unstageAll",
+          "when": "false"
+        },
+        {
+          "command": "changelist.stage",
+          "when": "false"
+        },
+        {
+          "command": "changelist.unstage",
+          "when": "false"
+        },
+        {
+          "command": "changelist.discard",
+          "when": "false"
+        },
+        {
+          "command": "changelist.openChange",
+          "when": "false"
+        },
+        {
+          "command": "changelist.openFile",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Changelist",
+      "properties": {
+        "changelist.viewMode": {
+          "type": "string",
+          "enum": [
+            "list",
+            "tree"
+          ],
+          "enumDescriptions": [
+            "Show changes as a flat list, with the folder next to each file.",
+            "Show changes as a folder tree."
+          ],
+          "default": "list",
+          "description": "Controls whether changes are shown as a list or as a tree."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "~1.100.0",
+    "typescript": "^5.9.0"
+  }
+}
