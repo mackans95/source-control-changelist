@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "preLaunchTask": "watch",
+      "postDebugTask": "stop watch",
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"]
+    },
+    {
+      // Same, but with your installed extensions disabled so the Debug Console only shows
+      // output from this extension and VS Code's built-ins.
+      "name": "Run Extension (no other extensions)",
+      "type": "extensionHost",
+      "request": "launch",
+      "preLaunchTask": "watch",
+      "postDebugTask": "stop watch",
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}"]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Recompiles out/ on every change; launch.json starts it before a debug session.
+      "label": "watch",
+      "type": "npm",
+      "script": "watch",
+      "isBackground": true,
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "never" },
+      "problemMatcher": "$tsc-watch"
+    },
+    {
+      // Stops the watch task when the debug window closes; launch.json runs it as postDebugTask.
+      // The input runs VS Code's Terminate Task for "watch", so echo has nothing to print.
+      // An extension debug session ends in two parts, and each runs postDebugTask. The second run
+      // would otherwise ask which running "stop watch" to end, with an empty list, so it's dropped.
+      "label": "stop watch",
+      "type": "shell",
+      "command": "echo ${input:terminateWatch}",
+      "presentation": { "reveal": "never" },
+      "problemMatcher": [],
+      "runOptions": { "instancePolicy": "silent" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "terminateWatch",
+      "type": "command",
+      "command": "workbench.action.tasks.terminate",
+      "args": "watch"
+    }
+  ]
+}

@@ -20,13 +20,9 @@ export function registerCommands(git: API, provider: ChangelistProvider): vscode
 		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
 		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
 		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
-		vscode.commands.registerCommand('changelist.collapseAll', () =>
-			setAllExpanded(provider, false),
-		),
+		vscode.commands.registerCommand('changelist.collapseAll', () => setAllExpanded(provider, false)),
 		vscode.commands.registerCommand('changelist.expandAll', () => setAllExpanded(provider, true)),
-		vscode.commands.registerCommand('changelist.openChange', (node: ResourceNode) =>
-			openChange(git, node),
-		),
+		vscode.commands.registerCommand('changelist.openChange', (node: ResourceNode) => openChange(git, node)),
 		vscode.commands.registerCommand('changelist.openFile', (node: ResourceNode) =>
 			vscode.window.showTextDocument(node.change.uri),
 		),
@@ -37,9 +33,8 @@ export function registerCommands(git: API, provider: ChangelistProvider): vscode
 			node.repository.revert([node.change.uri.fsPath]),
 		),
 		vscode.commands.registerCommand('changelist.discard', (node: ResourceNode) => discard(node)),
-		vscode.commands.registerCommand(
-			'changelist.stageAll',
-			(node: RepositoryNode | GroupNode | FolderNode) => stageAll(node),
+		vscode.commands.registerCommand('changelist.stageAll', (node: RepositoryNode | GroupNode | FolderNode) =>
+			stageAll(node),
 		),
 		vscode.commands.registerCommand('changelist.unstageAll', (node: GroupNode | FolderNode) =>
 			node.repository.revert(paths(node.changes)),
@@ -49,9 +44,7 @@ export function registerCommands(git: API, provider: ChangelistProvider): vscode
 }
 
 function setViewMode(mode: ViewMode): Thenable<void> {
-	return vscode.workspace
-		.getConfiguration('changelist')
-		.update('viewMode', mode, vscode.ConfigurationTarget.Global)
+	return vscode.workspace.getConfiguration('changelist').update('viewMode', mode, vscode.ConfigurationTarget.Global)
 }
 
 function setAllExpanded(provider: ChangelistProvider, expanded: boolean): void {
@@ -65,9 +58,7 @@ function paths(changes: readonly Change[]): string[] {
 
 async function stageAll(node: RepositoryNode | GroupNode | FolderNode): Promise<void> {
 	const changes =
-		node.type === 'repository'
-			? UNSTAGED_KINDS.flatMap(kind => getChanges(node.repository, kind))
-			: node.changes
+		node.type === 'repository' ? UNSTAGED_KINDS.flatMap(kind => getChanges(node.repository, kind)) : node.changes
 	if (changes.length > 0) {
 		await node.repository.add(paths(changes))
 	}
@@ -135,12 +126,7 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 	if (kind === 'staged') {
 		// HEAD <-> index
 		if (change.status === Status.INDEX_ADDED) {
-			await vscode.commands.executeCommand(
-				'vscode.open',
-				git.toGitUri(change.uri, ''),
-				{},
-				`${name} (Index)`,
-			)
+			await vscode.commands.executeCommand('vscode.open', git.toGitUri(change.uri, ''), {}, `${name} (Index)`)
 		} else if (change.status === Status.INDEX_DELETED) {
 			await vscode.commands.executeCommand(
 				'vscode.open',
@@ -161,12 +147,7 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 
 	// index <-> working tree
 	if (change.status === Status.DELETED) {
-		await vscode.commands.executeCommand(
-			'vscode.open',
-			git.toGitUri(change.uri, '~'),
-			{},
-			`${name} (Deleted)`,
-		)
+		await vscode.commands.executeCommand('vscode.open', git.toGitUri(change.uri, '~'), {}, `${name} (Deleted)`)
 	} else {
 		await vscode.commands.executeCommand(
 			'vscode.diff',

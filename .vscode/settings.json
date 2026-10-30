@@ -1,0 +1,29 @@
+{
+  // Oxfmt formats the code with the settings in .oxfmtrc.json (tabs, no semicolons, single quotes).
+  // These override personal defaults such as Prettier, so Format Document keeps the project's style.
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[css]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[json]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "files.insertFinalNewline": true
+}

@@ -1,5 +1,9 @@
 .vscode/**
 .claude/**
+.gitignore
 src/**
 **/*.map
-tsconfig.json
+tsconfig*.json
+.github/**
+.oxfmtrc.json
+.oxlintrc.json
