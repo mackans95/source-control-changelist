@@ -27,7 +27,8 @@
       "scm": [
         {
           "id": "changelist.view",
-          "name": "Changelist"
+          "name": "Changelist",
+          "icon": "$(checklist)"
         }
       ]
     },
