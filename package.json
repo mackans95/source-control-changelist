@@ -1,5 +1,5 @@
 {
-  "name": "changelist-in-source-control",
+  "name": "source-control-changelist",
   "displayName": "Changelist",
   "description": "PyCharm-style changelists in the Source Control view: only repositories with changes are shown.",
   "version": "0.0.1",
@@ -178,6 +178,11 @@
       ],
       "view/item/context": [
         {
+          "command": "changelist.checkout",
+          "when": "view == changelist.view && viewItem =~ /^repository:/",
+          "group": "inline@0"
+        },
+        {
           "command": "changelist.commit",
           "when": "view == changelist.view && viewItem =~ /^repository:/",
           "group": "inline@1"
@@ -220,17 +225,12 @@
         {
           "command": "changelist.sync",
           "when": "view == changelist.view && viewItem == repository:tracking",
-          "group": "inline@3"
+          "group": "inline@4"
         },
         {
           "command": "changelist.publish",
           "when": "view == changelist.view && viewItem == repository:unpublished",
-          "group": "inline@3"
-        },
-        {
-          "command": "changelist.checkout",
-          "when": "view == changelist.view && viewItem =~ /^repository:/",
-          "group": "1_branch@1"
+          "group": "inline@4"
         },
         {
           "command": "changelist.pull",
