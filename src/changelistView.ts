@@ -118,9 +118,52 @@ function syncSummary(repository: Repository): string {
 	return [head.behind ? `${head.behind}↓` : '', head.ahead ? `${head.ahead}↑` : ''].filter(Boolean).join(' ')
 }
 
+/** Escapes text for Markdown, including `$(`, so a branch name can't turn into a codicon. */
+function escapeMarkdown(text: string): string {
+	return text.replace(/[\\`*_{}[\]()<>#+\-.!|~$]/g, '\\$&')
+}
+
+/**
+ * A Markdown link that runs one of the Git extension's commands. The command finds the repository
+ * from its path, since a link can only pass arguments that survive JSON.
+ */
+function gitCommandLink(text: string, command: string, title: string, repository: Repository): string {
+	const args = encodeURIComponent(JSON.stringify([repository.rootUri.fsPath]))
+	return `[${text}](command:${command}?${args} "${title}")`
+}
+
+/** Links like the built-in branch and sync buttons, such as `⎇ main · ⟳ 1↓ 2↑`. */
+function branchLinks(repository: Repository): string {
+	const head = repository.state.HEAD
+	// A detached HEAD has no branch name, so show its commit like the built-in view does.
+	const branch = head?.name ?? head?.commit?.slice(0, 8)
+	if (!head || !branch) {
+		return ''
+	}
+
+	const links = [
+		gitCommandLink(`$(git-branch) ${escapeMarkdown(branch)}`, 'git.checkout', 'Switch Branch...', repository),
+	]
+	if (head.upstream) {
+		const summary = syncSummary(repository)
+		links.push(gitCommandLink(summary ? `$(sync) ${summary}` : '$(sync)', 'git.sync', 'Sync Changes', repository))
+	} else if (head.name) {
+		links.push(gitCommandLink('$(cloud-upload) Publish Branch', 'git.publish', 'Publish Branch', repository))
+	}
+	return links.join(' · ')
+}
+
 function repositoryTooltip(repository: Repository, counts: ChangeCounts): vscode.MarkdownString {
-	// `true` rendders `$(icon)` as codicons; appendText escapes the path so it's shown as is.
+	// `true` renders `$(icon)` as codicons; appendText escapes the path so it's shown as is.
 	const tooltip = new vscode.MarkdownString('', true)
+	// Command links only run when trusted, and then only these commands.
+	tooltip.isTrusted = { enabledCommands: ['git.checkout', 'git.sync', 'git.publish'] }
+
+	const links = branchLinks(repository)
+	if (links) {
+		tooltip.appendMarkdown(`${links}\n\n`)
+	}
+
 	tooltip.appendText(repository.rootUri.fsPath)
 	tooltip.appendMarkdown('\n\n')
 
@@ -305,7 +348,6 @@ export class ChangelistProvider implements vscode.TreeDataProvider<Node>, vscode
 				const head = repository.state.HEAD
 				const name = repositoryName(repository)
 				const counts = countChanges(repository)
-				// Highlighting the whole name is the only way to make a tree item's label bold.
 				const item = new vscode.TreeItem(name, this.defaultState)
 				item.id = `${this.generation}#${repository.rootUri}`
 				const branch = [head?.name, syncSummary(repository)].filter(Boolean).join(' ')
