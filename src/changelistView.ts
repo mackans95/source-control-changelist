@@ -1,7 +1,17 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
+import { Status } from './constants'
 import type { API, Change, Repository } from './types/git'
-import type { FolderNode, GroupKind, Node, ResourceNode, ViewMode } from './types/view'
+import type {
+	CategoryDisplay,
+	ChangeCategory,
+	ChangeCounts,
+	FolderNode,
+	GroupKind,
+	Node,
+	ResourceNode,
+	ViewMode,
+} from './types/view'
 
 export function getViewMode(): ViewMode {
 	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list')
@@ -32,11 +42,96 @@ export function hasChanges(repository: Repository): boolean {
 	return (Object.keys(GROUP_LABELS) as GroupKind[]).some(kind => getChanges(repository, kind).length > 0)
 }
 
-function countChanges(repository: Repository): number {
-	return (Object.keys(GROUP_LABELS) as GroupKind[]).reduce(
-		(sum, kind) => sum + getChanges(repository, kind).length,
-		0,
-	)
+// Ignored files never show up in the view, so they have no category.
+const STATUS_CATEGORIES: Record<(typeof Status)[keyof typeof Status], ChangeCategory | undefined> = {
+	[Status.INDEX_MODIFIED]: 'modified',
+	[Status.INDEX_ADDED]: 'added',
+	[Status.INDEX_DELETED]: 'deleted',
+	[Status.INDEX_RENAMED]: 'modified',
+	[Status.INDEX_COPIED]: 'added',
+	[Status.MODIFIED]: 'modified',
+	[Status.DELETED]: 'deleted',
+	[Status.UNTRACKED]: 'added',
+	[Status.IGNORED]: undefined,
+	[Status.INTENT_TO_ADD]: 'added',
+	[Status.INTENT_TO_RENAME]: 'modified',
+	[Status.TYPE_CHANGED]: 'modified',
+	[Status.ADDED_BY_US]: 'conflict',
+	[Status.ADDED_BY_THEM]: 'conflict',
+	[Status.DELETED_BY_US]: 'conflict',
+	[Status.DELETED_BY_THEM]: 'conflict',
+	[Status.BOTH_ADDED]: 'conflict',
+	[Status.BOTH_DELETED]: 'conflict',
+	[Status.BOTH_MODIFIED]: 'conflict',
+}
+
+// In the order they're shown in the description and the tooltip.
+const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
+	added: { symbol: '+', icon: 'diff-added', label: 'added' },
+	modified: { symbol: '~', icon: 'diff-modified', label: 'modified' },
+	deleted: { symbol: '-', icon: 'diff-removed', label: 'deleted' },
+	conflict: { symbol: '!', icon: 'warning', label: 'with conflicts' },
+}
+
+// A file that's in more than one group, like staged and then edited again, counts once, under the first of these.
+const CATEGORY_PRIORITY: readonly ChangeCategory[] = ['conflict', 'added', 'deleted', 'modified']
+
+function countChanges(repository: Repository): ChangeCounts {
+	const categories = new Map<string, ChangeCategory>()
+
+	for (const kind of Object.keys(GROUP_LABELS) as GroupKind[]) {
+		for (const change of getChanges(repository, kind)) {
+			const category = STATUS_CATEGORIES[change.status]
+			const current = categories.get(change.uri.toString())
+
+			if (category && (!current || CATEGORY_PRIORITY.indexOf(category) < CATEGORY_PRIORITY.indexOf(current))) {
+				categories.set(change.uri.toString(), category)
+			}
+		}
+	}
+
+	const counts: ChangeCounts = { added: 0, modified: 0, deleted: 0, conflict: 0 }
+
+	for (const category of categories.values()) {
+		counts[category]++
+	}
+
+	return counts
+}
+
+/** Like `+3 ~2 -1`, leaving out categories without changes. */
+function changeSummary(counts: ChangeCounts): string {
+	return (Object.keys(CATEGORIES) as ChangeCategory[])
+		.filter(category => counts[category] > 0)
+		.map(category => `${CATEGORIES[category].symbol}${counts[category]}`)
+		.join(' ')
+}
+
+/** Commits to pull and push, like `1↓ 2↑`, the way the status bar shows them. */
+function syncSummary(repository: Repository): string {
+	const head = repository.state.HEAD
+
+	if (!head?.upstream) {
+		return ''
+	}
+
+	return [head.behind ? `${head.behind}↓` : '', head.ahead ? `${head.ahead}↑` : ''].filter(Boolean).join(' ')
+}
+
+function repositoryTooltip(repository: Repository, counts: ChangeCounts): vscode.MarkdownString {
+	// `true` rendders `$(icon)` as codicons; appendText escapes the path so it's shown as is.
+	const tooltip = new vscode.MarkdownString('', true)
+	tooltip.appendText(repository.rootUri.fsPath)
+	tooltip.appendMarkdown('\n\n')
+
+	for (const category of Object.keys(CATEGORIES) as ChangeCategory[]) {
+		if (counts[category] > 0) {
+			const { icon, label } = CATEGORIES[category]
+			tooltip.appendMarkdown(`$(${icon}) ${counts[category]} ${label}  \n`)
+		}
+	}
+
+	return tooltip
 }
 
 export function repositoryName(repository: Repository): string {
@@ -206,13 +301,23 @@ export class ChangelistProvider implements vscode.TreeDataProvider<Node>, vscode
 	getTreeItem(node: Node): vscode.TreeItem {
 		switch (node.type) {
 			case 'repository': {
-				const item = new vscode.TreeItem(repositoryName(node.repository), this.defaultState)
-				item.id = `${this.generation}#${node.repository.rootUri}`
-				const branch = node.repository.state.HEAD?.name
-				item.description = [branch, `${countChanges(node.repository)}`].filter(Boolean).join(' · ')
-				item.tooltip = node.repository.rootUri.fsPath
+				const repository = node.repository
+				const head = repository.state.HEAD
+				const name = repositoryName(repository)
+				const counts = countChanges(repository)
+				// Highlighting the whole name is the only way to make a tree item's label bold.
+				const item = new vscode.TreeItem(name, this.defaultState)
+				item.id = `${this.generation}#${repository.rootUri}`
+				const branch = [head?.name, syncSummary(repository)].filter(Boolean).join(' ')
+				item.description = [branch, changeSummary(counts)].filter(Boolean).join(' · ')
+				item.tooltip = repositoryTooltip(repository, counts)
 				item.iconPath = new vscode.ThemeIcon('repo')
-				item.contextValue = 'repository'
+				// Tells the menus in package.json whether the branch can sync, can be published, or neither (detached HEAD).
+				item.contextValue = head?.upstream
+					? 'repository:tracking'
+					: head?.name
+						? 'repository:unpublished'
+						: 'repository:detached'
 				return item
 			}
 			case 'group': {

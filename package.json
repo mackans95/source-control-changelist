@@ -116,6 +116,36 @@
         "title": "Expand All",
         "category": "Changelist",
         "icon": "$(expand-all)"
+      },
+      {
+        "command": "changelist.sync",
+        "title": "Sync Changes",
+        "category": "Changelist",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "changelist.publish",
+        "title": "Publish Branch",
+        "category": "Changelist",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "changelist.pull",
+        "title": "Pull",
+        "category": "Changelist",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "changelist.push",
+        "title": "Push",
+        "category": "Changelist",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "changelist.checkout",
+        "title": "Switch Branch...",
+        "category": "Changelist",
+        "icon": "$(git-branch)"
       }
     ],
     "menus": {
@@ -149,12 +179,12 @@
       "view/item/context": [
         {
           "command": "changelist.commit",
-          "when": "view == changelist.view && viewItem == repository",
+          "when": "view == changelist.view && viewItem =~ /^repository:/",
           "group": "inline@1"
         },
         {
           "command": "changelist.stageAll",
-          "when": "view == changelist.view && viewItem == repository",
+          "when": "view == changelist.view && viewItem =~ /^repository:/",
           "group": "inline@2"
         },
         {
@@ -186,6 +216,36 @@
           "command": "changelist.unstage",
           "when": "view == changelist.view && viewItem == resource:staged",
           "group": "inline@3"
+        },
+        {
+          "command": "changelist.sync",
+          "when": "view == changelist.view && viewItem == repository:tracking",
+          "group": "inline@3"
+        },
+        {
+          "command": "changelist.publish",
+          "when": "view == changelist.view && viewItem == repository:unpublished",
+          "group": "inline@3"
+        },
+        {
+          "command": "changelist.checkout",
+          "when": "view == changelist.view && viewItem =~ /^repository:/",
+          "group": "1_branch@1"
+        },
+        {
+          "command": "changelist.pull",
+          "when": "view == changelist.view && viewItem == repository:tracking",
+          "group": "2_sync@1"
+        },
+        {
+          "command": "changelist.push",
+          "when": "view == changelist.view && viewItem == repository:tracking",
+          "group": "2_sync@2"
+        },
+        {
+          "command": "changelist.sync",
+          "when": "view == changelist.view && viewItem == repository:tracking",
+          "group": "2_sync@3"
         }
       ],
       "commandPalette": [
@@ -219,6 +279,26 @@
         },
         {
           "command": "changelist.openFile",
+          "when": "false"
+        },
+        {
+          "command": "changelist.sync",
+          "when": "false"
+        },
+        {
+          "command": "changelist.publish",
+          "when": "false"
+        },
+        {
+          "command": "changelist.pull",
+          "when": "false"
+        },
+        {
+          "command": "changelist.push",
+          "when": "false"
+        },
+        {
+          "command": "changelist.checkout",
           "when": "false"
         }
       ]

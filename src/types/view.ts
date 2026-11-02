@@ -36,3 +36,15 @@ export interface FolderNode {
 export type Node = RepositoryNode | GroupNode | FolderNode | ResourceNode
 
 export type ViewMode = 'list' | 'tree'
+
+export type ChangeCategory = 'added' | 'modified' | 'deleted' | 'conflict'
+
+export type ChangeCounts = Record<ChangeCategory, number>
+
+export interface CategoryDisplay {
+	/** Shown before the count in the repository's description, like `+3`. */
+	readonly symbol: string
+	/** Codicon shown in the repository's tooltip. */
+	readonly icon: string
+	readonly label: string
+}
