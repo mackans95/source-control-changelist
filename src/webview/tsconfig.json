@@ -1,0 +1,10 @@
+{
+  // The script that runs in the Changelist view's webview. esbuild bundles it; this only type checks it.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": [".", "../types/shared.ts", "../types/webview.ts", "../types/vscode-webview.d.ts"],
+  "exclude": []
+}

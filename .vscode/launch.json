@@ -7,7 +7,7 @@
       "request": "launch",
       "preLaunchTask": "watch",
       "postDebugTask": "stop watch",
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "args": ["--extensionDevelopmentPath=${workspaceFolder}", "/Users/marcusgustafsson/Workspace/Personal"]
     },
     {
@@ -18,7 +18,7 @@
       "request": "launch",
       "preLaunchTask": "watch",
       "postDebugTask": "stop watch",
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "args": [
         "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}",

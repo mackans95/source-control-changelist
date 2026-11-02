@@ -1,19 +1,21 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { ChangelistProvider, getChanges, repositoryName } from './changelistView'
+import { getChanges, repositoryName } from './changelistModel'
+import type { ChangelistWebviewProvider } from './changelistWebview'
 import { Status } from './constants'
 import type { API, Change } from './types/git'
-import type { FolderNode, GroupKind, GroupNode, RepositoryNode, ResourceNode, ViewMode } from './types/view'
+import type { GroupKind, ViewMode } from './types/shared'
+import type { FolderNode, GroupNode, RepositoryNode, ResourceNode } from './types/view'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 
-export function registerCommands(git: API, provider: ChangelistProvider): vscode.Disposable[] {
+export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
 	return [
 		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
 		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
 		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
-		vscode.commands.registerCommand('changelist.collapseAll', () => setAllExpanded(provider, false)),
-		vscode.commands.registerCommand('changelist.expandAll', () => setAllExpanded(provider, true)),
+		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
+		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
 		vscode.commands.registerCommand('changelist.openChange', (node: ResourceNode) => openChange(git, node)),
 		vscode.commands.registerCommand('changelist.openFile', (node: ResourceNode) =>
 			vscode.window.showTextDocument(node.change.uri),
@@ -46,11 +48,6 @@ export function registerCommands(git: API, provider: ChangelistProvider): vscode
 
 function setViewMode(mode: ViewMode): Thenable<void> {
 	return vscode.workspace.getConfiguration('changelist').update('viewMode', mode, vscode.ConfigurationTarget.Global)
-}
-
-function setAllExpanded(provider: ChangelistProvider, expanded: boolean): void {
-	provider.setAllExpanded(expanded)
-	vscode.commands.executeCommand('setContext', 'changelist.allCollapsed', !expanded)
 }
 
 // The Git extension's commands take the repository as their first argument, and then skip the repository picker.

@@ -1,14 +1,15 @@
 {
+  // The extension. Type checking only (npm run typecheck); scripts/build.ts builds the code with esbuild.
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "outDir": "out",
-    "rootDir": "src",
-    "sourceMap": true,
     "strict": true,
+    "noEmit": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The webview's script has its own tsconfig, with the DOM instead of Node.
+  "exclude": ["src/webview", "src/types/vscode-webview.d.ts"]
 }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { ChangelistProvider } from './changelistView'
+import { ChangelistWebviewProvider } from './changelistWebview'
 import { registerCommands } from './commands'
 import type { API, GitExtension } from './types/git'
 
@@ -38,18 +38,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		return
 	}
 
-	const provider = new ChangelistProvider(git)
-	const treeView = vscode.window.createTreeView('changelist.view', {
-		treeDataProvider: provider,
-		showCollapseAll: false,
-	})
-
+	const provider = new ChangelistWebviewProvider(git, context.extensionUri)
 	context.subscriptions.push(
 		provider,
-		treeView,
-		treeView.onDidExpandElement(() =>
-			vscode.commands.executeCommand('setContext', 'changelist.allCollapsed', false),
-		),
+		vscode.window.registerWebviewViewProvider('changelist.view', provider),
 		...registerCommands(git, provider),
 	)
 }

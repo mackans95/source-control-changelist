@@ -1,0 +1,255 @@
+/* The Changelist view. Sizes and colors follow VS Code's own trees, through its theme variables. */
+@import '@vscode/codicons/dist/codicon.css';
+
+:root {
+	--row-height: 22px;
+	--indent: 8px;
+}
+
+body {
+	/* Lets the rows below adapt to the view's width with container queries. */
+	container-type: inline-size;
+	margin: 0;
+	/* VS Code gives webview pages side padding by default; trees go edge to edge. */
+	padding: 0;
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	user-select: none;
+}
+
+#root {
+	outline: none;
+}
+
+.empty {
+	display: block;
+	padding: 4px 20px;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	height: var(--row-height);
+	padding-left: calc(var(--level) * var(--indent) + 4px);
+	padding-right: 8px;
+	overflow: hidden;
+	white-space: nowrap;
+	cursor: pointer;
+	outline: none;
+}
+
+.row:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.row.focused {
+	background-color: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground);
+}
+
+#root:focus-within .row.focused {
+	background-color: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+	outline: 1px solid var(--vscode-list-focusOutline);
+	outline-offset: -1px;
+}
+
+.twistie {
+	flex: none;
+	width: 16px;
+	margin-right: 2px;
+	text-align: center;
+}
+
+.icon {
+	flex: none;
+	margin-right: 6px;
+}
+
+.label {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.description {
+	flex: 0 1000 auto;
+	min-width: 0;
+	margin-left: 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--vscode-descriptionForeground);
+	font-size: 0.9em;
+}
+
+.spacer {
+	flex: 1 1 auto;
+	min-width: 4px;
+}
+
+/* Repositories: a bold name, and a line between them. */
+
+.repository .label {
+	/* The name shrinks first, like in the built-in view, but some of it always shows. */
+	min-width: 48px;
+	font-weight: bold;
+}
+
+/* Normally the name shrinks to make room. Once it can't, the branch and sync labels shrink too, but
+   never past their icons. main.ts marks the rows where that's needed: `narrow` when the row doesn't
+   fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
+.repository.narrow .label,
+.repository.narrow-with-actions:hover .label,
+#root:focus-within .repository.narrow-with-actions.focused .label {
+	flex-shrink: 0;
+	max-width: 48px;
+}
+
+.repository.narrow .toolbar,
+.repository.narrow-with-actions:hover .toolbar,
+#root:focus-within .repository.narrow-with-actions.focused .toolbar {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.repository.narrow .text-button,
+.repository.narrow-with-actions:hover .text-button,
+#root:focus-within .repository.narrow-with-actions.focused .text-button {
+	flex: 0 1 auto;
+	min-width: 22px;
+}
+
+.text-button-icon {
+	flex: none;
+}
+
+.text-button-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.repository:not(:first-child) {
+	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, transparent));
+}
+
+.counts {
+	display: flex;
+	flex: none;
+	gap: 4px;
+	margin-left: 8px;
+	font-size: 0.9em;
+}
+
+.count {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+/* Smaller than codicon.css's 16px, which needs the extra class to override. */
+.count-icon.codicon {
+	font-size: 14px;
+}
+
+/* Buttons */
+
+.toolbar,
+.actions {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 2px;
+}
+
+.actions {
+	display: none;
+	margin-left: 2px;
+}
+
+/* Like the inline actions in VS Code's trees: shown on hover and on the selected row, taking their
+   space from the name and the branch. */
+.row:hover .actions,
+#root:focus-within .row.focused .actions {
+	display: flex;
+}
+
+/* While main.ts measures how wide a repository's row is with its actions. */
+.repository.measuring .actions {
+	display: flex;
+}
+
+.action,
+.text-button {
+	display: flex;
+	align-items: center;
+	height: 20px;
+	padding: 0 2px;
+	border: none;
+	border-radius: 5px;
+	background: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.action {
+	justify-content: center;
+	width: 20px;
+	padding: 0;
+}
+
+.text-button {
+	gap: 3px;
+	padding: 0 4px;
+	/* Compact, like the branch and sync buttons in the built-in view. */
+	font-size: 0.92em;
+}
+
+.action:hover,
+.text-button:hover {
+	background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.action:active,
+.text-button:active {
+	background-color: var(--vscode-toolbar-activeBackground);
+}
+
+.text-button-icon.codicon {
+	font-size: 14px;
+}
+
+.badge {
+	flex: none;
+	min-width: 8px;
+	margin-left: 4px;
+	padding: 0 5px;
+	border-radius: 11px;
+	background-color: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	font-size: 11px;
+	line-height: 16px;
+	text-align: center;
+}
+
+/* Files: colored by their status like Git colors them in the Explorer. */
+
+.file .label,
+.letter {
+	color: var(--decoration-color);
+}
+
+.file.strikethrough .label {
+	text-decoration: line-through;
+}
+
+.letter {
+	flex: none;
+	width: 16px;
+	margin-left: 4px;
+	text-align: center;
+	font-size: 0.9em;
+}

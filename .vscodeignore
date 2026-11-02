@@ -2,7 +2,9 @@
 .claude/**
 .gitignore
 src/**
-**/*.map
+scripts/**
+out/**
+dist/**/*.map
 tsconfig*.json
 .github/**
 .oxfmtrc.json
