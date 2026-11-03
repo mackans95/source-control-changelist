@@ -21,7 +21,7 @@ const extension: esbuild.BuildOptions = {
 
 // The Changelist view's page. It loads the script as a plain <script>, so it's one self-contained file.
 const webview: esbuild.BuildOptions = {
-	entryPoints: { webview: 'src/webview/main.ts' },
+	entryPoints: { webview: 'src/webview/index.ts' },
 	outdir: 'dist',
 	bundle: true,
 	format: 'iife',

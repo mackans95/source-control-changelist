@@ -1,0 +1,72 @@
+// Moving through the rows with the keyboard, like in VS Code's trees.
+import { findRow, rowElements } from './dom.ts'
+import { rowFocus } from './focus.ts'
+import { tree } from './tree.ts'
+
+/** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
+function openMenu(row: HTMLElement): void {
+	const { left, bottom } = row.getBoundingClientRect()
+	row.dispatchEvent(
+		new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: left, clientY: bottom }),
+	)
+}
+
+/**
+ * A key pressed in the view: the arrows, Home and End move the selection, Right and Left expand and
+ * collapse, Enter and Space do what a click does, and Shift+F10 opens the right-click menu.
+ */
+export function onKeydown(event: KeyboardEvent): void {
+	const rows = rowElements()
+	const index = rows.findIndex(row => row.dataset.id === rowFocus.id)
+	const row = rows[index]
+
+	if (!row?.dataset.id) return
+
+	const id = row.dataset.id
+	const expanded = row.getAttribute('aria-expanded')
+
+	// Shift+F10 opens the menu on every platform. The menu key, on keyboards that have one, already
+	// does by itself.
+	if (event.key === 'F10' && event.shiftKey) {
+		openMenu(row)
+		event.preventDefault()
+		return
+	}
+
+	switch (event.key) {
+		case 'ArrowDown':
+			rowFocus.set(rows[index + 1])
+			break
+		case 'ArrowUp':
+			rowFocus.set(rows[index - 1])
+			break
+		case 'Home':
+			rowFocus.set(rows[0])
+			break
+		case 'End':
+			rowFocus.set(rows[rows.length - 1])
+			break
+		case 'ArrowRight':
+			if (expanded === 'false') {
+				tree.toggle(id)
+			} else if (expanded === 'true') {
+				rowFocus.set(rows[index + 1])
+			}
+			break
+		case 'ArrowLeft':
+			if (expanded === 'true') {
+				tree.toggle(id)
+			} else {
+				rowFocus.set(findRow(tree.parentOf(id)))
+			}
+			break
+		case 'Enter':
+		case ' ':
+			tree.activate(id)
+			break
+		default:
+			return
+	}
+
+	event.preventDefault()
+}

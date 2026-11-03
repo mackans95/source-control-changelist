@@ -96,7 +96,7 @@ body {
 }
 
 /* Normally the name shrinks to make room. Once it can't, the branch label shrinks too, but never
-   past its icon. main.ts marks the rows where that's needed: `narrow` when the row doesn't
+   past its icon. tree.ts marks the rows where that's needed: `narrow` when the row doesn't
    fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
 .repository.narrow .label,
 .repository.narrow-with-actions:hover .label,
@@ -184,7 +184,7 @@ body {
 	display: flex;
 }
 
-/* While main.ts measures how wide a repository's row is with its actions. */
+/* While tree.ts measures how wide a repository's row is with its actions. */
 .repository.measuring .actions {
 	display: flex;
 }
