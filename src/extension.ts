@@ -1,3 +1,5 @@
+// Starts the extension: waits for the Git extension, then registers the Changelist view and its
+// commands. With Git turned off, the view only says so.
 import * as vscode from 'vscode'
 import { unavailableHtml } from './changelistHtml.ts'
 import { ChangelistWebviewProvider } from './changelistWebview.ts'
@@ -58,5 +60,3 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		...registerCommands(git, provider),
 	)
 }
-
-export function deactivate(): void {}

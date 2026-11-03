@@ -1,3 +1,5 @@
+// The values of the Git extension's API that its own declarations write as enums, as `as const`
+// objects since this project uses no enums. types/git.ts takes their types from here.
 export const ForcePushMode = {
 	Force: 0,
 	ForceWithLease: 1,

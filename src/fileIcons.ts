@@ -1,3 +1,5 @@
+// The file icon theme's icons and fonts, as URIs the webview can load. How a file or folder gets
+// its icon is in iconMatching.ts.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import {
@@ -70,10 +72,11 @@ function loadLanguageAssociations(): LanguageAssociations[] {
  * longest extension, then by language, and otherwise the theme's default file icon.
  */
 export class FileIcons implements vscode.Disposable {
+	private readonly changeEmitter = new vscode.EventEmitter<void>()
+	// Fires when the icons change: another theme, other file associations, or another color theme.
+	readonly onDidChange = this.changeEmitter.event
 	private theme: LoadedIconTheme | undefined
 	private languages: LanguageAssociations[] = []
-	private readonly changeEmitter = new vscode.EventEmitter<void>()
-	readonly onDidChange = this.changeEmitter.event
 	private readonly disposables: vscode.Disposable[]
 
 	constructor() {
@@ -104,6 +107,10 @@ export class FileIcons implements vscode.Disposable {
 			folder: (uri, expanded) =>
 				this.toFileIcon(webview, folderIconId(this.lookup(), path.basename(uri.fsPath), expanded)),
 		}
+	}
+
+	dispose(): void {
+		this.disposables.forEach(d => d.dispose())
 	}
 
 	private async load(): Promise<void> {
@@ -192,9 +199,5 @@ export class FileIcons implements vscode.Disposable {
 			weight: font.weight,
 			style: font.style,
 		}))
-	}
-
-	dispose(): void {
-		this.disposables.forEach(d => d.dispose())
 	}
 }

@@ -13,24 +13,6 @@ export const GROUP_LABELS: Record<GroupKind, string> = {
 	untracked: 'Untracked Changes',
 }
 
-export function getChanges(repository: Repository, kind: GroupKind): readonly Change[] {
-	const state = repository.state
-	switch (kind) {
-		case 'merge':
-			return state.mergeChanges
-		case 'staged':
-			return state.indexChanges
-		case 'changes':
-			return state.workingTreeChanges
-		case 'untracked':
-			return state.untrackedChanges
-	}
-}
-
-export function hasChanges(repository: Repository): boolean {
-	return (Object.keys(GROUP_LABELS) as GroupKind[]).some(kind => getChanges(repository, kind).length > 0)
-}
-
 // Ignored files never show up in the view, so they have no category.
 const STATUS_CATEGORIES: Record<(typeof Status)[keyof typeof Status], ChangeCategory | undefined> = {
 	[Status.INDEX_MODIFIED]: 'modified',
@@ -56,6 +38,24 @@ const STATUS_CATEGORIES: Record<(typeof Status)[keyof typeof Status], ChangeCate
 
 // A file that's in more than one group, like staged and then edited again, counts once, under the first of these.
 const CATEGORY_PRIORITY: readonly ChangeCategory[] = ['conflict', 'added', 'deleted', 'modified']
+
+export function getChanges(repository: Repository, kind: GroupKind): readonly Change[] {
+	const state = repository.state
+	switch (kind) {
+		case 'merge':
+			return state.mergeChanges
+		case 'staged':
+			return state.indexChanges
+		case 'changes':
+			return state.workingTreeChanges
+		case 'untracked':
+			return state.untrackedChanges
+	}
+}
+
+export function hasChanges(repository: Repository): boolean {
+	return (Object.keys(GROUP_LABELS) as GroupKind[]).some(kind => getChanges(repository, kind).length > 0)
+}
 
 export function countChanges(repository: Repository): ChangeCounts {
 	const categories = new Map<string, ChangeCategory>()

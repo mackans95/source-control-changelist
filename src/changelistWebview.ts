@@ -1,3 +1,6 @@
+// Keeps the Changelist view up to date: it listens to every repository and the settings the view
+// depends on, and sends the webview its data once the page says it's ready. Messages from the page
+// run the `changelist.*` commands on the row they came from.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './changelistHtml.ts'
@@ -94,6 +97,51 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	setAllExpanded(expanded: boolean): void {
 		this.postMessage({ type: 'setAllExpanded', expanded })
+	}
+
+	/**
+	 * Turns a target from the webview, or a row's right-click menu context, back into the node the
+	 * `changelist.*` commands take.
+	 */
+	resolveTarget(target: ActionTarget): Node | undefined {
+		const repository = this.git.repositories.find(r => r.rootUri.toString() === target.repository)
+		if (!repository) {
+			return undefined
+		}
+		if (!target.kind) {
+			return { type: 'repository', repository }
+		}
+
+		const kind = target.kind
+		const changes = getChanges(repository, kind)
+		if (!target.uri) {
+			return { type: 'group', repository, kind, changes }
+		}
+
+		const change = changes.find(c => c.uri.toString() === target.uri)
+		if (change) {
+			return { type: 'resource', repository, kind, change }
+		}
+
+		// Not a file, so a folder: the commands only need the changes below it.
+		const uri = vscode.Uri.parse(target.uri)
+		const prefix = uri.fsPath + path.sep
+		return {
+			type: 'folder',
+			repository,
+			kind,
+			uri,
+			label: path.basename(uri.fsPath),
+			changes: changes.filter(c => c.uri.fsPath.startsWith(prefix)),
+			children: [],
+		}
+	}
+
+	dispose(): void {
+		clearTimeout(this.refreshTimer)
+		this.repositoryListeners.forEach(d => d.dispose())
+		this.viewDisposables.forEach(d => d.dispose())
+		this.disposables.forEach(d => d.dispose())
 	}
 
 	private onDidOpenRepository(repository: Repository): void {
@@ -193,50 +241,5 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				return
 			}
 		}
-	}
-
-	/**
-	 * Turns a target from the webview, or a row's right-click menu context, back into the node the
-	 * `changelist.*` commands take.
-	 */
-	resolveTarget(target: ActionTarget): Node | undefined {
-		const repository = this.git.repositories.find(r => r.rootUri.toString() === target.repository)
-		if (!repository) {
-			return undefined
-		}
-		if (!target.kind) {
-			return { type: 'repository', repository }
-		}
-
-		const kind = target.kind
-		const changes = getChanges(repository, kind)
-		if (!target.uri) {
-			return { type: 'group', repository, kind, changes }
-		}
-
-		const change = changes.find(c => c.uri.toString() === target.uri)
-		if (change) {
-			return { type: 'resource', repository, kind, change }
-		}
-
-		// Not a file, so a folder: the commands only need the changes below it.
-		const uri = vscode.Uri.parse(target.uri)
-		const prefix = uri.fsPath + path.sep
-		return {
-			type: 'folder',
-			repository,
-			kind,
-			uri,
-			label: path.basename(uri.fsPath),
-			changes: changes.filter(c => c.uri.fsPath.startsWith(prefix)),
-			children: [],
-		}
-	}
-
-	dispose(): void {
-		clearTimeout(this.refreshTimer)
-		this.repositoryListeners.forEach(d => d.dispose())
-		this.viewDisposables.forEach(d => d.dispose())
-		this.disposables.forEach(d => d.dispose())
 	}
 }

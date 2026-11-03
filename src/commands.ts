@@ -1,3 +1,6 @@
+// The `changelist.*` commands: the view's title buttons, and the actions on its rows. A row's
+// action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
+// turned back into the node first.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { getChanges, repositoryName } from './changelistModel.ts'
@@ -8,65 +11,6 @@ import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode, ViewMod
 import type { GroupKind, MenuContext } from './types/shared.ts'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
-
-export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
-	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
-	// node. The menu's `when` clauses make sure it's the right kind of row.
-	const withNode =
-		<T extends Node>(run: (node: T) => unknown) =>
-		(arg: T | MenuContext) => {
-			const node = 'webviewSection' in arg ? provider.resolveTarget(arg) : arg
-			return node && run(node as T)
-		}
-
-	return [
-		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
-		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
-		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
-		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
-		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
-		vscode.commands.registerCommand(
-			'changelist.openChange',
-			withNode((node: ResourceNode) => openChange(git, node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.openFile',
-			withNode((node: ResourceNode) => vscode.window.showTextDocument(node.change.uri)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.stage',
-			withNode((node: ResourceNode) => node.repository.add([node.change.uri.fsPath])),
-		),
-		vscode.commands.registerCommand(
-			'changelist.unstage',
-			withNode((node: ResourceNode) => node.repository.revert([node.change.uri.fsPath])),
-		),
-		vscode.commands.registerCommand(
-			'changelist.discard',
-			withNode((node: ResourceNode) => discard(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.discardAll',
-			withNode((node: GroupNode | FolderNode) => discardAll(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.stageAll',
-			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.unstageAll',
-			withNode((node: GroupNode | FolderNode) => node.repository.revert(paths(node.changes))),
-		),
-		vscode.commands.registerCommand(
-			'changelist.commit',
-			withNode((node: RepositoryNode) => commit(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.checkout',
-			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),
-		),
-	]
-}
 
 function setViewMode(mode: ViewMode): Thenable<void> {
 	return vscode.workspace.getConfiguration('changelist').update('viewMode', mode, vscode.ConfigurationTarget.Global)
@@ -79,6 +23,10 @@ function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown>
 
 function paths(changes: readonly Change[]): string[] {
 	return changes.map(c => c.uri.fsPath)
+}
+
+function count(n: number, noun: string): string {
+	return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
 async function stageAll(node: RepositoryNode | GroupNode | FolderNode): Promise<void> {
@@ -99,10 +47,6 @@ async function discard(node: ResourceNode): Promise<void> {
 	if (choice === 'Discard') {
 		await node.repository.clean([node.change.uri.fsPath])
 	}
-}
-
-function count(n: number, noun: string): string {
-	return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
 async function discardAll(node: GroupNode | FolderNode): Promise<void> {
@@ -207,4 +151,63 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 			`${name} (Working Tree)`,
 		)
 	}
+}
+
+export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
+	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
+	// node. The menu's `when` clauses make sure it's the right kind of row.
+	const withNode =
+		<T extends Node>(run: (node: T) => unknown) =>
+		(arg: T | MenuContext) => {
+			const node = 'webviewSection' in arg ? provider.resolveTarget(arg) : arg
+			return node && run(node as T)
+		}
+
+	return [
+		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
+		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
+		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
+		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
+		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
+		vscode.commands.registerCommand(
+			'changelist.openChange',
+			withNode((node: ResourceNode) => openChange(git, node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.openFile',
+			withNode((node: ResourceNode) => vscode.window.showTextDocument(node.change.uri)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.stage',
+			withNode((node: ResourceNode) => node.repository.add([node.change.uri.fsPath])),
+		),
+		vscode.commands.registerCommand(
+			'changelist.unstage',
+			withNode((node: ResourceNode) => node.repository.revert([node.change.uri.fsPath])),
+		),
+		vscode.commands.registerCommand(
+			'changelist.discard',
+			withNode((node: ResourceNode) => discard(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.discardAll',
+			withNode((node: GroupNode | FolderNode) => discardAll(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.stageAll',
+			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.unstageAll',
+			withNode((node: GroupNode | FolderNode) => node.repository.revert(paths(node.changes))),
+		),
+		vscode.commands.registerCommand(
+			'changelist.commit',
+			withNode((node: RepositoryNode) => commit(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.checkout',
+			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),
+		),
+	]
 }

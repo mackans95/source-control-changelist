@@ -95,42 +95,6 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 	return element
 }
 
-export function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
-	const target: ActionTarget = { repository: repository.id }
-	const row = createRow(rows, repository.id, 1, 'repository', target, undefined, () => tree.toggle(repository.id))
-	const expanded = addTwistie(row, repository.id)
-	row.dataset.tooltip = repository.path
-
-	const toolbar = span('toolbar')
-
-	if (repository.branch) {
-		toolbar.append(
-			textButton('git-branch', repository.branch, `${repository.branch}, Switch Branch...`, 'checkout', target),
-		)
-	}
-
-	const actions = span('actions')
-	actions.append(
-		actionButton('check', 'Commit', 'commit', target),
-		actionButton('add', 'Stage All Changes', 'stageAll', target),
-	)
-
-	row.append(
-		codicon('repo'),
-		span('label', repository.name),
-		countsElement(repository.counts),
-		span('spacer'),
-		toolbar,
-		actions,
-	)
-
-	if (expanded) {
-		for (const group of repository.groups) {
-			renderGroup(rows, repository, group)
-		}
-	}
-}
-
 function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	const actions = span('actions')
 
@@ -145,61 +109,6 @@ function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	)
 
 	return actions
-}
-
-function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind }
-	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
-	const expanded = addTwistie(row, group.id)
-	const actions = groupActions(group, target)
-
-	row.append(span('label', group.label), span('spacer'), actions, span('badge', String(group.count)))
-
-	if (expanded) {
-		renderEntries(rows, repository, group, group.children, 3, group.id)
-	}
-}
-
-function renderEntries(
-	rows: HTMLElement[],
-	repository: RepositoryItem,
-	group: GroupItem,
-	entries: readonly (FolderItem | FileItem)[],
-	level: number,
-	parentId: string,
-): void {
-	for (const entry of entries) {
-		if (entry.type === 'folder') {
-			renderFolder(rows, repository, group, entry, level, parentId)
-		} else {
-			renderFile(rows, repository, group, entry, level, parentId)
-		}
-	}
-}
-
-function renderFolder(
-	rows: HTMLElement[],
-	repository: RepositoryItem,
-	group: GroupItem,
-	folder: FolderItem,
-	level: number,
-	parentId: string,
-): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: folder.uri }
-	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
-	const expanded = addTwistie(row, folder.id)
-	const actions = groupActions(group, target)
-	const icon = expanded ? folder.expandedIcon : folder.icon
-
-	if (icon) {
-		row.append(fileIcon(icon))
-	}
-
-	row.append(span('label', folder.label), span('spacer'), actions)
-
-	if (expanded) {
-		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
-	}
 }
 
 function renderFile(
@@ -239,4 +148,95 @@ function renderFile(
 		row.append(span('description', file.folder))
 	}
 	row.append(span('spacer'), actions, span('letter', file.letter))
+}
+
+function renderFolder(
+	rows: HTMLElement[],
+	repository: RepositoryItem,
+	group: GroupItem,
+	folder: FolderItem,
+	level: number,
+	parentId: string,
+): void {
+	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: folder.uri }
+	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
+	const expanded = addTwistie(row, folder.id)
+	const actions = groupActions(group, target)
+	const icon = expanded ? folder.expandedIcon : folder.icon
+
+	if (icon) {
+		row.append(fileIcon(icon))
+	}
+
+	row.append(span('label', folder.label), span('spacer'), actions)
+
+	if (expanded) {
+		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
+	}
+}
+
+function renderEntries(
+	rows: HTMLElement[],
+	repository: RepositoryItem,
+	group: GroupItem,
+	entries: readonly (FolderItem | FileItem)[],
+	level: number,
+	parentId: string,
+): void {
+	for (const entry of entries) {
+		if (entry.type === 'folder') {
+			renderFolder(rows, repository, group, entry, level, parentId)
+		} else {
+			renderFile(rows, repository, group, entry, level, parentId)
+		}
+	}
+}
+
+function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
+	const target: ActionTarget = { repository: repository.id, kind: group.kind }
+	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
+	const expanded = addTwistie(row, group.id)
+	const actions = groupActions(group, target)
+
+	row.append(span('label', group.label), span('spacer'), actions, span('badge', String(group.count)))
+
+	if (expanded) {
+		renderEntries(rows, repository, group, group.children, 3, group.id)
+	}
+}
+
+export function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
+	const target: ActionTarget = { repository: repository.id }
+	const row = createRow(rows, repository.id, 1, 'repository', target, undefined, () => tree.toggle(repository.id))
+	const expanded = addTwistie(row, repository.id)
+	row.dataset.tooltip = repository.path
+
+	const toolbar = span('toolbar')
+
+	if (repository.branch) {
+		toolbar.append(
+			textButton('git-branch', repository.branch, `${repository.branch}, Switch Branch...`, 'checkout', target),
+		)
+	}
+
+	const actions = span('actions')
+	actions.append(
+		actionButton('check', 'Commit', 'commit', target),
+		actionButton('add', 'Stage All Changes', 'stageAll', target),
+	)
+
+	row.append(
+		codicon('repo'),
+		span('label', repository.name),
+		countsElement(repository.counts),
+		span('spacer'),
+		toolbar,
+		actions,
+	)
+
+	if (expanded) {
+		for (const group of repository.groups) {
+			renderGroup(rows, repository, group)
+		}
+	}
 }
