@@ -30,10 +30,12 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 	},
 }
 
+/** An icon button that runs a command on the row's target. */
 function actionButton(icon: string, title: string, action: WebviewAction, target: ActionTarget): HTMLButtonElement {
 	return button(`action codicon codicon-${icon}`, title, () => run(action, target))
 }
 
+/** A button with an icon and text, like the branch on a repository's row. */
 function textButton(
 	icon: string,
 	text: string,
@@ -46,6 +48,10 @@ function textButton(
 	return element
 }
 
+/**
+ * A row, added to `rows`, with its right-click menu context. The tree notes its parent and what
+ * clicking it does.
+ */
 function createRow(
 	rows: HTMLElement[],
 	id: string,
@@ -78,6 +84,7 @@ function addTwistie(row: HTMLDivElement, id: string): boolean {
 	return expanded
 }
 
+/** The colored counts on a repository's row, with a tooltip that spells them out. */
 function countsElement(counts: ChangeCounts): HTMLSpanElement {
 	const element = span('counts')
 	const descriptions: string[] = []
@@ -95,6 +102,7 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 	return element
 }
 
+/** The actions on a group's or folder's row: Discard All when it's unstaged, and Stage or Unstage All. */
 function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	const actions = span('actions')
 
@@ -111,6 +119,7 @@ function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	return actions
 }
 
+/** A file's row: its icon, its name, its folder in list mode, its status letter and its actions. */
 function renderFile(
 	rows: HTMLElement[],
 	repository: RepositoryItem,
@@ -150,6 +159,7 @@ function renderFile(
 	row.append(span('spacer'), actions, span('letter', file.letter))
 }
 
+/** A folder's row, and the rows below it while it's expanded. */
 function renderFolder(
 	rows: HTMLElement[],
 	repository: RepositoryItem,
@@ -175,6 +185,7 @@ function renderFolder(
 	}
 }
 
+/** The rows for a group's or folder's folders and files. */
 function renderEntries(
 	rows: HTMLElement[],
 	repository: RepositoryItem,
@@ -192,6 +203,7 @@ function renderEntries(
 	}
 }
 
+/** A group's row, and the rows below it while it's expanded. */
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
@@ -205,6 +217,7 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	}
 }
 
+/** A repository's row, and the rows below it while it's expanded. */
 export function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
 	const target: ActionTarget = { repository: repository.id }
 	const row = createRow(rows, repository.id, 1, 'repository', target, undefined, () => tree.toggle(repository.id))

@@ -6,6 +6,7 @@ import { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { registerCommands } from './commands.ts'
 import type { API, GitExtension } from './types/git.ts'
 
+/** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */
 async function getGitAPI(): Promise<API | undefined> {
 	const extension = vscode.extensions.getExtension<GitExtension>('vscode.git')
 	if (!extension) {
@@ -31,6 +32,7 @@ async function getGitAPI(): Promise<API | undefined> {
 	return git
 }
 
+/** Called by VS Code the first time the view is shown or one of its commands runs. */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const log = vscode.window.createOutputChannel('Changelist', { log: true })
 	context.subscriptions.push(log)

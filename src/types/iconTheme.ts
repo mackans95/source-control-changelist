@@ -2,6 +2,7 @@
 // extension's package.json have them. See https://code.visualstudio.com/api/extension-guides/file-icon-theme
 import type * as vscode from 'vscode'
 
+/** One of the theme's icons. */
 export interface IconDefinition {
 	/** An image, relative to the theme's JSON file. */
 	readonly iconPath?: string
@@ -13,6 +14,7 @@ export interface IconDefinition {
 	readonly fontId?: string
 }
 
+/** A font in the theme's JSON file. */
 export interface IconThemeFont {
 	readonly id: string
 	/** Paths relative to the theme's JSON file. */
@@ -57,6 +59,7 @@ export interface LanguageContribution {
 	readonly filenames?: readonly string[]
 }
 
+/** A theme, read from the extension that has it. */
 export interface LoadedIconTheme {
 	readonly id: string
 	readonly document: IconThemeDocument

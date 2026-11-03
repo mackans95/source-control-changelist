@@ -7,10 +7,12 @@ export function own<T>(record: Readonly<Record<string, T>> | undefined, key: str
 	return record && key !== undefined && Object.hasOwn(record, key) ? record[key] : undefined
 }
 
+/** The same record, with lowercase keys. */
 function lowercaseKeys(record: Readonly<Record<string, string>> | undefined): Record<string, string> | undefined {
 	return record && Object.fromEntries(Object.entries(record).map(([key, value]) => [key.toLowerCase(), value]))
 }
 
+/** The associations with every name lowercase, for matching without case. */
 function normalize(associations: IconAssociations | undefined): IconAssociations | undefined {
 	return (
 		associations && {
@@ -70,6 +72,7 @@ function pick(lookup: IconLookup, get: (associations: IconAssociations) => strin
 	})
 }
 
+/** A file's language: by name, then by extension, from the user's `files.associations` first. */
 function languageOf(
 	languages: readonly LanguageAssociations[],
 	name: string,

@@ -131,6 +131,7 @@ function cssVariable(themeColor: string): string {
 	return `--vscode-${themeColor.replace(/\./g, '-')}`
 }
 
+/** A file's row: its name, icon and status, and its folder in list mode. */
 function toFileItem(
 	repository: Repository,
 	kind: GroupKind,
@@ -155,6 +156,7 @@ function toFileItem(
 	}
 }
 
+/** A folder's or file's row in tree mode, with the rows below a folder. */
 function toEntry(node: FolderNode | ResourceNode, viewMode: ViewMode, icons: IconResolver): FolderItem | FileItem {
 	if (node.type === 'resource') {
 		return toFileItem(node.repository, node.kind, node.change, viewMode, icons)
@@ -170,6 +172,7 @@ function toEntry(node: FolderNode | ResourceNode, viewMode: ViewMode, icons: Ico
 	}
 }
 
+/** A group's row, with its files: in folders in tree mode, or sorted by path in list mode. */
 function toGroupItem(repository: Repository, kind: GroupKind, viewMode: ViewMode, icons: IconResolver): GroupItem {
 	const changes = getChanges(repository, kind)
 	const children =
@@ -179,6 +182,7 @@ function toGroupItem(repository: Repository, kind: GroupKind, viewMode: ViewMode
 	return { id: `${repository.rootUri}#${kind}`, kind, label: GROUP_LABELS[kind], count: changes.length, children }
 }
 
+/** A repository's row, with its counts and the groups that have changes. */
 export function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: IconResolver): RepositoryItem {
 	const head = repository.state.HEAD
 	return {

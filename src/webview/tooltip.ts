@@ -8,6 +8,7 @@ const SHOW_AGAIN_INSTANTLY_MS = 200
 // The space between the tooltip and its element, and the view's edges.
 const MARGIN = 4
 
+/** The one tooltip element, shared by every element with a `data-tooltip`. */
 class Tooltip {
 	// Created by init().
 	private element: HTMLSpanElement | undefined

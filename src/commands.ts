@@ -10,8 +10,10 @@ import type { API, Change } from './types/git.ts'
 import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode, ViewMode } from './types/extension.ts'
 import type { GroupKind, MenuContext } from './types/shared.ts'
 
+// The groups a repository's Stage All button stages.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 
+/** The View as Tree and View as List buttons: saves the choice in the user's settings. */
 function setViewMode(mode: ViewMode): Thenable<void> {
 	return vscode.workspace.getConfiguration('changelist').update('viewMode', mode, vscode.ConfigurationTarget.Global)
 }
@@ -21,14 +23,17 @@ function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown>
 	return vscode.commands.executeCommand(command, node.repository)
 }
 
+/** The changes' paths, which the Git API's add, revert and clean take. */
 function paths(changes: readonly Change[]): string[] {
 	return changes.map(c => c.uri.fsPath)
 }
 
+/** A count with its noun, like `1 file` or `2 files`. */
 function count(n: number, noun: string): string {
 	return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
+/** Stages the changes in a group or folder, or every unstaged change in a repository. */
 async function stageAll(node: RepositoryNode | GroupNode | FolderNode): Promise<void> {
 	const changes =
 		node.type === 'repository' ? UNSTAGED_KINDS.flatMap(kind => getChanges(node.repository, kind)) : node.changes
@@ -37,6 +42,7 @@ async function stageAll(node: RepositoryNode | GroupNode | FolderNode): Promise<
 	}
 }
 
+/** Discards a file's changes, or deletes it when it's untracked, after asking. */
 async function discard(node: ResourceNode): Promise<void> {
 	const name = path.basename(node.change.uri.fsPath)
 	const message =
@@ -49,6 +55,7 @@ async function discard(node: ResourceNode): Promise<void> {
 	}
 }
 
+/** Discards the changes in a group or folder, and deletes its untracked files, after asking. */
 async function discardAll(node: GroupNode | FolderNode): Promise<void> {
 	const changes = node.changes
 
@@ -71,6 +78,10 @@ async function discardAll(node: GroupNode | FolderNode): Promise<void> {
 	}
 }
 
+/**
+ * Commits the staged changes with a message the user types. When nothing is staged, it offers to
+ * stage everything first.
+ */
 async function commit(node: RepositoryNode): Promise<void> {
 	const repository = node.repository
 	const name = repositoryName(repository)
@@ -104,6 +115,10 @@ async function commit(node: RepositoryNode): Promise<void> {
 	repository.inputBox.value = ''
 }
 
+/**
+ * Opens a file's changes like the built-in view does: a diff of the staged or unstaged changes, or
+ * just the file when there is nothing to compare it with.
+ */
 async function openChange(git: API, node: ResourceNode): Promise<void> {
 	const { change, kind } = node
 	const name = path.basename(change.uri.fsPath)
@@ -153,6 +168,7 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 	}
 }
 
+/** Registers the `changelist.*` commands, for the view to run on its rows and in its title bar. */
 export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
 	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
 	// node. The menu's `when` clauses make sure it's the right kind of row.

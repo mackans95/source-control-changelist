@@ -22,10 +22,12 @@ import type {
 import type { IconResolver } from './types/extension.ts'
 import type { FileIcon, IconFont } from './types/shared.ts'
 
+/** A font's family name in the webview, unique per theme so two themes' fonts can't clash. */
 function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
 	return `${theme.id}-${font.id}`
 }
 
+/** Reads the file icon theme with this id from the extension that has it. */
 async function loadIconTheme(id: string): Promise<LoadedIconTheme | undefined> {
 	for (const extension of vscode.extensions.all) {
 		const themes: readonly IconThemeContribution[] = extension.packageJSON?.contributes?.iconThemes ?? []
@@ -72,11 +74,15 @@ function loadLanguageAssociations(): LanguageAssociations[] {
  * longest extension, then by language, and otherwise the theme's default file icon.
  */
 export class FileIcons implements vscode.Disposable {
+	// Fires onDidChange.
 	private readonly changeEmitter = new vscode.EventEmitter<void>()
 	// Fires when the icons change: another theme, other file associations, or another color theme.
 	readonly onDidChange = this.changeEmitter.event
+	// The current file icon theme, or undefined when none is set or it can't be read.
 	private theme: LoadedIconTheme | undefined
+	// Which language each file name and extension has, for themes that pick icons by language.
 	private languages: LanguageAssociations[] = []
+	// The emitter, and the listeners that load the theme again.
 	private readonly disposables: vscode.Disposable[]
 
 	constructor() {
@@ -100,6 +106,7 @@ export class FileIcons implements vscode.Disposable {
 		return this.theme?.extensionUri
 	}
 
+	/** Looks up icons as URIs this webview can load. */
 	resolver(webview: vscode.Webview): IconResolver {
 		return {
 			fonts: () => this.fonts(webview),
@@ -109,10 +116,12 @@ export class FileIcons implements vscode.Disposable {
 		}
 	}
 
+	/** Stops listening for changes to the theme. */
 	dispose(): void {
 		this.disposables.forEach(d => d.dispose())
 	}
 
+	/** Reads the current theme and the languages again, and fires onDidChange. */
 	private async load(): Promise<void> {
 		const id = vscode.workspace.getConfiguration('workbench').get<string | null>('iconTheme')
 		this.languages = loadLanguageAssociations()
@@ -150,6 +159,7 @@ export class FileIcons implements vscode.Disposable {
 		return vscode.Uri.joinPath(theme.uri, '..', relativePath)
 	}
 
+	/** An icon as the webview draws it: an image, or a character in one of the theme's fonts. */
 	private toFileIcon(webview: vscode.Webview, id: string | undefined): FileIcon | undefined {
 		const theme = this.theme
 		const definition = own(theme?.document.iconDefinitions, id)
@@ -184,6 +194,7 @@ export class FileIcons implements vscode.Disposable {
 		}
 	}
 
+	/** The theme's fonts, for the webview to load. */
 	private fonts(webview: vscode.Webview): IconFont[] {
 		const theme = this.theme
 

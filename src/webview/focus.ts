@@ -2,6 +2,7 @@
 // selected when the rows are drawn again.
 import { rowElements } from './dom.ts'
 
+/** The selected row, which stays selected when the rows are drawn again. */
 class RowFocus {
 	// The row that has the keyboard focus, or had it last.
 	private focusedId: string | undefined

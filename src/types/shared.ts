@@ -2,10 +2,14 @@
 // use. Everything here has to survive postMessage, so it's plain data: URIs are strings, and there
 // are no Repository objects. Nothing here may depend on the vscode or Node APIs, which the webview
 // doesn't have.
+
+/** The groups of changes, like in the built-in Source Control view. */
 export type GroupKind = 'merge' | 'staged' | 'changes' | 'untracked'
 
+/** The kinds of changes a repository's row counts. */
 export type ChangeCategory = 'added' | 'modified' | 'deleted' | 'conflict'
 
+/** How many files of each kind a repository has changed. */
 export type ChangeCounts = Record<ChangeCategory, number>
 
 /** A file or folder icon from the file icon theme. */
@@ -35,6 +39,7 @@ export interface IconFont {
 	readonly style?: string
 }
 
+/** A file's row. */
 export interface FileItem {
 	readonly type: 'file'
 	readonly id: string
@@ -50,6 +55,7 @@ export interface FileItem {
 	readonly tooltip: string
 }
 
+/** A folder's row in tree mode, with the rows below it. */
 export interface FolderItem {
 	readonly type: 'folder'
 	readonly id: string
@@ -60,6 +66,7 @@ export interface FolderItem {
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
+/** A group's row, with the rows below it. */
 export interface GroupItem {
 	readonly id: string
 	readonly kind: GroupKind
@@ -68,6 +75,7 @@ export interface GroupItem {
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
+/** A repository's row, with its groups. */
 export interface RepositoryItem {
 	/** The repository's root URI. */
 	readonly id: string
@@ -79,6 +87,7 @@ export interface RepositoryItem {
 	readonly groups: readonly GroupItem[]
 }
 
+/** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */
 export type ExtensionMessage =
 	| {
 			readonly type: 'update'
@@ -126,6 +135,10 @@ export interface MenuContext extends ActionTarget {
 	readonly preventDefaultContextMenuItems: true
 }
 
+/**
+ * What the webview sends the extension: that it's ready for data, a row's action, or whether every
+ * repository is collapsed.
+ */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }

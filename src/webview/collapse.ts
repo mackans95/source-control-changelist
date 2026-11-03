@@ -2,6 +2,7 @@
 // hidden.
 import { post, readState, writeState } from './api.ts'
 
+/** The collapsed rows, and the rows that can collapse. */
 class CollapsedRows {
 	// Ids of the collapsed rows; load() reads them from the page's state.
 	private ids = new Set<string>()

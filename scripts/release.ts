@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { setTimeout } from 'node:timers/promises'
 
+// The GitHub repository the gh commands work on.
 const repo = 'mackans95/source-control-changelist'
 // The files the version bump changes, and the only ones the release commit includes.
 const releaseFiles = ['package.json', 'package-lock.json', 'CHANGELOG.md']

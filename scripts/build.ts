@@ -2,8 +2,10 @@
 // Type checking is separate (npm run typecheck): esbuild only strips the types.
 import * as esbuild from 'esbuild'
 
+// While debugging: rebuild on every change, instead of building once.
 const watch = process.argv.includes('--watch')
 
+// The extension, which VS Code loads from dist/extension.js (package.json's main).
 const extension: esbuild.BuildOptions = {
 	entryPoints: ['src/extension.ts'],
 	outfile: 'dist/extension.js',
@@ -45,9 +47,10 @@ const styles: esbuild.BuildOptions = {
 	logLevel: watch ? 'silent' : 'warning',
 }
 
+// How many of the builds are running right now.
+let running = 0
 // tasks.json waits for these lines before starting a debug session. With several builds running
 // at once, only the first start and the last finish are logged.
-let running = 0
 const watchLog: esbuild.Plugin = {
 	name: 'watch-log',
 	setup(build) {
@@ -67,6 +70,7 @@ const watchLog: esbuild.Plugin = {
 	},
 }
 
+// Built at the same time.
 const builds = [extension, webview, styles]
 if (watch) {
 	for (const options of builds) {

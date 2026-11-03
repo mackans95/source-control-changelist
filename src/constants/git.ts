@@ -1,17 +1,21 @@
 // The values of the Git extension's API that its own declarations write as enums, as `as const`
 // objects since this project uses no enums. types/git.ts takes their types from here.
+
+// How a push may overwrite the remote branch.
 export const ForcePushMode = {
 	Force: 0,
 	ForceWithLease: 1,
 	ForceWithLeaseIfIncludes: 2,
 } as const
 
+// What a ref is: a local branch, a remote branch, or a tag.
 export const RefType = {
 	Head: 0,
 	RemoteHead: 1,
 	Tag: 2,
 } as const
 
+// A change's status. The view's letters, colors and counts come from it.
 export const Status = {
 	INDEX_MODIFIED: 0,
 	INDEX_ADDED: 1,
@@ -36,6 +40,7 @@ export const Status = {
 	BOTH_MODIFIED: 18,
 } as const
 
+// The codes of the errors the Git extension throws.
 export const GitErrorCodes = {
 	BadConfigFile: 'BadConfigFile',
 	BadRevision: 'BadRevision',

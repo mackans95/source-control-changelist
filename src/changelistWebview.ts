@@ -16,6 +16,7 @@ import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/sha
 // this long after the last one, so it's drawn again once and not for every step.
 const UPDATE_DELAY_MS = 100
 
+/** The `changelist.viewMode` setting: a flat list of files, or files in folders. */
 function getViewMode(): ViewMode {
 	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list')
 }
@@ -26,19 +27,26 @@ function getViewMode(): ViewMode {
  * colored counts. Clean repositories are left out, so the view is empty when nothing has changed.
  */
 export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
-	// The webview's page loads again each time the view is shown, and says when it's ready for data.
+	// Listeners for as long as the provider lives.
 	private readonly disposables: vscode.Disposable[] = []
 	// Keyed by root URI: `git.repositories` returns new wrapper objects on every call.
 	private readonly repositoryListeners = new Map<string, vscode.Disposable>()
+	// The file icon theme's icons, which the rows show.
 	private readonly fileIcons = new FileIcons()
+	// The Git extension's API.
 	private readonly git: API
+	// The extension's folder. The page's script and stylesheet are in its dist/.
 	private readonly extensionUri: vscode.Uri
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
+	// The wait before the next update, see UPDATE_DELAY_MS.
 	private refreshTimer: NodeJS.Timeout | undefined
+	// Listeners for the current view, replaced when VS Code resolves the view again.
 	private viewDisposables: vscode.Disposable[] = []
+	// The webview's page loads again each time the view is shown, and says when it's ready for data.
 	private ready = false
+	// The view, from when VS Code resolves it until it closes.
 	private view: vscode.WebviewView | undefined
 
 	constructor(git: API, extensionUri: vscode.Uri) {
@@ -66,6 +74,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		)
 	}
 
+	/** Called by VS Code to show the view: loads the page, which then asks for the data. */
 	resolveWebviewView(webviewView: vscode.WebviewView): void {
 		this.viewDisposables.forEach(d => d.dispose())
 		this.view = webviewView
@@ -90,11 +99,13 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		]
 	}
 
+	/** The view's Refresh button: has Git check every repository's status again, then updates the view. */
 	async refresh(): Promise<void> {
 		await Promise.all(this.git.repositories.map(r => r.status()))
 		this.postUpdate()
 	}
 
+	/** The view's Expand All and Collapse All buttons. */
 	setAllExpanded(expanded: boolean): void {
 		this.postMessage({ type: 'setAllExpanded', expanded })
 	}
@@ -137,6 +148,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
+	/** Stops listening to the repositories, the settings and the view. */
 	dispose(): void {
 		clearTimeout(this.refreshTimer)
 		this.repositoryListeners.forEach(d => d.dispose())
@@ -144,6 +156,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.disposables.forEach(d => d.dispose())
 	}
 
+	/** Listens to a repository Git opened, and shows it when it has changes. */
 	private onDidOpenRepository(repository: Repository): void {
 		this.repositoryListeners.set(
 			repository.rootUri.toString(),
@@ -161,6 +174,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
+	/** Sends the rows again with the file icon theme's current icons. */
 	private onDidChangeFileIcons(): void {
 		// The new theme's icons can be in another extension's folder. If they are, this reloads the
 		// webview, which then asks for the data again.
@@ -170,17 +184,20 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.postUpdate()
 	}
 
+	/** Stops listening to a repository Git closed, and takes it out of the view. */
 	private onDidCloseRepository(repository: Repository): void {
 		this.repositoryListeners.get(repository.rootUri.toString())?.dispose()
 		this.repositoryListeners.delete(repository.rootUri.toString())
 		this.scheduleUpdate()
 	}
 
+	/** Updates the view once Git has been quiet for UPDATE_DELAY_MS. */
 	private scheduleUpdate(): void {
 		clearTimeout(this.refreshTimer)
 		this.refreshTimer = setTimeout(() => this.postUpdate(), UPDATE_DELAY_MS)
 	}
 
+	/** Sends the page every repository that has changes, unless that is what it shows already. */
 	private postUpdate(): void {
 		if (!this.view || !this.ready) return
 
@@ -210,12 +227,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.postMessage(message)
 	}
 
+	/** Sends the page a message, once it's ready for one. */
 	private postMessage(message: ExtensionMessage): void {
 		if (this.view && this.ready) {
 			void this.view.webview.postMessage(message)
 		}
 	}
 
+	/** Handles a message from the page: it's ready, every repository is collapsed or not, or a row's action. */
 	private async onDidReceiveMessage(message: WebviewMessage): Promise<void> {
 		switch (message.type) {
 			case 'ready':

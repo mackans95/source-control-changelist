@@ -24,11 +24,13 @@ function fitRepositoryRows(): void {
 	}
 }
 
+/** Draws the rows, and knows each row's parent and what clicking it does. */
 class Tree {
 	// The repositories from the extension's latest update.
 	private repositories: readonly RepositoryItem[] = []
-	// Filled in on each render: each row's parent row, and what clicking the row does.
+	// Each row's parent row, filled in on each render.
 	private readonly parents = new Map<string, string>()
+	// What clicking each row does, filled in on each render.
 	private readonly activations = new Map<string, () => void>()
 
 	/** Listens for clicks on the rows, and for the view changing size. */

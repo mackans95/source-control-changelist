@@ -4,13 +4,16 @@ import type * as vscode from 'vscode'
 import type { Change, Repository } from './git.ts'
 import type { FileIcon, GroupKind, IconFont } from './shared.ts'
 
+/** How the view lays out a group's files: a flat list that shows their folders, or a folder tree. */
 export type ViewMode = 'list' | 'tree'
 
+/** A repository's row. */
 export interface RepositoryNode {
 	readonly type: 'repository'
 	readonly repository: Repository
 }
 
+/** A group's row, with the group's changes. */
 export interface GroupNode {
 	readonly type: 'group'
 	readonly repository: Repository
@@ -18,6 +21,7 @@ export interface GroupNode {
 	readonly changes: readonly Change[]
 }
 
+/** A file's row: one change in a group. */
 export interface ResourceNode {
 	readonly type: 'resource'
 	readonly repository: Repository
@@ -25,6 +29,7 @@ export interface ResourceNode {
 	readonly change: Change
 }
 
+/** A folder's row in tree mode, with the changes and rows below it. */
 export interface FolderNode {
 	readonly type: 'folder'
 	readonly repository: Repository
@@ -36,6 +41,7 @@ export interface FolderNode {
 	readonly children: readonly (FolderNode | ResourceNode)[]
 }
 
+/** Any row, as the `changelist.*` commands take it. */
 export type Node = RepositoryNode | GroupNode | FolderNode | ResourceNode
 
 /** A folder while buildTree sorts a group's changes into folders. */

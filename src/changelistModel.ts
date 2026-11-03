@@ -6,6 +6,7 @@ import type { Change, Repository } from './types/git.ts'
 import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared.ts'
 import type { Directory, FolderNode, ResourceNode } from './types/extension.ts'
 
+// The groups, in the order the view shows them, with the built-in Source Control view's names.
 export const GROUP_LABELS: Record<GroupKind, string> = {
 	merge: 'Merge Changes',
 	staged: 'Staged Changes',
@@ -39,6 +40,7 @@ const STATUS_CATEGORIES: Record<(typeof Status)[keyof typeof Status], ChangeCate
 // A file that's in more than one group, like staged and then edited again, counts once, under the first of these.
 const CATEGORY_PRIORITY: readonly ChangeCategory[] = ['conflict', 'added', 'deleted', 'modified']
 
+/** A group's changes, from the repository's current state. */
 export function getChanges(repository: Repository, kind: GroupKind): readonly Change[] {
 	const state = repository.state
 	switch (kind) {
@@ -53,10 +55,12 @@ export function getChanges(repository: Repository, kind: GroupKind): readonly Ch
 	}
 }
 
+/** Whether the repository has any changes, so the view shows it. */
 export function hasChanges(repository: Repository): boolean {
 	return (Object.keys(GROUP_LABELS) as GroupKind[]).some(kind => getChanges(repository, kind).length > 0)
 }
 
+/** How many files are added, modified, deleted and in conflict, each file counted once. */
 export function countChanges(repository: Repository): ChangeCounts {
 	const categories = new Map<string, ChangeCategory>()
 
@@ -80,10 +84,12 @@ export function countChanges(repository: Repository): ChangeCounts {
 	return counts
 }
 
+/** The repository's folder name, which the view shows as its name. */
 export function repositoryName(repository: Repository): string {
 	return path.basename(repository.rootUri.fsPath)
 }
 
+/** Sorts changes by their path, for list mode and for the files in a folder. */
 export function byPath(a: Change, b: Change): number {
 	return a.uri.fsPath.localeCompare(b.uri.fsPath)
 }
