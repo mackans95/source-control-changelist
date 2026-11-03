@@ -4,9 +4,8 @@ import { getChanges, repositoryName } from './changelistModel.ts'
 import type { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { Status } from './constants/git.ts'
 import type { API, Change } from './types/git.ts'
-import type { GroupKind, ViewMode } from './types/shared.ts'
-import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode } from './types/view.ts'
-import type { MenuContext } from './types/webview.ts'
+import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode, ViewMode } from './types/extension.ts'
+import type { GroupKind, MenuContext } from './types/shared.ts'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 

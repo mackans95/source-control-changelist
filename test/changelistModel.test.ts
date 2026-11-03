@@ -4,7 +4,7 @@ import type * as vscode from 'vscode'
 import { buildTree, byPath, countChanges, getChanges, hasChanges, repositoryName } from '../src/changelistModel.ts'
 import { Status } from '../src/constants/git.ts'
 import type { Change, Repository } from '../src/types/git.ts'
-import type { FolderNode, ResourceNode } from '../src/types/view.ts'
+import type { FolderNode, ResourceNode } from '../src/types/extension.ts'
 
 // Just enough of a URI for the model, which only reads `path` and `fsPath` and makes folders with `with`.
 function uri(path: string): vscode.Uri {

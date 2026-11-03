@@ -4,7 +4,7 @@ import * as path from 'path'
 import { Status } from './constants/git.ts'
 import type { Change, Repository } from './types/git.ts'
 import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared.ts'
-import type { FolderNode, ResourceNode } from './types/view.ts'
+import type { Directory, FolderNode, ResourceNode } from './types/extension.ts'
 
 export const GROUP_LABELS: Record<GroupKind, string> = {
 	merge: 'Merge Changes',
@@ -86,11 +86,6 @@ export function repositoryName(repository: Repository): string {
 
 export function byPath(a: Change, b: Change): number {
 	return a.uri.fsPath.localeCompare(b.uri.fsPath)
-}
-
-interface Directory {
-	readonly directories: Map<string, Directory>
-	readonly files: Change[]
 }
 
 /**

@@ -14,18 +14,17 @@ import { Status } from './constants/git.ts'
 import { DEFAULT_HOVER_DELAY_MS, ROOT_ELEMENT_ID } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Change, Repository } from './types/git.ts'
-import type { GroupKind, ViewMode } from './types/shared.ts'
-import type { FolderNode, IconResolver, Node, ResourceNode } from './types/view.ts'
+import type { FolderNode, IconResolver, Node, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
 import type {
 	ActionTarget,
 	ExtensionMessage,
 	FileItem,
 	FolderItem,
 	GroupItem,
+	GroupKind,
 	RepositoryItem,
-	StatusDecoration,
 	WebviewMessage,
-} from './types/webview.ts'
+} from './types/shared.ts'
 
 // The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
 const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {

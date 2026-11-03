@@ -17,8 +17,8 @@ import type {
 	LanguageContribution,
 	LoadedIconTheme,
 } from './types/iconTheme.ts'
-import type { IconResolver } from './types/view.ts'
-import type { FileIcon, IconFont } from './types/webview.ts'
+import type { IconResolver } from './types/extension.ts'
+import type { FileIcon, IconFont } from './types/shared.ts'
 
 function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
 	return `${theme.id}-${font.id}`
