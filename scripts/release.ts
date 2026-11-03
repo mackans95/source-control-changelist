@@ -139,11 +139,16 @@ function releaseNotes(version: string, notes: string): string {
  */
 async function findRun(workflow: string, tag: string): Promise<string> {
 	const args = ['run', 'list', '--repo', repo, '--workflow', workflow, '--branch', tag, '--limit', '1']
-	// A run can take a few seconds to show up after the push or the publish that starts it.
+	// A run can take a few seconds to show up after the push or the publish that starts it. Before a
+	// workflow's first run, GitHub doesn't know the workflow at all and answers 404, so that's retried too.
 	for (let attempt = 0; attempt < 10; attempt++) {
-		const id = read('gh', [...args, '--json', 'databaseId', '--jq', '.[0].databaseId // empty'])
-		if (id) {
-			return id
+		try {
+			const id = read('gh', [...args, '--json', 'databaseId', '--jq', '.[0].databaseId // empty'])
+			if (id) {
+				return id
+			}
+		} catch {
+			// Not there yet.
 		}
 		await setTimeout(3000)
 	}
@@ -211,6 +216,10 @@ if (read('git', ['status', '--porcelain', '--', ...releaseFiles]) !== '') {
 }
 
 if (!hasTag(tag)) {
+	// Without a bump, the version is only tagged when its release commit is already there.
+	if (!changelogSection(readFileSync('CHANGELOG.md', 'utf8'), version)) {
+		fail(`${version} has no release commit yet. To start a release, pass a version: npm run release -- minor`)
+	}
 	step(`Tagging ${tag}`)
 	run('git', ['tag', '-a', tag, '-m', `Changelist ${version}`])
 }
