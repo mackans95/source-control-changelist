@@ -1,237 +1,20 @@
-import { randomBytes } from 'crypto'
 import * as path from 'path'
 import * as vscode from 'vscode'
-import {
-	GROUP_LABELS,
-	buildTree,
-	byPath,
-	countChanges,
-	getChanges,
-	hasChanges,
-	repositoryName,
-} from './changelistModel.ts'
-import { Status } from './constants/git.ts'
-import { DEFAULT_HOVER_DELAY_MS, ROOT_ELEMENT_ID } from './constants/shared.ts'
+import { viewHtml } from './changelistHtml.ts'
+import { toRepositoryItem } from './changelistItems.ts'
+import { getChanges, hasChanges, repositoryName } from './changelistModel.ts'
+import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
-import type { API, Change, Repository } from './types/git.ts'
-import type { FolderNode, IconResolver, Node, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
-import type {
-	ActionTarget,
-	ExtensionMessage,
-	FileItem,
-	FolderItem,
-	GroupItem,
-	GroupKind,
-	RepositoryItem,
-	WebviewMessage,
-} from './types/shared.ts'
+import type { API, Repository } from './types/git.ts'
+import type { Node, ViewMode } from './types/extension.ts'
+import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/shared.ts'
 
-// The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
-const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {
-	[Status.INDEX_MODIFIED]: {
-		letter: 'M',
-		color: 'gitDecoration.stageModifiedResourceForeground',
-		text: 'Index Modified',
-		strikethrough: false,
-	},
-	[Status.INDEX_ADDED]: {
-		letter: 'A',
-		color: 'gitDecoration.addedResourceForeground',
-		text: 'Index Added',
-		strikethrough: false,
-	},
-	[Status.INDEX_DELETED]: {
-		letter: 'D',
-		color: 'gitDecoration.stageDeletedResourceForeground',
-		text: 'Index Deleted',
-		strikethrough: true,
-	},
-	[Status.INDEX_RENAMED]: {
-		letter: 'R',
-		color: 'gitDecoration.renamedResourceForeground',
-		text: 'Index Renamed',
-		strikethrough: false,
-	},
-	[Status.INDEX_COPIED]: {
-		letter: 'C',
-		color: 'gitDecoration.renamedResourceForeground',
-		text: 'Index Copied',
-		strikethrough: false,
-	},
-	[Status.MODIFIED]: {
-		letter: 'M',
-		color: 'gitDecoration.modifiedResourceForeground',
-		text: 'Modified',
-		strikethrough: false,
-	},
-	[Status.DELETED]: {
-		letter: 'D',
-		color: 'gitDecoration.deletedResourceForeground',
-		text: 'Deleted',
-		strikethrough: true,
-	},
-	[Status.UNTRACKED]: {
-		letter: 'U',
-		color: 'gitDecoration.untrackedResourceForeground',
-		text: 'Untracked',
-		strikethrough: false,
-	},
-	[Status.IGNORED]: {
-		letter: 'I',
-		color: 'gitDecoration.ignoredResourceForeground',
-		text: 'Ignored',
-		strikethrough: false,
-	},
-	[Status.INTENT_TO_ADD]: {
-		letter: 'A',
-		color: 'gitDecoration.addedResourceForeground',
-		text: 'Intent to Add',
-		strikethrough: false,
-	},
-	[Status.INTENT_TO_RENAME]: {
-		letter: 'R',
-		color: 'gitDecoration.renamedResourceForeground',
-		text: 'Intent to Rename',
-		strikethrough: false,
-	},
-	[Status.TYPE_CHANGED]: {
-		letter: 'T',
-		color: 'gitDecoration.modifiedResourceForeground',
-		text: 'Type Changed',
-		strikethrough: false,
-	},
-	[Status.ADDED_BY_US]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Added By Us',
-		strikethrough: false,
-	},
-	[Status.ADDED_BY_THEM]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Added By Them',
-		strikethrough: false,
-	},
-	[Status.DELETED_BY_US]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Deleted By Us',
-		strikethrough: true,
-	},
-	[Status.DELETED_BY_THEM]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Deleted By Them',
-		strikethrough: true,
-	},
-	[Status.BOTH_ADDED]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Both Added',
-		strikethrough: false,
-	},
-	[Status.BOTH_DELETED]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Both Deleted',
-		strikethrough: true,
-	},
-	[Status.BOTH_MODIFIED]: {
-		letter: '!',
-		color: 'gitDecoration.conflictingResourceForeground',
-		text: 'Conflict: Both Modified',
-		strikethrough: false,
-	},
-}
+// Git reports a change for each step of an operation like a checkout or a commit. The view waits
+// this long after the last one, so it's drawn again once and not for every step.
+const UPDATE_DELAY_MS = 100
 
 function getViewMode(): ViewMode {
 	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list')
-}
-
-/** Theme colors are CSS variables in webviews, with the dot as a dash: `--vscode-gitDecoration-…`. */
-function cssVariable(themeColor: string): string {
-	return `--vscode-${themeColor.replace(/\./g, '-')}`
-}
-
-function toFileItem(
-	repository: Repository,
-	kind: GroupKind,
-	change: Change,
-	viewMode: ViewMode,
-	icons: IconResolver,
-): FileItem {
-	const decoration = STATUS_DECORATIONS[change.status]
-	const relativePath = path.relative(repository.rootUri.fsPath, change.uri.fsPath)
-	const folder = path.dirname(relativePath)
-	return {
-		type: 'file',
-		id: `${repository.rootUri}#${kind}#${change.uri}`,
-		uri: change.uri.toString(),
-		name: path.basename(change.uri.fsPath),
-		icon: icons.file(change.uri),
-		folder: viewMode === 'list' && folder !== '.' ? folder : '',
-		letter: decoration.letter,
-		color: cssVariable(decoration.color),
-		strikethrough: decoration.strikethrough,
-		tooltip: `${relativePath} • ${decoration.text}`,
-	}
-}
-
-function toEntry(node: FolderNode | ResourceNode, viewMode: ViewMode, icons: IconResolver): FolderItem | FileItem {
-	if (node.type === 'resource') {
-		return toFileItem(node.repository, node.kind, node.change, viewMode, icons)
-	}
-	return {
-		type: 'folder',
-		id: `${node.repository.rootUri}#${node.kind}#${node.uri}`,
-		uri: node.uri.toString(),
-		label: node.label,
-		icon: icons.folder(node.uri, false),
-		expandedIcon: icons.folder(node.uri, true),
-		children: node.children.map(child => toEntry(child, viewMode, icons)),
-	}
-}
-
-function toGroupItem(repository: Repository, kind: GroupKind, viewMode: ViewMode, icons: IconResolver): GroupItem {
-	const changes = getChanges(repository, kind)
-	const children =
-		viewMode === 'tree'
-			? buildTree(repository, kind, changes).map(node => toEntry(node, viewMode, icons))
-			: [...changes].sort(byPath).map(change => toFileItem(repository, kind, change, viewMode, icons))
-	return { id: `${repository.rootUri}#${kind}`, kind, label: GROUP_LABELS[kind], count: changes.length, children }
-}
-
-function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: IconResolver): RepositoryItem {
-	const head = repository.state.HEAD
-	return {
-		id: repository.rootUri.toString(),
-		name: repositoryName(repository),
-		path: repository.rootUri.fsPath,
-		// A detached HEAD has no branch name, so show its commit like the built-in view does.
-		branch: head?.name ?? head?.commit?.slice(0, 8) ?? '',
-		counts: countChanges(repository),
-		groups: (Object.keys(GROUP_LABELS) as GroupKind[])
-			.filter(kind => getChanges(repository, kind).length > 0)
-			.map(kind => toGroupItem(repository, kind, viewMode, icons)),
-	}
-}
-
-/** The view's page when Git is turned off: a message where the changes would be, and no script. */
-export function unavailableHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-	const styles = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.css'))
-	const csp = ["default-src 'none'", `style-src ${webview.cspSource}`].join('; ')
-	return `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="Content-Security-Policy" content="${csp}">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="${styles}">
-</head>
-<body>
-	<div class="empty">Git is turned off. Turn on the <code>git.enabled</code> setting, then reload the window to see your changes here.</div>
-</body>
-</html>`
 }
 
 /**
@@ -285,9 +68,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.view = webviewView
 		this.ready = false
 
-		const dist = vscode.Uri.joinPath(this.extensionUri, 'dist')
 		webviewView.webview.options = this.webviewOptions()
-		webviewView.webview.html = this.getHtml(webviewView.webview, dist)
+		webviewView.webview.html = viewHtml(webviewView.webview, this.extensionUri)
 
 		this.viewDisposables = [
 			webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => this.onDidReceiveMessage(message)),
@@ -348,7 +130,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	private scheduleUpdate(): void {
 		clearTimeout(this.refreshTimer)
-		this.refreshTimer = setTimeout(() => this.postUpdate(), 100)
+		this.refreshTimer = setTimeout(() => this.postUpdate(), UPDATE_DELAY_MS)
 	}
 
 	private postUpdate(): void {
@@ -449,35 +231,6 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			changes: changes.filter(c => c.uri.fsPath.startsWith(prefix)),
 			children: [],
 		}
-	}
-
-	private getHtml(webview: vscode.Webview, dist: vscode.Uri): string {
-		const nonce = randomBytes(16).toString('base64')
-		const script = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'webview.js'))
-		const styles = webview.asWebviewUri(vscode.Uri.joinPath(dist, 'webview.css'))
-		const csp = [
-			"default-src 'none'",
-			`font-src ${webview.cspSource}`,
-			`img-src ${webview.cspSource}`,
-			`style-src ${webview.cspSource}`,
-			`script-src 'nonce-${nonce}'`,
-		].join('; ')
-
-		// The body's `data-vscode-context` leaves out the Cut, Copy and Paste items VS Code adds to the
-		// right-click menu.
-		return `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="Content-Security-Policy" content="${csp}">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="${styles}">
-</head>
-<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-	<div id="${ROOT_ELEMENT_ID}" role="tree" aria-label="Changelist"></div>
-	<script nonce="${nonce}" src="${script}"></script>
-</body>
-</html>`
 	}
 
 	dispose(): void {

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
-import { ChangelistWebviewProvider, unavailableHtml } from './changelistWebview.ts'
+import { unavailableHtml } from './changelistHtml.ts'
+import { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { registerCommands } from './commands.ts'
 import type { API, GitExtension } from './types/git.ts'
 
