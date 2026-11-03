@@ -8,7 +8,7 @@
       "preLaunchTask": "watch",
       "postDebugTask": "stop watch",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "/Users/marcusgustafsson/Workspace/Personal"]
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/.."]
     },
     {
       // Same, but with your installed extensions disabled so the Debug Console only shows
@@ -22,7 +22,7 @@
       "args": [
         "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "/Users/marcusgustafsson/Workspace/Personal"
+        "${workspaceFolder}/.."
       ]
     }
   ]

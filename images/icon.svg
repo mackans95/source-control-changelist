@@ -1,16 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#e11d48"/></linearGradient></defs>
   <rect width="256" height="256" rx="52" fill="url(#g)"/>
-  <!-- A branch: the trunk with a commit at each end, and a branch curving off to a third commit -->
-  <g fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round">
-    <line x1="70" y1="88" x2="70" y2="168"/>
-    <path d="M 116 104 C 116 140, 70 136, 70 164"/>
-    <circle cx="70" cy="70" r="18"/>
-    <circle cx="70" cy="186" r="18"/>
-    <circle cx="116" cy="86" r="18"/>
+  <!-- A repository, and a guide line from it to each of its files, like a file tree -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="52" y1="68" x2="172" y2="68" stroke-width="22"/>
+    <path d="M 64 92 V 188 M 64 110 H 82 M 64 149 H 82 M 64 188 H 82" stroke-width="10"/>
+    <line x1="106" y1="110" x2="208" y2="110" stroke-width="16"/>
+    <line x1="106" y1="149" x2="180" y2="149" stroke-width="16"/>
+    <line x1="106" y1="188" x2="196" y2="188" stroke-width="16"/>
   </g>
-  <!-- The changelist: one row per repository -->
-  <rect x="150" y="80" width="62" height="14" rx="7" fill="#fff"/>
-  <rect x="150" y="121" width="62" height="14" rx="7" fill="#fff"/>
-  <rect x="150" y="162" width="62" height="14" rx="7" fill="#fff"/>
 </svg>

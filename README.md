@@ -20,6 +20,7 @@ A PyCharm-style changes view for VS Code's Source Control. It lists only the rep
 ## Install
 
 - **VS Code:** search for **Changelist** in the Extensions view, or install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=mackans95.source-control-changelist).
+- **VSCodium, Cursor, Windsurf and other editors that use Open VSX:** search for **Changelist** in the Extensions view, or install it from [Open VSX](https://open-vsx.org/extension/mackans95/source-control-changelist).
 - **From a file:** download the `.vsix` from a [GitHub release](https://github.com/mackans95/source-control-changelist/releases) and run `code --install-extension source-control-changelist-<version>.vsix`.
 
 ## Usage

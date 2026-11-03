@@ -1,0 +1,30 @@
+name: Publish
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+  # Lets vsce and ovsx swap a GitHub OIDC token for a short-lived registry credential (Trusted Publishing), so no token secrets are needed.
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Download the .vsix from the release
+        id: download
+        # Publishes the exact file the release workflow attached instead of building it again.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.vsix'
+      # --skip-duplicate on both makes re-running the job harmless for a registry that already has the version.
+      - name: Publish to the VS Code Marketplace
+        run: npx --yes @vscode/vsce@^4.0.2 publish --oidc --skip-duplicate --packagePath ./*.vsix
+      - name: Publish to Open VSX
+        # Also runs when the Marketplace step failed, so one registry failing doesn't stop the other.
+        if: ${{ !cancelled() && steps.download.outcome == 'success' }}
+        run: npx --yes ovsx@^1.3.0 publish ./*.vsix --trusted-publishing --skip-duplicate

@@ -1,6 +1,7 @@
 .vscode/**
 .claude/**
 .gitignore
+CONTRIBUTING.md
 src/**
 scripts/**
 test/**
