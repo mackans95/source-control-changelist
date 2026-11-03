@@ -10,7 +10,9 @@ import type {
 	FolderItem,
 	GroupItem,
 	IconFont,
+	MenuContext,
 	RepositoryItem,
+	RowSection,
 	WebviewAction,
 } from '../types/webview'
 
@@ -174,13 +176,16 @@ function createRow(
 	rows: HTMLElement[],
 	id: string,
 	level: number,
-	className: string,
+	section: RowSection,
+	target: ActionTarget,
 	parentId: string | undefined,
 	onActivate: () => void,
 ): HTMLDivElement {
 	const row = document.createElement('div')
-	row.className = `row ${className}`
+	row.className = `row ${section}`
 	row.dataset.id = id
+	const context: MenuContext = { webviewSection: section, preventDefaultContextMenuItems: true, ...target }
+	row.dataset.vscodeContext = JSON.stringify(context)
 	row.tabIndex = -1
 	row.setAttribute('role', 'treeitem')
 	row.setAttribute('aria-level', String(level))
@@ -221,7 +226,7 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 
 function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
 	const target: ActionTarget = { repository: repository.id }
-	const row = createRow(rows, repository.id, 1, 'repository', undefined, () => toggle(repository.id))
+	const row = createRow(rows, repository.id, 1, 'repository', target, undefined, () => toggle(repository.id))
 	const expanded = addTwistie(row, repository.id)
 	row.dataset.tooltip = repository.path
 
@@ -272,7 +277,7 @@ function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind }
-	const row = createRow(rows, group.id, 2, 'group', repository.id, () => toggle(group.id))
+	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => toggle(group.id))
 	const expanded = addTwistie(row, group.id)
 	const actions = groupActions(group, target)
 
@@ -309,7 +314,7 @@ function renderFolder(
 	parentId: string,
 ): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: folder.uri }
-	const row = createRow(rows, folder.id, level, 'folder', parentId, () => toggle(folder.id))
+	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => toggle(folder.id))
 	const expanded = addTwistie(row, folder.id)
 	const actions = groupActions(group, target)
 	const icon = expanded ? folder.expandedIcon : folder.icon
@@ -334,7 +339,7 @@ function renderFile(
 	parentId: string,
 ): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: file.uri }
-	const row = createRow(rows, file.id, level, 'file', parentId, () => run('openChange', target))
+	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
 	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', `var(${file.color})`)
 	if (file.strikethrough) {
@@ -467,6 +472,23 @@ root.addEventListener('click', event => {
 	}
 })
 
+// Right-clicking a row selects it, like in VS Code's trees. VS Code shows the menu itself, from the
+// row's `data-vscode-context`.
+root.addEventListener('contextmenu', event => {
+	const row = (event.target as HTMLElement).closest<HTMLElement>('.row')
+	if (row) {
+		setFocus(row)
+	}
+})
+
+/** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
+function openMenu(row: HTMLElement): void {
+	const { left, bottom } = row.getBoundingClientRect()
+	row.dispatchEvent(
+		new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: left, clientY: bottom }),
+	)
+}
+
 root.addEventListener('mouseover', event => {
 	const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tooltip]') ?? undefined
 	if (target === tooltipTarget) {
@@ -500,6 +522,14 @@ root.addEventListener('keydown', event => {
 	}
 	const id = row.dataset.id
 	const expanded = row.getAttribute('aria-expanded')
+
+	// Shift+F10 opens the menu on every platform. The menu key, on keyboards that have one, already
+	// does by itself.
+	if (event.key === 'F10' && event.shiftKey) {
+		openMenu(row)
+		event.preventDefault()
+		return
+	}
 
 	switch (event.key) {
 		case 'ArrowDown':

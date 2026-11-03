@@ -5,38 +5,66 @@ import type { ChangelistWebviewProvider } from './changelistWebview'
 import { Status } from './constants'
 import type { API, Change } from './types/git'
 import type { GroupKind, ViewMode } from './types/shared'
-import type { FolderNode, GroupNode, RepositoryNode, ResourceNode } from './types/view'
+import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode } from './types/view'
+import type { MenuContext } from './types/webview'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 
 export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
+	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
+	// node. The menu's `when` clauses make sure it's the right kind of row.
+	const withNode =
+		<T extends Node>(run: (node: T) => unknown) =>
+		(arg: T | MenuContext) => {
+			const node = 'webviewSection' in arg ? provider.resolveTarget(arg) : arg
+			return node && run(node as T)
+		}
+
 	return [
 		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
 		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
 		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
 		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
 		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
-		vscode.commands.registerCommand('changelist.openChange', (node: ResourceNode) => openChange(git, node)),
-		vscode.commands.registerCommand('changelist.openFile', (node: ResourceNode) =>
-			vscode.window.showTextDocument(node.change.uri),
+		vscode.commands.registerCommand(
+			'changelist.openChange',
+			withNode((node: ResourceNode) => openChange(git, node)),
 		),
-		vscode.commands.registerCommand('changelist.stage', (node: ResourceNode) =>
-			node.repository.add([node.change.uri.fsPath]),
+		vscode.commands.registerCommand(
+			'changelist.openFile',
+			withNode((node: ResourceNode) => vscode.window.showTextDocument(node.change.uri)),
 		),
-		vscode.commands.registerCommand('changelist.unstage', (node: ResourceNode) =>
-			node.repository.revert([node.change.uri.fsPath]),
+		vscode.commands.registerCommand(
+			'changelist.stage',
+			withNode((node: ResourceNode) => node.repository.add([node.change.uri.fsPath])),
 		),
-		vscode.commands.registerCommand('changelist.discard', (node: ResourceNode) => discard(node)),
-		vscode.commands.registerCommand('changelist.discardAll', (node: GroupNode | FolderNode) => discardAll(node)),
-		vscode.commands.registerCommand('changelist.stageAll', (node: RepositoryNode | GroupNode | FolderNode) =>
-			stageAll(node),
+		vscode.commands.registerCommand(
+			'changelist.unstage',
+			withNode((node: ResourceNode) => node.repository.revert([node.change.uri.fsPath])),
 		),
-		vscode.commands.registerCommand('changelist.unstageAll', (node: GroupNode | FolderNode) =>
-			node.repository.revert(paths(node.changes)),
+		vscode.commands.registerCommand(
+			'changelist.discard',
+			withNode((node: ResourceNode) => discard(node)),
 		),
-		vscode.commands.registerCommand('changelist.commit', (node: RepositoryNode) => commit(node)),
-		vscode.commands.registerCommand('changelist.checkout', (node: RepositoryNode) =>
-			runGitCommand('git.checkout', node),
+		vscode.commands.registerCommand(
+			'changelist.discardAll',
+			withNode((node: GroupNode | FolderNode) => discardAll(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.stageAll',
+			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.unstageAll',
+			withNode((node: GroupNode | FolderNode) => node.repository.revert(paths(node.changes))),
+		),
+		vscode.commands.registerCommand(
+			'changelist.commit',
+			withNode((node: RepositoryNode) => commit(node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.checkout',
+			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),
 		),
 	]
 }

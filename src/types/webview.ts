@@ -118,6 +118,18 @@ export interface ActionTarget {
 	readonly uri?: string
 }
 
+/** The kinds of rows, for the right-click menu's `when` clauses. */
+export type RowSection = 'repository' | 'group' | 'folder' | 'file'
+
+/**
+ * A row's `data-vscode-context`. Its properties are context keys in the right-click menu's `when`
+ * clauses, and VS Code passes it to the command that runs.
+ */
+export interface MenuContext extends ActionTarget {
+	readonly webviewSection: RowSection
+	readonly preventDefaultContextMenuItems: true
+}
+
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }

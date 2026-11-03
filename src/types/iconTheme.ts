@@ -66,6 +66,15 @@ export interface LoadedIconTheme {
 	readonly extensionUri: vscode.Uri
 }
 
+/**
+ * What a file's or folder's icon is looked up in: the theme's associations for the current color
+ * theme, the light or high contrast ones first, and the icons it defines.
+ */
+export interface IconLookup {
+	readonly associations: readonly IconAssociations[]
+	readonly definitions: Readonly<Record<string, IconDefinition>> | undefined
+}
+
 /** The languages VS Code would give files from their names. Keys are lowercase; extensions have their dot. */
 export interface LanguageAssociations {
 	readonly fileNames: Map<string, string>

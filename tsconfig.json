@@ -6,6 +6,8 @@
     "lib": ["ES2022"],
     "strict": true,
     "noEmit": true,
+    // For the modules the tests run in Node, which needs the extension in their imports.
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "types": ["node"]
   },

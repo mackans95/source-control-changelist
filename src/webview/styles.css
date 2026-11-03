@@ -7,8 +7,6 @@
 }
 
 body {
-	/* Lets the rows below adapt to the view's width with container queries. */
-	container-type: inline-size;
 	margin: 0;
 	/* VS Code gives webview pages side padding by default; trees go edge to edge. */
 	padding: 0;

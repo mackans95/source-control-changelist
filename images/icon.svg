@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#e11d48"/></linearGradient></defs>
+  <rect width="256" height="256" rx="52" fill="url(#g)"/>
+  <!-- A branch: the trunk with a commit at each end, and a branch curving off to a third commit -->
+  <g fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round">
+    <line x1="70" y1="88" x2="70" y2="168"/>
+    <path d="M 116 104 C 116 140, 70 136, 70 164"/>
+    <circle cx="70" cy="70" r="18"/>
+    <circle cx="70" cy="186" r="18"/>
+    <circle cx="116" cy="86" r="18"/>
+  </g>
+  <!-- The changelist: one row per repository -->
+  <rect x="150" y="80" width="62" height="14" rx="7" fill="#fff"/>
+  <rect x="150" y="121" width="62" height="14" rx="7" fill="#fff"/>
+  <rect x="150" y="162" width="62" height="14" rx="7" fill="#fff"/>
+</svg>

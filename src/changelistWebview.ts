@@ -7,7 +7,6 @@ import {
 	byPath,
 	countChanges,
 	getChanges,
-	getViewMode,
 	hasChanges,
 	repositoryName,
 } from './changelistModel'
@@ -145,6 +144,10 @@ const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDec
 	},
 }
 
+function getViewMode(): ViewMode {
+	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list')
+}
+
 /** Theme colors are CSS variables in webviews, with the dot as a dash: `--vscode-gitDecoration-…`. */
 function cssVariable(themeColor: string): string {
 	return `--vscode-${themeColor.replace(/\./g, '-')}`
@@ -211,6 +214,24 @@ function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: Ico
 			.filter(kind => getChanges(repository, kind).length > 0)
 			.map(kind => toGroupItem(repository, kind, viewMode, icons)),
 	}
+}
+
+/** The view's page when Git is turned off: a message where the changes would be, and no script. */
+export function unavailableHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+	const styles = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.css'))
+	const csp = ["default-src 'none'", `style-src ${webview.cspSource}`].join('; ')
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="Content-Security-Policy" content="${csp}">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="${styles}">
+</head>
+<body>
+	<div class="empty">Git is turned off. Turn on the <code>git.enabled</code> setting, then reload the window to see your changes here.</div>
+</body>
+</html>`
 }
 
 /**
@@ -386,8 +407,11 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
-	/** Turns a target from the webview back into the node the `changelist.*` commands take. */
-	private resolveTarget(target: ActionTarget): Node | undefined {
+	/**
+	 * Turns a target from the webview, or a row's right-click menu context, back into the node the
+	 * `changelist.*` commands take.
+	 */
+	resolveTarget(target: ActionTarget): Node | undefined {
 		const repository = this.git.repositories.find(r => r.rootUri.toString() === target.repository)
 		if (!repository) {
 			return undefined
@@ -433,6 +457,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			`script-src 'nonce-${nonce}'`,
 		].join('; ')
 
+		// The body's `data-vscode-context` leaves out the Cut, Copy and Paste items VS Code adds to the
+		// right-click menu.
 		return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -441,7 +467,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="${styles}">
 </head>
-<body>
+<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
 	<div id="root" role="tree" aria-label="Changelist"></div>
 	<script nonce="${nonce}" src="${script}"></script>
 </body>

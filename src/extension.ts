@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { ChangelistWebviewProvider } from './changelistWebview'
+import { ChangelistWebviewProvider, unavailableHtml } from './changelistWebview'
 import { registerCommands } from './commands'
 import type { API, GitExtension } from './types/git'
 
@@ -35,8 +35,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const git = await getGitAPI()
 	if (!git) {
 		log.warn('Git extension is not available or disabled')
+		// Without a provider, the view would only say "There is no data provider registered".
+		context.subscriptions.push(
+			vscode.window.registerWebviewViewProvider('changelist.view', {
+				resolveWebviewView: view => {
+					view.webview.options = { localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist')] }
+					view.webview.html = unavailableHtml(view.webview, context.extensionUri)
+				},
+			}),
+		)
 		return
 	}
+
+	// Shows the view's title buttons, which need Git.
+	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
 
 	const provider = new ChangelistWebviewProvider(git, context.extensionUri)
 	context.subscriptions.push(

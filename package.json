@@ -3,8 +3,17 @@
   "displayName": "Changelist",
   "description": "PyCharm-style changelists in the Source Control view: only repositories with changes are shown.",
   "version": "0.0.1",
-  "publisher": "marcusgustafsson",
+  "publisher": "mackans95",
   "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mackans95/source-control-changelist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mackans95/source-control-changelist/issues"
+  },
+  "homepage": "https://github.com/mackans95/source-control-changelist#readme",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -12,15 +21,33 @@
     "SCM Providers",
     "Other"
   ],
+  "keywords": [
+    "git",
+    "scm",
+    "source control",
+    "changelist",
+    "changes",
+    "repositories",
+    "multi-root",
+    "monorepo",
+    "pycharm"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Git needs the repositories on disk, which virtual workspaces don't have."
+    }
+  },
   "extensionKind": [
     "workspace"
   ],
   "extensionDependencies": [
     "vscode.git"
   ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "views": {
@@ -129,28 +156,85 @@
       "view/title": [
         {
           "command": "changelist.viewAsTree",
-          "when": "view == changelist.view && config.changelist.viewMode == list",
+          "when": "view == changelist.view && changelist.active && config.changelist.viewMode == list",
           "group": "navigation@1"
         },
         {
           "command": "changelist.viewAsList",
-          "when": "view == changelist.view && config.changelist.viewMode == tree",
+          "when": "view == changelist.view && changelist.active && config.changelist.viewMode == tree",
           "group": "navigation@1"
         },
         {
           "command": "changelist.refresh",
-          "when": "view == changelist.view",
+          "when": "view == changelist.view && changelist.active",
           "group": "navigation@2"
         },
         {
           "command": "changelist.collapseAll",
-          "when": "view == changelist.view && !changelist.allCollapsed",
+          "when": "view == changelist.view && changelist.active && !changelist.allCollapsed",
           "group": "navigation@3"
         },
         {
           "command": "changelist.expandAll",
-          "when": "view == changelist.view && changelist.allCollapsed",
+          "when": "view == changelist.view && changelist.active && changelist.allCollapsed",
           "group": "navigation@3"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "changelist.commit",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "1_commit@1"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "1_commit@2"
+        },
+        {
+          "command": "changelist.checkout",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "2_branch@1"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "webviewId == 'changelist.view' && webviewSection =~ /^(group|folder)$/ && kind != 'staged'",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "changelist.unstageAll",
+          "when": "webviewId == 'changelist.view' && webviewSection =~ /^(group|folder)$/ && kind == 'staged'",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "changelist.discardAll",
+          "when": "webviewId == 'changelist.view' && webviewSection =~ /^(group|folder)$/ && kind =~ /^(changes|untracked)$/",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "changelist.openChange",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'file'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "changelist.openFile",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'file'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "changelist.stage",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'file' && kind != 'staged'",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "changelist.unstage",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'file' && kind == 'staged'",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "changelist.discard",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'file' && kind =~ /^(changes|untracked)$/",
+          "group": "1_modification@2"
         }
       ],
       "commandPalette": [
@@ -218,8 +302,9 @@
   "scripts": {
     "build": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build.ts",
     "watch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build.ts --watch",
-    "typecheck": "tsc -p . && tsc -p src/webview && tsc -p scripts",
+    "typecheck": "tsc -p . && tsc -p src/webview && tsc -p test && tsc -p scripts",
     "vscode:prepublish": "npm run build",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt",
     "format:check": "oxfmt --check"

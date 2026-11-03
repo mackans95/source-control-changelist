@@ -1,13 +1,10 @@
+// What the view shows of a repository, worked out from the Git extension's state. It doesn't use
+// `vscode`, so the tests can run it in Node, and its own imports have their `.ts` for that.
 import * as path from 'path'
-import * as vscode from 'vscode'
-import { Status } from './constants'
+import { Status } from './constants/index.ts'
 import type { Change, Repository } from './types/git'
-import type { ChangeCategory, ChangeCounts, GroupKind, ViewMode } from './types/shared'
+import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared'
 import type { FolderNode, ResourceNode } from './types/view'
-
-export function getViewMode(): ViewMode {
-	return vscode.workspace.getConfiguration('changelist').get<ViewMode>('viewMode', 'list')
-}
 
 export const GROUP_LABELS: Record<GroupKind, string> = {
 	merge: 'Merge Changes',
@@ -96,17 +93,21 @@ interface Directory {
 	readonly files: Change[]
 }
 
-/** Builds the folder hierarchy for a group, compacting single-folder chains like `src/app`. */
+/**
+ * Builds the folder hierarchy for a group, compacting single-folder chains like `src/app`. It works
+ * with the URIs' paths, which use `/` on every platform, so the folders' URIs can come from the
+ * repository's.
+ */
 export function buildTree(
 	repository: Repository,
 	kind: GroupKind,
 	changes: readonly Change[],
 ): (FolderNode | ResourceNode)[] {
-	const rootPath = repository.rootUri.fsPath
+	const rootPath = repository.rootUri.path
 	const root: Directory = { directories: new Map(), files: [] }
 
 	for (const change of changes) {
-		const segments = path.relative(rootPath, change.uri.fsPath).split(path.sep)
+		const segments = path.posix.relative(rootPath, change.uri.path).split('/')
 		let directory = root
 		for (const segment of segments.slice(0, -1)) {
 			let child = directory.directories.get(segment)
@@ -124,11 +125,11 @@ export function buildTree(
 			.sort(([a], [b]) => a.localeCompare(b))
 			.map(([name, child]): FolderNode => {
 				let label = name
-				let folderPath = path.join(directoryPath, name)
+				let folderPath = path.posix.join(directoryPath, name)
 				while (child.files.length === 0 && child.directories.size === 1) {
 					const [[nextName, next]] = child.directories
 					label = `${label}/${nextName}`
-					folderPath = path.join(folderPath, nextName)
+					folderPath = path.posix.join(folderPath, nextName)
 					child = next
 				}
 				const children = toNodes(child, folderPath)
@@ -137,7 +138,7 @@ export function buildTree(
 					type: 'folder',
 					repository,
 					kind,
-					uri: vscode.Uri.file(folderPath),
+					uri: repository.rootUri.with({ path: folderPath }),
 					label,
 					changes: folderChanges,
 					children,

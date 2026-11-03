@@ -1,7 +1,15 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
+import {
+	fileIconId,
+	folderIconId,
+	normalizeDocument,
+	own,
+	unescapeCharacter,
+	userLanguageAssociations,
+} from './iconMatching'
 import type {
-	IconAssociations,
+	IconLookup,
 	IconThemeContribution,
 	IconThemeDocument,
 	IconThemeFont,
@@ -11,39 +19,6 @@ import type {
 } from './types/iconTheme'
 import type { IconResolver } from './types/view'
 import type { FileIcon, IconFont } from './types/webview'
-
-/** Looks up a key the theme has itself, so a file named `constructor` doesn't find Object's. */
-function own<T>(record: Readonly<Record<string, T>> | undefined, key: string | undefined): T | undefined {
-	return record && key !== undefined && Object.hasOwn(record, key) ? record[key] : undefined
-}
-
-function lowercaseKeys(record: Readonly<Record<string, string>> | undefined): Record<string, string> | undefined {
-	return record && Object.fromEntries(Object.entries(record).map(([key, value]) => [key.toLowerCase(), value]))
-}
-
-// VS Code matches names without case, so the theme's names are made lowercase once, when it loads.
-function normalize(associations: IconAssociations | undefined): IconAssociations | undefined {
-	return (
-		associations && {
-			...associations,
-			fileNames: lowercaseKeys(associations.fileNames),
-			fileExtensions: lowercaseKeys(associations.fileExtensions),
-			folderNames: lowercaseKeys(associations.folderNames),
-			folderNamesExpanded: lowercaseKeys(associations.folderNamesExpanded),
-		}
-	)
-}
-
-/** The extensions of a file name, longest first: `d.ts` and then `ts` for `index.d.ts`. */
-function extensionsOf(name: string): string[] {
-	const segments = name.split('.').slice(1)
-	return segments.map((_, i) => segments.slice(i).join('.'))
-}
-
-/** Theme fonts give their characters as CSS escapes, like `\E004`. */
-function unescapeCharacter(value: string): string {
-	return value.replace(/\\([0-9a-f]{1,6}) ?/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-}
 
 function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
 	return `${theme.id}-${font.id}`
@@ -64,12 +39,7 @@ async function loadIconTheme(id: string): Promise<LoadedIconTheme | undefined> {
 				id,
 				uri,
 				extensionUri: extension.extensionUri,
-				document: {
-					...document,
-					...normalize(document),
-					light: normalize(document.light),
-					highContrast: normalize(document.highContrast),
-				},
+				document: normalizeDocument(document),
 			}
 		}
 	}
@@ -79,18 +49,7 @@ async function loadIconTheme(id: string): Promise<LoadedIconTheme | undefined> {
 
 /** The user's `files.associations` first, then the languages extensions contribute. */
 function loadLanguageAssociations(): LanguageAssociations[] {
-	const user: LanguageAssociations = { fileNames: new Map(), extensions: new Map() }
-	// Only the simple patterns: `*.ext` and plain file names.
 	const patterns = vscode.workspace.getConfiguration('files').get<Record<string, string>>('associations', {})
-
-	for (const [pattern, language] of Object.entries(patterns)) {
-		if (/^\*\.[^*?/{[]+$/.test(pattern)) {
-			user.extensions.set(pattern.slice(1).toLowerCase(), language)
-		} else if (!/[*?/{[]/.test(pattern)) {
-			user.fileNames.set(pattern.toLowerCase(), language)
-		}
-	}
-
 	const contributed: LanguageAssociations = { fileNames: new Map(), extensions: new Map() }
 
 	for (const extension of vscode.extensions.all) {
@@ -102,7 +61,7 @@ function loadLanguageAssociations(): LanguageAssociations[] {
 		}
 	}
 
-	return [user, contributed]
+	return [userLanguageAssociations(patterns), contributed]
 }
 
 /**
@@ -141,8 +100,9 @@ export class FileIcons implements vscode.Disposable {
 	resolver(webview: vscode.Webview): IconResolver {
 		return {
 			fonts: () => this.fonts(webview),
-			file: uri => this.toFileIcon(webview, this.fileIconId(uri)),
-			folder: (uri, expanded) => this.toFileIcon(webview, this.folderIconId(uri, expanded)),
+			file: uri => this.toFileIcon(webview, fileIconId(this.lookup(), this.languages, path.basename(uri.fsPath))),
+			folder: (uri, expanded) =>
+				this.toFileIcon(webview, folderIconId(this.lookup(), path.basename(uri.fsPath), expanded)),
 		}
 	}
 
@@ -159,12 +119,12 @@ export class FileIcons implements vscode.Disposable {
 		this.changeEmitter.fire()
 	}
 
-	/** The theme's associations for the current color theme, the light or high contrast ones first. */
-	private associations(): IconAssociations[] {
+	/** What icons are looked up in for the current color theme: its light or high contrast associations first. */
+	private lookup(): IconLookup {
 		const document = this.theme?.document
 
 		if (!document) {
-			return []
+			return { associations: [], definitions: undefined }
 		}
 
 		const kind = vscode.window.activeColorTheme.kind
@@ -175,65 +135,7 @@ export class FileIcons implements vscode.Disposable {
 					? document.highContrast
 					: undefined
 
-		return variant ? [variant, document] : [document]
-	}
-
-	/**
-	 * The first icon the associations give, the light or high contrast ones first. Like VS Code, it
-	 * skips icons the theme leaves empty, like vscode-icons' light file icon.
-	 */
-	private pick(
-		associations: readonly IconAssociations[],
-		get: (associations: IconAssociations) => string | undefined,
-	): string | undefined {
-		return associations.map(get).find(id => {
-			const definition = own(this.theme?.document.iconDefinitions, id)
-			return definition?.iconPath || definition?.fontCharacter
-		})
-	}
-
-	private languageOf(name: string, extensions: readonly string[]): string | undefined {
-		for (const languages of this.languages) {
-			const language =
-				languages.fileNames.get(name) ??
-				extensions.map(ext => languages.extensions.get(`.${ext}`)).find(Boolean)
-
-			if (language) {
-				return language
-			}
-		}
-
-		return undefined
-	}
-
-	private fileIconId(uri: vscode.Uri): string | undefined {
-		const associations = this.associations()
-		const name = path.basename(uri.fsPath).toLowerCase()
-		const extensions = extensionsOf(name)
-		const language = this.languageOf(name, extensions)
-
-		return (
-			this.pick(associations, a => own(a.fileNames, name)) ??
-			extensions.map(ext => this.pick(associations, a => own(a.fileExtensions, ext))).find(Boolean) ??
-			this.pick(associations, a => own(a.languageIds, language)) ??
-			this.pick(associations, a => a.file)
-		)
-	}
-
-	private folderIconId(uri: vscode.Uri, expanded: boolean): string | undefined {
-		const associations = this.associations()
-		const name = path.basename(uri.fsPath).toLowerCase()
-
-		if (expanded) {
-			return (
-				this.pick(associations, a => own(a.folderNamesExpanded, name)) ??
-				this.pick(associations, a => own(a.folderNames, name)) ??
-				this.pick(associations, a => a.folderExpanded) ??
-				this.pick(associations, a => a.folder)
-			)
-		}
-
-		return this.pick(associations, a => own(a.folderNames, name)) ?? this.pick(associations, a => a.folder)
+		return { associations: variant ? [variant, document] : [document], definitions: document.iconDefinitions }
 	}
 
 	/** Paths in the theme are relative to its JSON file. */
