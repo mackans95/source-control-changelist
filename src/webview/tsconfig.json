@@ -4,5 +4,5 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": [".", "../types/shared.ts", "../types/webview.ts", "../types/vscode-webview.d.ts"]
+  "include": [".", "../types/shared.ts", "../types/webview.ts"]
 }

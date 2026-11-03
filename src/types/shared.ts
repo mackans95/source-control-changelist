@@ -8,6 +8,33 @@ export type ChangeCategory = 'added' | 'modified' | 'deleted' | 'conflict'
 
 export type ChangeCounts = Record<ChangeCategory, number>
 
+/** A file or folder icon from the file icon theme. */
+export type FileIcon =
+	| {
+			readonly type: 'font'
+			readonly character: string
+			readonly family: string
+			readonly color?: string
+			readonly size?: string
+			readonly weight?: string
+			readonly style?: string
+	  }
+	| {
+			readonly type: 'image'
+			readonly uri: string
+			/** Drawn in the text color, for themes whose images use `currentColor`. */
+			readonly mask: boolean
+	  }
+
+/** A font of the file icon theme, for the webview to load. */
+export interface IconFont {
+	readonly family: string
+	/** A CSS `src`, like `url("...") format("woff")`. */
+	readonly src: string
+	readonly weight?: string
+	readonly style?: string
+}
+
 export interface FileItem {
 	readonly type: 'file'
 	readonly id: string
@@ -103,30 +130,3 @@ export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }
 	| { readonly type: 'allCollapsed'; readonly value: boolean }
-
-/** A file or folder icon from the file icon theme. */
-export type FileIcon =
-	| {
-			readonly type: 'font'
-			readonly character: string
-			readonly family: string
-			readonly color?: string
-			readonly size?: string
-			readonly weight?: string
-			readonly style?: string
-	  }
-	| {
-			readonly type: 'image'
-			readonly uri: string
-			/** Drawn in the text color, for themes whose images use `currentColor`. */
-			readonly mask: boolean
-	  }
-
-/** A font of the file icon theme, for the webview to load. */
-export interface IconFont {
-	readonly family: string
-	/** A CSS `src`, like `url("...") format("woff")`. */
-	readonly src: string
-	readonly weight?: string
-	readonly style?: string
-}

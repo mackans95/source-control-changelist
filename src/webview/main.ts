@@ -2,12 +2,13 @@
 // this draws them as a tree that looks and behaves like VS Code's own, and sends clicks back as
 // actions. It keeps which rows are collapsed, also while the view is hidden.
 import { DEFAULT_HOVER_DELAY_MS, ROOT_ELEMENT_ID } from '../constants/shared.ts'
-import type { CategoryDisplay, ChangeCategory, ChangeCounts } from '../types/shared.ts'
 import type {
 	ActionTarget,
+	ChangeCategory,
+	ChangeCounts,
 	ExtensionMessage,
-	FileItem,
 	FileIcon,
+	FileItem,
 	FolderItem,
 	GroupItem,
 	IconFont,
@@ -15,7 +16,8 @@ import type {
 	RepositoryItem,
 	RowSection,
 	WebviewAction,
-} from '../types/webview.ts'
+} from '../types/shared.ts'
+import type { CategoryDisplay, VsCodeApi } from '../types/webview.ts'
 
 // In the order they're shown on the repository's row.
 const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
@@ -28,6 +30,8 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 		color: '--vscode-gitDecoration-conflictingResourceForeground',
 	},
 }
+
+declare function acquireVsCodeApi(): VsCodeApi
 
 const vscode = acquireVsCodeApi()
 const root = document.getElementById(ROOT_ELEMENT_ID)!
