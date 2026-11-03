@@ -177,9 +177,12 @@ if (read('git', ['rev-list', '--count', 'HEAD..origin/main']) !== '0') {
 	fail('main is behind origin/main. Pull first.')
 }
 
-// The version in package.json is either released (its GitHub release is published) or in the middle of a release.
-const released = findRelease(`v${version}`)?.isDraft === false
-if (bump && !released) {
+// The version in package.json is released (its GitHub release is published), in the middle of a release (tagged, or
+// with a draft release), or never released at all, like before the first release.
+const release = findRelease(`v${version}`)
+const released = release?.isDraft === false
+const started = release !== undefined || hasTag(`v${version}`) || hasTag(`v${version}`, true)
+if (bump && !released && started) {
 	fail(`The release of ${version} isn't finished. Run npm run release without an argument to carry on.`)
 }
 if (!bump && released) {
