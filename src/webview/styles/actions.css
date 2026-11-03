@@ -1,0 +1,78 @@
+/* The buttons on a row (rows.ts): the actions, and the branch label on a repository's row. */
+
+.toolbar,
+.actions {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 2px;
+}
+
+.actions {
+	display: none;
+	margin-left: 2px;
+}
+
+/* Like the inline actions in VS Code's trees: shown on hover and on the selected row, taking their
+   space from the name and the branch. With `scm.alwaysShowActions`, they're always shown. */
+.always-show-actions .actions,
+.row:hover .actions,
+#root:focus-within .row.focused .actions {
+	display: flex;
+}
+
+/* While tree.ts measures how wide a repository's row is with its actions. */
+.repository.measuring .actions {
+	display: flex;
+}
+
+.action,
+.text-button {
+	display: flex;
+	align-items: center;
+	height: 20px;
+	padding: 0 2px;
+	border: none;
+	border-radius: 5px;
+	background: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.action {
+	justify-content: center;
+	width: 20px;
+	padding: 0;
+}
+
+.text-button {
+	gap: 3px;
+	padding: 0 4px;
+	/* Compact, like the branch button in the built-in view. */
+	font-size: 0.92em;
+}
+
+.action:hover,
+.text-button:hover {
+	background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.action:active,
+.text-button:active {
+	background-color: var(--vscode-toolbar-activeBackground);
+}
+
+.text-button-icon {
+	flex: none;
+}
+
+/* Smaller than codicon.css's 16px, which needs the extra class to override. */
+.text-button-icon.codicon {
+	font-size: 14px;
+}
+
+.text-button-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}

@@ -1,0 +1,67 @@
+/* What every row has (rows.ts): the indent, the arrow, the icon and the name, how a row looks when
+   it's hovered or selected, and the count on a group's row. */
+
+.row {
+	display: flex;
+	align-items: center;
+	height: var(--row-height);
+	padding-left: calc(var(--level) * var(--indent) + 4px);
+	padding-right: 8px;
+	overflow: hidden;
+	white-space: nowrap;
+	cursor: pointer;
+	outline: none;
+}
+
+.row:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.row.focused {
+	background-color: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground);
+}
+
+#root:focus-within .row.focused {
+	background-color: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+	outline: 1px solid var(--vscode-list-focusOutline);
+	outline-offset: -1px;
+}
+
+.twistie {
+	flex: none;
+	width: 16px;
+	margin-right: 2px;
+	text-align: center;
+}
+
+.icon {
+	flex: none;
+	margin-right: 6px;
+}
+
+.label {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.spacer {
+	flex: 1 1 auto;
+	min-width: 4px;
+}
+
+.badge {
+	flex: none;
+	min-width: 8px;
+	margin-left: 4px;
+	padding: 0 5px;
+	border-radius: 11px;
+	background-color: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	font-size: 11px;
+	line-height: 16px;
+	text-align: center;
+}

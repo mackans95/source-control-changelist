@@ -1,0 +1,21 @@
+/* The page (index.ts), the element the rows are drawn in, and what it shows when there are no
+   changes. */
+
+body {
+	margin: 0;
+	/* VS Code gives webview pages side padding by default; trees go edge to edge. */
+	padding: 0;
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	user-select: none;
+}
+
+#root {
+	outline: none;
+}
+
+.empty {
+	display: block;
+	padding: 4px 20px;
+}

@@ -36,7 +36,7 @@ export function span(className: string, text?: string): HTMLSpanElement {
 	return element
 }
 
-/** A codicon, from the codicon font that styles.css loads. */
+/** A codicon, from the codicon font that styles/index.css imports. */
 export function codicon(name: string, className = 'icon'): HTMLSpanElement {
 	return span(`${className} codicon codicon-${name}`)
 }

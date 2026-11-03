@@ -9,8 +9,8 @@ import type { RepositoryItem } from '../types/shared.ts'
 
 /**
  * Marks the repository rows whose name has shrunk as far as it can, without and with their
- * actions, so the branch label shrinks too (see styles.css). CSS alone would shrink the name and
- * the label at the same time.
+ * actions, so the branch label shrinks too (see styles/repository.css). CSS alone would shrink the
+ * name and the label at the same time.
  */
 function fitRepositoryRows(): void {
 	for (const row of rowElements().filter(r => r.classList.contains('repository'))) {

@@ -1,0 +1,20 @@
+/* File and folder icons from the file icon theme (icons.ts), sized like in VS Code's trees. */
+
+.file-icon {
+	width: 16px;
+	height: var(--row-height);
+	line-height: var(--row-height);
+	text-align: center;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 16px;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* For themes whose images are drawn in the text color. */
+.file-icon.mask {
+	background-color: currentColor;
+	mask-position: center;
+	mask-repeat: no-repeat;
+	mask-size: 16px;
+}

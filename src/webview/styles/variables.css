@@ -1,0 +1,7 @@
+/* Sizes the other files share. */
+
+:root {
+	--row-height: 22px;
+	/* How far each level of the tree is indented. */
+	--indent: 8px;
+}

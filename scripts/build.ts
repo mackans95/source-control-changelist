@@ -32,9 +32,10 @@ const webview: esbuild.BuildOptions = {
 	logLevel: watch ? 'silent' : 'warning',
 }
 
-// The page's stylesheet, with the codicon font it imports copied next to it as dist/codicon.ttf.
+// The page's stylesheet: styles/index.css and the files it imports, bundled into one file, with the
+// codicon font copied next to it as dist/codicon.ttf.
 const styles: esbuild.BuildOptions = {
-	entryPoints: { webview: 'src/webview/styles.css' },
+	entryPoints: { webview: 'src/webview/styles/index.css' },
 	outdir: 'dist',
 	bundle: true,
 	loader: { '.ttf': 'file' },

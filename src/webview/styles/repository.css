@@ -1,0 +1,65 @@
+/* Repositories (rows.ts): a bold name, a line between them, the counts of changed files, and how
+   the name and the branch label shrink when the view is narrow. */
+
+.repository .label {
+	/* The name shrinks first, like in the built-in view, but some of it always shows. */
+	min-width: 48px;
+	font-weight: bold;
+}
+
+/* Normally the name shrinks to make room. Once it can't, the branch label shrinks too, but never
+   past its icon. tree.ts marks the rows where that's needed: `narrow` when the row doesn't
+   fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
+.repository.narrow .label,
+.repository.narrow-with-actions:hover .label,
+#root:focus-within .repository.narrow-with-actions.focused .label {
+	flex-shrink: 0;
+	max-width: 48px;
+}
+
+.repository.narrow .toolbar,
+.repository.narrow-with-actions:hover .toolbar,
+#root:focus-within .repository.narrow-with-actions.focused .toolbar {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.repository.narrow .text-button,
+.repository.narrow-with-actions:hover .text-button,
+#root:focus-within .repository.narrow-with-actions.focused .text-button {
+	flex: 0 1 auto;
+	min-width: 22px;
+}
+
+.repository:not(:first-child) {
+	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, transparent));
+}
+
+.counts {
+	display: flex;
+	flex: none;
+	gap: 4px;
+	margin-left: 8px;
+	font-size: 0.9em;
+}
+
+.count {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+/* Smaller than codicon.css's 16px, which needs the extra class to override. */
+.count-icon.codicon {
+	font-size: 14px;
+	/* The codicons sit about 0.4px above the middle of their box, so they're moved down to the
+	   digits. Not 0.5px: at 100% zoom on a 1x display that would round to a whole pixel, too far. */
+	transform: translateY(0.45px);
+}
+
+/* A line box as tall as the font, so the digits center on the icons. With the default line height,
+   there's more room below the digits than above, and they sit about a pixel lower. */
+.count-number {
+	line-height: 1;
+}
