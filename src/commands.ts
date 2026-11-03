@@ -1,12 +1,12 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { getChanges, repositoryName } from './changelistModel'
-import type { ChangelistWebviewProvider } from './changelistWebview'
-import { Status } from './constants'
-import type { API, Change } from './types/git'
-import type { GroupKind, ViewMode } from './types/shared'
-import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode } from './types/view'
-import type { MenuContext } from './types/webview'
+import { getChanges, repositoryName } from './changelistModel.ts'
+import type { ChangelistWebviewProvider } from './changelistWebview.ts'
+import { Status } from './constants/index.ts'
+import type { API, Change } from './types/git.ts'
+import type { GroupKind, ViewMode } from './types/shared.ts'
+import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode } from './types/view.ts'
+import type { MenuContext } from './types/webview.ts'
 
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 

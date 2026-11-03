@@ -1,11 +1,8 @@
 {
-  // The build script, which Node runs straight from TypeScript.
-  "extends": "../tsconfig.json",
+  // The build and release scripts, which Node runs straight from TypeScript.
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "module": "preserve",
-    // Node runs it by stripping the types, which only works for syntax that is just types.
-    "erasableSyntaxOnly": true
+    "types": ["node"]
   },
-  "include": ["."],
-  "exclude": []
+  "include": ["."]
 }

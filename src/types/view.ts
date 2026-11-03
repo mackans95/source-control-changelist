@@ -1,7 +1,7 @@
-import type { Change, Repository } from './git'
 import type * as vscode from 'vscode'
-import type { GroupKind } from './shared'
-import type { FileIcon, IconFont } from './webview'
+import type { Change, Repository } from './git.ts'
+import type { GroupKind } from './shared.ts'
+import type { FileIcon, IconFont } from './webview.ts'
 
 export interface RepositoryNode {
 	readonly type: 'repository'

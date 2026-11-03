@@ -1,11 +1,9 @@
 {
   // The tests, which Node runs straight from TypeScript.
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "module": "preserve",
-    // Node runs them by stripping the types, which only works for syntax that is just types.
-    "erasableSyntaxOnly": true
+    "lib": ["ES2022"],
+    "types": ["node"]
   },
-  "include": ["."],
-  "exclude": []
+  "include": ["."]
 }

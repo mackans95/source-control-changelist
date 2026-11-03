@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
-import { ChangelistWebviewProvider, unavailableHtml } from './changelistWebview'
-import { registerCommands } from './commands'
-import type { API, GitExtension } from './types/git'
+import { ChangelistWebviewProvider, unavailableHtml } from './changelistWebview.ts'
+import { registerCommands } from './commands.ts'
+import type { API, GitExtension } from './types/git.ts'
 
 async function getGitAPI(): Promise<API | undefined> {
 	const extension = vscode.extensions.getExtension<GitExtension>('vscode.git')

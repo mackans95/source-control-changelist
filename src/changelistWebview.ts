@@ -9,12 +9,12 @@ import {
 	getChanges,
 	hasChanges,
 	repositoryName,
-} from './changelistModel'
-import { Status } from './constants'
-import { FileIcons } from './fileIcons'
-import type { API, Change, Repository } from './types/git'
-import type { GroupKind, ViewMode } from './types/shared'
-import type { FolderNode, IconResolver, Node, ResourceNode } from './types/view'
+} from './changelistModel.ts'
+import { Status } from './constants/index.ts'
+import { FileIcons } from './fileIcons.ts'
+import type { API, Change, Repository } from './types/git.ts'
+import type { GroupKind, ViewMode } from './types/shared.ts'
+import type { FolderNode, IconResolver, Node, ResourceNode } from './types/view.ts'
 import type {
 	ActionTarget,
 	ExtensionMessage,
@@ -24,7 +24,7 @@ import type {
 	RepositoryItem,
 	StatusDecoration,
 	WebviewMessage,
-} from './types/webview'
+} from './types/webview.ts'
 
 // The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
 const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {
@@ -240,25 +240,29 @@ export function unavailableHtml(webview: vscode.Webview, extensionUri: vscode.Ur
  * colored counts. Clean repositories are left out, so the view is empty when nothing has changed.
  */
 export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
-	private view: vscode.WebviewView | undefined
 	// The webview's page loads again each time the view is shown, and says when it's ready for data.
-	private ready = false
 	private readonly disposables: vscode.Disposable[] = []
-	private viewDisposables: vscode.Disposable[] = []
 	// Keyed by root URI: `git.repositories` returns new wrapper objects on every call.
 	private readonly repositoryListeners = new Map<string, vscode.Disposable>()
-	private refreshTimer: NodeJS.Timeout | undefined
+	private readonly fileIcons = new FileIcons()
+	private readonly git: API
+	private readonly extensionUri: vscode.Uri
+
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
-	private readonly fileIcons = new FileIcons()
+	private refreshTimer: NodeJS.Timeout | undefined
+	private viewDisposables: vscode.Disposable[] = []
+	private ready = false
+	private view: vscode.WebviewView | undefined
 
-	constructor(
-		private readonly git: API,
-		private readonly extensionUri: vscode.Uri,
-	) {
+	constructor(git: API, extensionUri: vscode.Uri) {
+		this.git = git
+		this.extensionUri = extensionUri
+
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
 		}
+
 		this.disposables.push(
 			this.fileIcons,
 			this.fileIcons.onDidChange(() => this.onDidChangeFileIcons()),

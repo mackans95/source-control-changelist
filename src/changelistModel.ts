@@ -2,9 +2,9 @@
 // `vscode`, so the tests can run it in Node, and its own imports have their `.ts` for that.
 import * as path from 'path'
 import { Status } from './constants/index.ts'
-import type { Change, Repository } from './types/git'
-import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared'
-import type { FolderNode, ResourceNode } from './types/view'
+import type { Change, Repository } from './types/git.ts'
+import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared.ts'
+import type { FolderNode, ResourceNode } from './types/view.ts'
 
 export const GROUP_LABELS: Record<GroupKind, string> = {
 	merge: 'Merge Changes',

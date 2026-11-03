@@ -1,17 +1,9 @@
 {
-  // The extension. Type checking only (npm run typecheck); scripts/build.ts builds the code with esbuild.
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "ES2022",
+    // The extension uses Node's path and crypto, so unlike markdown-toc-sidebar it has Node's types.
     "lib": ["ES2022"],
-    "strict": true,
-    "noEmit": true,
-    // For the modules the tests run in Node, which needs the extension in their imports.
-    "allowImportingTsExtensions": true,
-    "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src"],
-  // The webview's script has its own tsconfig, with the DOM instead of Node.
-  "exclude": ["src/webview", "src/types/vscode-webview.d.ts"]
+  "include": ["src/extension.ts"]
 }

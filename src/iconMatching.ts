@@ -1,6 +1,6 @@
 // How VS Code picks a file's or folder's icon from a file icon theme. It doesn't use `vscode`, so
 // the tests can run it in Node.
-import type { IconAssociations, IconLookup, IconThemeDocument, LanguageAssociations } from './types/iconTheme'
+import type { IconAssociations, IconLookup, IconThemeDocument, LanguageAssociations } from './types/iconTheme.ts'
 
 /** Looks up a key the theme has itself, so a file named `constructor` doesn't find Object's. */
 export function own<T>(record: Readonly<Record<string, T>> | undefined, key: string | undefined): T | undefined {

@@ -2,10 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-import type { RefType, Status, ForcePushMode, GitErrorCodes } from '../constants'
-import type { Uri, Event, Disposable, ProviderResult, Command, CancellationToken } from 'vscode'
-export type { ProviderResult } from 'vscode'
+import type { Uri, Event, ProviderResult, Command, CancellationToken } from 'vscode'
+import type { RefType, Status, ForcePushMode, GitErrorCodes } from '../constants/index.ts'
 
 export interface Git {
 	readonly path: string

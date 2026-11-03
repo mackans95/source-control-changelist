@@ -7,7 +7,7 @@ import {
 	own,
 	unescapeCharacter,
 	userLanguageAssociations,
-} from './iconMatching'
+} from './iconMatching.ts'
 import type {
 	IconLookup,
 	IconThemeContribution,
@@ -16,9 +16,9 @@ import type {
 	LanguageAssociations,
 	LanguageContribution,
 	LoadedIconTheme,
-} from './types/iconTheme'
-import type { IconResolver } from './types/view'
-import type { FileIcon, IconFont } from './types/webview'
+} from './types/iconTheme.ts'
+import type { IconResolver } from './types/view.ts'
+import type { FileIcon, IconFont } from './types/webview.ts'
 
 function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
 	return `${theme.id}-${font.id}`

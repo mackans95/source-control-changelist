@@ -1,7 +1,7 @@
 // Renders the Changelist view in its webview. The extension sends the repositories with changes;
 // this draws them as a tree that looks and behaves like VS Code's own, and sends clicks back as
 // actions. It keeps which rows are collapsed, also while the view is hidden.
-import type { CategoryDisplay, ChangeCategory, ChangeCounts } from '../types/shared'
+import type { CategoryDisplay, ChangeCategory, ChangeCounts } from '../types/shared.ts'
 import type {
 	ActionTarget,
 	ExtensionMessage,
@@ -14,7 +14,7 @@ import type {
 	RepositoryItem,
 	RowSection,
 	WebviewAction,
-} from '../types/webview'
+} from '../types/webview.ts'
 
 // In the order they're shown on the repository's row.
 const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {

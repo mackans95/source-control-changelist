@@ -1,6 +1,6 @@
 // What the extension and the Changelist view's webview send each other. Everything here has to
 // survive postMessage, so it's plain data: URIs are strings, and there are no Repository objects.
-import type { ChangeCounts, GroupKind } from './shared'
+import type { ChangeCounts, GroupKind } from './shared.ts'
 
 /** How a file's status looks, the same as in the built-in Source Control view. */
 export interface StatusDecoration {
