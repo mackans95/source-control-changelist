@@ -143,7 +143,11 @@ async function findRun(workflow: string, tag: string): Promise<string> {
 	// workflow's first run, GitHub doesn't know the workflow at all and answers 404, so that's retried too.
 	for (let attempt = 0; attempt < 10; attempt++) {
 		try {
-			const id = read('gh', [...args, '--json', 'databaseId', '--jq', '.[0].databaseId // empty'])
+			// Quiet, so the 404 doesn't show up in the terminal.
+			const id = execFileSync('gh', [...args, '--json', 'databaseId', '--jq', '.[0].databaseId // empty'], {
+				encoding: 'utf8',
+				stdio: ['ignore', 'pipe', 'ignore'],
+			}).trim()
 			if (id) {
 				return id
 			}
