@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
 import { buildTree, byPath, countChanges, getChanges, hasChanges, repositoryName } from '../src/changelistModel.ts'
-import { Status } from '../src/constants/index.ts'
+import { Status } from '../src/constants/git.ts'
 import type { Change, Repository } from '../src/types/git.ts'
 import type { FolderNode, ResourceNode } from '../src/types/view.ts'
 

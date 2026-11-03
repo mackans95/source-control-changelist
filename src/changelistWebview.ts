@@ -10,7 +10,8 @@ import {
 	hasChanges,
 	repositoryName,
 } from './changelistModel.ts'
-import { Status } from './constants/index.ts'
+import { Status } from './constants/git.ts'
+import { DEFAULT_HOVER_DELAY_MS, ROOT_ELEMENT_ID } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Change, Repository } from './types/git.ts'
 import type { GroupKind, ViewMode } from './types/shared.ts'
@@ -365,7 +366,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			repositories,
 			fonts: icons.fonts(),
 			alwaysShowActions: vscode.workspace.getConfiguration('scm').get<boolean>('alwaysShowActions', false),
-			hoverDelay: vscode.workspace.getConfiguration('workbench').get<number>('hover.delay', 500),
+			hoverDelay: vscode.workspace
+				.getConfiguration('workbench')
+				.get<number>('hover.delay', DEFAULT_HOVER_DELAY_MS),
 		}
 
 		// Git reports a change after every status check, also when nothing changed. Drawing the rows
@@ -472,7 +475,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	<link rel="stylesheet" href="${styles}">
 </head>
 <body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-	<div id="root" role="tree" aria-label="Changelist"></div>
+	<div id="${ROOT_ELEMENT_ID}" role="tree" aria-label="Changelist"></div>
 	<script nonce="${nonce}" src="${script}"></script>
 </body>
 </html>`

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import type { Uri, Event, ProviderResult, Command, CancellationToken } from 'vscode'
-import type { RefType, Status, ForcePushMode, GitErrorCodes } from '../constants/index.ts'
+import type { RefType, Status, ForcePushMode, GitErrorCodes } from '../constants/git.ts'
 
 export interface Git {
 	readonly path: string

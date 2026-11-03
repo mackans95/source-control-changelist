@@ -1,6 +1,7 @@
 // Renders the Changelist view in its webview. The extension sends the repositories with changes;
 // this draws them as a tree that looks and behaves like VS Code's own, and sends clicks back as
 // actions. It keeps which rows are collapsed, also while the view is hidden.
+import { DEFAULT_HOVER_DELAY_MS, ROOT_ELEMENT_ID } from '../constants/shared.ts'
 import type { CategoryDisplay, ChangeCategory, ChangeCounts } from '../types/shared.ts'
 import type {
 	ActionTarget,
@@ -29,7 +30,7 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 }
 
 const vscode = acquireVsCodeApi()
-const root = document.getElementById('root')!
+const root = document.getElementById(ROOT_ELEMENT_ID)!
 
 let repositories: readonly RepositoryItem[] = []
 const collapsed = new Set(vscode.getState()?.collapsed ?? [])
@@ -45,7 +46,7 @@ const loadedFonts = new Set<string>()
 const tooltip = span('tooltip')
 tooltip.setAttribute('role', 'tooltip')
 document.body.append(tooltip)
-let hoverDelay = 500
+let hoverDelay = DEFAULT_HOVER_DELAY_MS
 let tooltipTarget: HTMLElement | undefined
 let tooltipTimer: number | undefined
 // Like VS Code: right after a tooltip hides, the next one shows without waiting.
