@@ -35,12 +35,6 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 			node.repository.revert(paths(node.changes)),
 		),
 		vscode.commands.registerCommand('changelist.commit', (node: RepositoryNode) => commit(node)),
-		vscode.commands.registerCommand('changelist.sync', (node: RepositoryNode) => runGitCommand('git.sync', node)),
-		vscode.commands.registerCommand('changelist.publish', (node: RepositoryNode) =>
-			runGitCommand('git.publish', node),
-		),
-		vscode.commands.registerCommand('changelist.pull', (node: RepositoryNode) => runGitCommand('git.pull', node)),
-		vscode.commands.registerCommand('changelist.push', (node: RepositoryNode) => runGitCommand('git.push', node)),
 		vscode.commands.registerCommand('changelist.checkout', (node: RepositoryNode) =>
 			runGitCommand('git.checkout', node),
 		),

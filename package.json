@@ -119,30 +119,6 @@
         "icon": "$(expand-all)"
       },
       {
-        "command": "changelist.sync",
-        "title": "Sync Changes",
-        "category": "Changelist",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "changelist.publish",
-        "title": "Publish Branch",
-        "category": "Changelist",
-        "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "changelist.pull",
-        "title": "Pull",
-        "category": "Changelist",
-        "icon": "$(arrow-down)"
-      },
-      {
-        "command": "changelist.push",
-        "title": "Push",
-        "category": "Changelist",
-        "icon": "$(arrow-up)"
-      },
-      {
         "command": "changelist.checkout",
         "title": "Switch Branch...",
         "category": "Changelist",
@@ -212,22 +188,6 @@
         },
         {
           "command": "changelist.openFile",
-          "when": "false"
-        },
-        {
-          "command": "changelist.sync",
-          "when": "false"
-        },
-        {
-          "command": "changelist.publish",
-          "when": "false"
-        },
-        {
-          "command": "changelist.pull",
-          "when": "false"
-        },
-        {
-          "command": "changelist.push",
           "when": "false"
         },
         {

@@ -166,10 +166,7 @@ function textButton(
 	target: ActionTarget,
 ): HTMLButtonElement {
 	const element = button('text-button', title, () => run(action, target))
-	element.append(codicon(icon, 'text-button-icon'))
-	if (text) {
-		element.append(span('text-button-label', text))
-	}
+	element.append(codicon(icon, 'text-button-icon'), span('text-button-label', text))
 	return element
 }
 
@@ -222,12 +219,6 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 	return element
 }
 
-function syncText(repository: RepositoryItem): string {
-	return [repository.behind ? `${repository.behind}↓` : '', repository.ahead ? `${repository.ahead}↑` : '']
-		.filter(Boolean)
-		.join(' ')
-}
-
 function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
 	const target: ActionTarget = { repository: repository.id }
 	const row = createRow(rows, repository.id, 1, 'repository', undefined, () => toggle(repository.id))
@@ -239,11 +230,6 @@ function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void
 		toolbar.append(
 			textButton('git-branch', repository.branch, `${repository.branch}, Switch Branch...`, 'checkout', target),
 		)
-	}
-	if (repository.sync === 'tracking') {
-		toolbar.append(textButton('sync', syncText(repository), 'Sync Changes', 'sync', target))
-	} else if (repository.sync === 'unpublished') {
-		toolbar.append(textButton('cloud-upload', '', 'Publish Branch', 'publish', target))
 	}
 
 	const actions = span('actions')
@@ -380,8 +366,8 @@ function renderFile(
 
 /**
  * Marks the repository rows whose name has shrunk as far as it can, without and with their
- * actions, so the branch and sync labels shrink too (see styles.css). CSS alone would shrink the
- * name and the labels at the same time.
+ * actions, so the branch label shrinks too (see styles.css). CSS alone would shrink the name and
+ * the label at the same time.
  */
 function fitRepositoryRows(): void {
 	for (const row of root.querySelectorAll<HTMLElement>('.row.repository')) {

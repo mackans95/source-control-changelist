@@ -206,9 +206,6 @@ function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: Ico
 		path: repository.rootUri.fsPath,
 		// A detached HEAD has no branch name, so show its commit like the built-in view does.
 		branch: head?.name ?? head?.commit?.slice(0, 8) ?? '',
-		sync: head?.upstream ? 'tracking' : head?.name ? 'unpublished' : 'detached',
-		ahead: head?.ahead ?? 0,
-		behind: head?.behind ?? 0,
 		counts: countChanges(repository),
 		groups: (Object.keys(GROUP_LABELS) as GroupKind[])
 			.filter(kind => getChanges(repository, kind).length > 0)

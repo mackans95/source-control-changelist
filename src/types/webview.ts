@@ -72,9 +72,6 @@ export interface GroupItem {
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
-/** Whether the branch has an upstream to sync with, can be published, or isn't a branch (detached HEAD). */
-export type SyncState = 'tracking' | 'unpublished' | 'detached'
-
 export interface RepositoryItem {
 	/** The repository's root URI. */
 	readonly id: string
@@ -82,9 +79,6 @@ export interface RepositoryItem {
 	readonly path: string
 	/** The branch name, the short commit for a detached HEAD, or empty before the first commit. */
 	readonly branch: string
-	readonly sync: SyncState
-	readonly ahead: number
-	readonly behind: number
 	readonly counts: ChangeCounts
 	readonly groups: readonly GroupItem[]
 }
@@ -104,8 +98,6 @@ export type ExtensionMessage =
 /** The `changelist.*` commands the webview can run. */
 export type WebviewAction =
 	| 'checkout'
-	| 'sync'
-	| 'publish'
 	| 'commit'
 	| 'stageAll'
 	| 'unstageAll'

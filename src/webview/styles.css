@@ -97,8 +97,8 @@ body {
 	font-weight: bold;
 }
 
-/* Normally the name shrinks to make room. Once it can't, the branch and sync labels shrink too, but
-   never past their icons. main.ts marks the rows where that's needed: `narrow` when the row doesn't
+/* Normally the name shrinks to make room. Once it can't, the branch label shrinks too, but never
+   past its icon. main.ts marks the rows where that's needed: `narrow` when the row doesn't
    fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
 .repository.narrow .label,
 .repository.narrow-with-actions:hover .label,
@@ -214,7 +214,7 @@ body {
 .text-button {
 	gap: 3px;
 	padding: 0 4px;
-	/* Compact, like the branch and sync buttons in the built-in view. */
+	/* Compact, like the branch button in the built-in view. */
 	font-size: 0.92em;
 }
 
