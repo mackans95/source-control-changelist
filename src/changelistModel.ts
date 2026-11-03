@@ -1,5 +1,5 @@
 // What the view shows of a repository, worked out from the Git extension's state. It doesn't use
-// `vscode`, so the tests can run it in Node, and its own imports have their `.ts` for that.
+// `vscode`, so the tests can run it in Node.
 import * as path from 'path'
 import { Status } from './constants/git.ts'
 import type { Change, Repository } from './types/git.ts'

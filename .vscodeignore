@@ -5,7 +5,6 @@ CONTRIBUTING.md
 src/**
 scripts/**
 test/**
-out/**
 dist/**/*.map
 tsconfig*.json
 .github/**

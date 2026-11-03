@@ -1,6 +1,5 @@
 // What the view's rows show of each repository: Git's state turned into the plain data the webview
-// draws. It doesn't use `vscode`, so the tests can run it in Node, and its own imports have their
-// `.ts` for that.
+// draws. It doesn't use `vscode`, so the tests can run it in Node.
 import * as path from 'path'
 import { GROUP_LABELS, buildTree, byPath, countChanges, getChanges, repositoryName } from './changelistModel.ts'
 import { Status } from './constants/git.ts'

@@ -7,12 +7,12 @@ Issues and pull requests are welcome.
 The view is a webview in the Source Control container, so it can draw things a tree view can't, like the branch button and the colored counts. It gets the repositories and their changes from the built-in Git extension's API.
 
 - `src/extension.ts` waits for the Git extension, then registers the view and the commands. When Git is turned off, the view shows a message instead.
-- `src/changelistWebview.ts` is the view's provider. It turns each repository with changes into plain data (the types in `src/types/webview.ts`), with each file's status letter, color and icon, and sends it to the webview whenever Git reports a change, unless nothing changed. Clicks and right-click menu choices come back as targets, which it turns into the nodes the commands take.
+- `src/changelistWebview.ts` is the view's provider. It listens to every repository and sends the webview the rows whenever Git reports a change, unless nothing changed. Clicks and right-click menu choices come back as targets, which it turns into the nodes the commands take. `src/changelistItems.ts` turns each repository with changes into that plain data, with each file's status letter, color and icon, and `src/changelistHtml.ts` has the view's pages.
 - `src/changelistModel.ts` works out what the view shows of a repository: its groups, the counts on its row and the folder tree. It doesn't use `vscode`, so the tests can run it.
 - `src/commands.ts` has the `changelist.*` commands: stage, unstage and discard, commit, and switching branch through the Git extension's own command.
 - `src/fileIcons.ts` reads your file icon theme, which VS Code doesn't share with extensions, and gives files and folders their icons as webview URIs. `src/iconMatching.ts` matches names to icons the way VS Code does, also without `vscode`.
-- `src/webview/` is the webview: `main.ts` draws the rows and handles the mouse, the keyboard, the tooltips and collapsing, and `styles.css` styles them with your theme's colors. The build bundles them with the codicon font into `dist/`.
-- `src/types/` holds the types: `view.ts` for the nodes the commands take, `webview.ts` for what the extension and the webview send each other, `shared.ts` for what both sides use, `iconTheme.ts` for icon themes, and `git.ts` for the Git extension's API. `src/constants/` holds the Git API's constants.
+- `src/webview/` is the webview's script. `index.ts` starts it; `tree.ts` draws the rows that `rows.ts` builds, and the other files each hold one part, like `keyboard.ts`, `tooltip.ts`, `collapse.ts` and `focus.ts`. `src/webview/styles/` styles the rows with your theme's colors, one file per part, like `rows.css`, `actions.css` and `tooltip.css`. `index.css` imports them all, and the build bundles them with the codicon font into `dist/`.
+- `src/types/` holds the types: `extension.ts` for the extension, like the nodes the commands take, `webview.ts` for the webview's script, `shared.ts` for what the extension and the webview send each other, `iconTheme.ts` for icon themes, and `git.ts` for the Git extension's API. `src/constants/` holds values: `git.ts` the Git API's enums, and `shared.ts` what both sides have to agree on, like the id of the element the rows are drawn in.
 
 ## Development
 
@@ -33,7 +33,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm run format` | Formats with Oxfmt; `npm run format:check` only checks. |
 | `npm test` | Runs the tests. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts and folder tree in `changelistModel.ts`, and the icon matching in `iconMatching.ts`. Modules the tests import write `.ts` in their own imports, because Node needs it. Pull requests run all the checks.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts and folder tree in `changelistModel.ts`, and the icon matching in `iconMatching.ts`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
 
 ## Releasing
 
