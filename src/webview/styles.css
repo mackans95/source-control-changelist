@@ -152,6 +152,15 @@ body {
 /* Smaller than codicon.css's 16px, which needs the extra class to override. */
 .count-icon.codicon {
 	font-size: 14px;
+	/* The codicons sit about 0.4px above the middle of their box, so they're moved down to the
+	   digits. Not 0.5px: at 100% zoom on a 1x display that would round to a whole pixel, too far. */
+	transform: translateY(0.45px);
+}
+
+/* A line box as tall as the font, so the digits center on the icons. With the default line height,
+   there's more room below the digits than above, and they sit about a pixel lower. */
+.count-number {
+	line-height: 1;
 }
 
 /* Buttons */
@@ -170,7 +179,8 @@ body {
 }
 
 /* Like the inline actions in VS Code's trees: shown on hover and on the selected row, taking their
-   space from the name and the branch. */
+   space from the name and the branch. With `scm.alwaysShowActions`, they're always shown. */
+.always-show-actions .actions,
 .row:hover .actions,
 #root:focus-within .row.focused .actions {
 	display: flex;
@@ -233,6 +243,49 @@ body {
 	font-size: 11px;
 	line-height: 16px;
 	text-align: center;
+}
+
+/* The tooltip, like VS Code's hovers. It can't go outside the view, so long text wraps. */
+.tooltip {
+	position: fixed;
+	z-index: 10;
+	display: none;
+	box-sizing: border-box;
+	max-width: calc(100vw - 8px);
+	padding: 4px 8px;
+	border: 1px solid var(--vscode-editorHoverWidget-border);
+	border-radius: 3px;
+	background-color: var(--vscode-editorHoverWidget-background);
+	color: var(--vscode-editorHoverWidget-foreground);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+	line-height: 19px;
+	overflow-wrap: anywhere;
+	/* The mouse goes through it, to the rows below. */
+	pointer-events: none;
+}
+
+.tooltip.visible {
+	display: block;
+}
+
+/* File and folder icons from the file icon theme, sized like in VS Code's trees. */
+.file-icon {
+	width: 16px;
+	height: var(--row-height);
+	line-height: var(--row-height);
+	text-align: center;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 16px;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* For themes whose images are drawn in the text color. */
+.file-icon.mask {
+	background-color: currentColor;
+	mask-position: center;
+	mask-repeat: no-repeat;
+	mask-size: 16px;
 }
 
 /* Files: colored by their status like Git colors them in the Explorer. */

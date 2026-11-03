@@ -12,11 +12,39 @@ export interface StatusDecoration {
 	readonly strikethrough: boolean
 }
 
+/** A file or folder icon from the file icon theme. */
+export type FileIcon =
+	| {
+			readonly type: 'font'
+			readonly character: string
+			readonly family: string
+			readonly color?: string
+			readonly size?: string
+			readonly weight?: string
+			readonly style?: string
+	  }
+	| {
+			readonly type: 'image'
+			readonly uri: string
+			/** Drawn in the text color, for themes whose images use `currentColor`. */
+			readonly mask: boolean
+	  }
+
+/** A font of the file icon theme, for the webview to load. */
+export interface IconFont {
+	readonly family: string
+	/** A CSS `src`, like `url("...") format("woff")`. */
+	readonly src: string
+	readonly weight?: string
+	readonly style?: string
+}
+
 export interface FileItem {
 	readonly type: 'file'
 	readonly id: string
 	readonly uri: string
 	readonly name: string
+	readonly icon?: FileIcon
 	/** The file's folder relative to the repository, shown next to the name in list mode. Empty in tree mode. */
 	readonly folder: string
 	readonly letter: string
@@ -31,6 +59,8 @@ export interface FolderItem {
 	readonly id: string
 	readonly uri: string
 	readonly label: string
+	readonly icon?: FileIcon
+	readonly expandedIcon?: FileIcon
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
@@ -60,7 +90,15 @@ export interface RepositoryItem {
 }
 
 export type ExtensionMessage =
-	| { readonly type: 'update'; readonly repositories: readonly RepositoryItem[] }
+	| {
+			readonly type: 'update'
+			readonly repositories: readonly RepositoryItem[]
+			readonly fonts: readonly IconFont[]
+			/** VS Code's `scm.alwaysShowActions`: show the actions on every row, not just on hover. */
+			readonly alwaysShowActions: boolean
+			/** VS Code's `workbench.hover.delay`: how long the mouse rests before a tooltip shows, in milliseconds. */
+			readonly hoverDelay: number
+	  }
 	| { readonly type: 'setAllExpanded'; readonly expanded: boolean }
 
 /** The `changelist.*` commands the webview can run. */
@@ -74,6 +112,7 @@ export type WebviewAction =
 	| 'stage'
 	| 'unstage'
 	| 'discard'
+	| 'discardAll'
 	| 'openChange'
 	| 'openFile'
 

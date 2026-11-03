@@ -6,8 +6,10 @@ import type {
 	ActionTarget,
 	ExtensionMessage,
 	FileItem,
+	FileIcon,
 	FolderItem,
 	GroupItem,
+	IconFont,
 	RepositoryItem,
 	WebviewAction,
 } from '../types/webview'
@@ -32,6 +34,21 @@ const collapsed = new Set(vscode.getState()?.collapsed ?? [])
 // The row that has the keyboard focus, or had it last.
 let focusedId: string | undefined
 let lastAllCollapsed: boolean | undefined
+
+// The file icon theme's fonts that are added to the page already.
+const loadedFonts = new Set<string>()
+
+// The tooltip is drawn here, like VS Code's hovers. The browser's own `title` tooltips are slow, and
+// often don't show at all while the window isn't focused.
+const tooltip = span('tooltip')
+tooltip.setAttribute('role', 'tooltip')
+document.body.append(tooltip)
+let hoverDelay = 500
+let tooltipTarget: HTMLElement | undefined
+let tooltipTimer: number | undefined
+// Like VS Code: right after a tooltip hides, the next one shows without waiting.
+let tooltipHiddenAt = 0
+let mouseX = 0
 
 // Filled in on each render.
 let collapsibleIds: string[] = []
@@ -90,7 +107,7 @@ function codicon(name: string, className = 'icon'): HTMLSpanElement {
 function button(className: string, title: string, onClick: () => void): HTMLButtonElement {
 	const element = document.createElement('button')
 	element.className = className
-	element.title = title
+	element.dataset.tooltip = title
 	element.setAttribute('aria-label', title)
 	// Like the inline actions in VS Code's trees: reached with the mouse, not with Tab.
 	element.tabIndex = -1
@@ -98,6 +115,42 @@ function button(className: string, title: string, onClick: () => void): HTMLButt
 		event.stopPropagation()
 		onClick()
 	})
+	return element
+}
+
+function loadFonts(fonts: readonly IconFont[]): void {
+	for (const font of fonts) {
+		if (!loadedFonts.has(font.family)) {
+			loadedFonts.add(font.family)
+			document.fonts.add(new FontFace(font.family, font.src, { weight: font.weight, style: font.style }))
+		}
+	}
+}
+
+/** An icon from the file icon theme: a character in one of its fonts, or an image. */
+function fileIcon(icon: FileIcon): HTMLSpanElement {
+	const element = span('icon file-icon')
+	if (icon.type === 'image') {
+		element.classList.toggle('mask', icon.mask)
+		element.style.setProperty(icon.mask ? 'mask-image' : 'background-image', `url("${icon.uri}")`)
+		return element
+	}
+
+	element.textContent = icon.character
+	element.style.setProperty('font-family', `"${icon.family}"`)
+	const styles = {
+		color: icon.color,
+		'font-size': icon.size,
+		'font-weight': icon.weight,
+		'font-style': icon.style,
+	}
+
+	for (const [property, value] of Object.entries(styles)) {
+		if (value) {
+			element.style.setProperty(property, value)
+		}
+	}
+
 	return element
 }
 
@@ -165,7 +218,7 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 			descriptions.push(`${counts[category]} ${label}`)
 		}
 	}
-	element.title = descriptions.join(', ')
+	element.dataset.tooltip = descriptions.join(', ')
 	return element
 }
 
@@ -179,7 +232,7 @@ function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void
 	const target: ActionTarget = { repository: repository.id }
 	const row = createRow(rows, repository.id, 1, 'repository', undefined, () => toggle(repository.id))
 	const expanded = addTwistie(row, repository.id)
-	row.title = repository.path
+	row.dataset.tooltip = repository.path
 
 	const toolbar = span('toolbar')
 	if (repository.branch) {
@@ -215,17 +268,28 @@ function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void
 	}
 }
 
-function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind }
-	const row = createRow(rows, group.id, 2, 'group', repository.id, () => toggle(group.id))
-	const expanded = addTwistie(row, group.id)
-
+function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	const actions = span('actions')
+
+	if (group.kind === 'changes' || group.kind === 'untracked') {
+		actions.append(actionButton('discard', 'Discard All Changes', 'discardAll', target))
+	}
+
 	actions.append(
 		group.kind === 'staged'
 			? actionButton('remove', 'Unstage All Changes', 'unstageAll', target)
 			: actionButton('add', 'Stage All Changes', 'stageAll', target),
 	)
+
+	return actions
+}
+
+function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
+	const target: ActionTarget = { repository: repository.id, kind: group.kind }
+	const row = createRow(rows, group.id, 2, 'group', repository.id, () => toggle(group.id))
+	const expanded = addTwistie(row, group.id)
+	const actions = groupActions(group, target)
+
 	row.append(span('label', group.label), span('spacer'), actions, span('badge', String(group.count)))
 
 	if (expanded) {
@@ -261,14 +325,14 @@ function renderFolder(
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: folder.uri }
 	const row = createRow(rows, folder.id, level, 'folder', parentId, () => toggle(folder.id))
 	const expanded = addTwistie(row, folder.id)
+	const actions = groupActions(group, target)
+	const icon = expanded ? folder.expandedIcon : folder.icon
 
-	const actions = span('actions')
-	actions.append(
-		group.kind === 'staged'
-			? actionButton('remove', 'Unstage All Changes', 'unstageAll', target)
-			: actionButton('add', 'Stage All Changes', 'stageAll', target),
-	)
-	row.append(codicon(expanded ? 'folder-opened' : 'folder'), span('label', folder.label), span('spacer'), actions)
+	if (icon) {
+		row.append(fileIcon(icon))
+	}
+
+	row.append(span('label', folder.label), span('spacer'), actions)
 
 	if (expanded) {
 		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
@@ -285,7 +349,7 @@ function renderFile(
 ): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: file.uri }
 	const row = createRow(rows, file.id, level, 'file', parentId, () => run('openChange', target))
-	row.title = file.tooltip
+	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', `var(${file.color})`)
 	if (file.strikethrough) {
 		row.classList.add('strikethrough')
@@ -302,7 +366,12 @@ function renderFile(
 			: actionButton('add', 'Stage Changes', 'stage', target),
 	)
 
-	row.append(span('twistie'), codicon('file'), span('label', file.name))
+	row.append(span('twistie'))
+	if (file.icon) {
+		row.append(fileIcon(file.icon))
+	}
+	row.append(span('label', file.name))
+
 	if (file.folder) {
 		row.append(span('description', file.folder))
 	}
@@ -326,7 +395,36 @@ function fitRepositoryRows(): void {
 	}
 }
 
+/** Shows the tooltip under its element, at the mouse, and above it when there's no room below. */
+function showTooltip(target: HTMLElement): void {
+	tooltip.textContent = target.dataset.tooltip ?? ''
+	tooltip.style.setProperty('left', '0')
+	tooltip.style.setProperty('top', '0')
+	tooltip.classList.add('visible')
+
+	const anchor = target.getBoundingClientRect()
+	const { width, height } = tooltip.getBoundingClientRect()
+	const margin = 4
+	const left = Math.max(margin, Math.min(mouseX - width / 2, window.innerWidth - width - margin))
+	const below = anchor.bottom + margin
+	const top = below + height <= window.innerHeight - margin ? below : Math.max(margin, anchor.top - height - margin)
+	tooltip.style.setProperty('left', `${left}px`)
+	tooltip.style.setProperty('top', `${top}px`)
+}
+
+function hideTooltip(): void {
+	clearTimeout(tooltipTimer)
+	tooltipTimer = undefined
+	tooltipTarget = undefined
+	if (tooltip.classList.contains('visible')) {
+		tooltip.classList.remove('visible')
+		tooltipHiddenAt = Date.now()
+	}
+}
+
 function render(): void {
+	// The rows the tooltip belongs to are about to be replaced.
+	hideTooltip()
 	const hadFocus = root.contains(document.activeElement)
 	const rows: HTMLElement[] = []
 	collapsibleIds = []
@@ -383,6 +481,30 @@ root.addEventListener('click', event => {
 	}
 })
 
+root.addEventListener('mouseover', event => {
+	const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tooltip]') ?? undefined
+	if (target === tooltipTarget) {
+		return
+	}
+	hideTooltip()
+	if (target) {
+		tooltipTarget = target
+		const delay = Date.now() - tooltipHiddenAt < 200 ? 0 : hoverDelay
+		tooltipTimer = window.setTimeout(() => showTooltip(target), delay)
+	}
+})
+
+document.addEventListener('mousemove', event => {
+	mouseX = event.clientX
+})
+
+// Like VS Code's hovers, the tooltip goes away when the mouse leaves, clicks, scrolls or types.
+root.addEventListener('mouseleave', hideTooltip)
+window.addEventListener('mousedown', hideTooltip)
+window.addEventListener('wheel', hideTooltip)
+window.addEventListener('keydown', hideTooltip)
+window.addEventListener('blur', hideTooltip)
+
 root.addEventListener('keydown', event => {
 	const rows = rowElements()
 	const index = rows.findIndex(row => row.dataset.id === focusedId)
@@ -435,6 +557,9 @@ window.addEventListener('message', (event: MessageEvent<ExtensionMessage>) => {
 	switch (message.type) {
 		case 'update':
 			repositories = message.repositories
+			loadFonts(message.fonts)
+			root.classList.toggle('always-show-actions', message.alwaysShowActions)
+			hoverDelay = message.hoverDelay
 			render()
 			break
 		case 'setAllExpanded':

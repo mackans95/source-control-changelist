@@ -89,6 +89,12 @@
         "icon": "$(discard)"
       },
       {
+        "command": "changelist.discardAll",
+        "title": "Discard All Changes",
+        "category": "Changelist",
+        "icon": "$(discard)"
+      },
+      {
         "command": "changelist.openChange",
         "title": "Open Changes",
         "category": "Changelist",
@@ -194,6 +200,10 @@
         },
         {
           "command": "changelist.discard",
+          "when": "false"
+        },
+        {
+          "command": "changelist.discardAll",
           "when": "false"
         },
         {

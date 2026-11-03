@@ -27,6 +27,7 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 			node.repository.revert([node.change.uri.fsPath]),
 		),
 		vscode.commands.registerCommand('changelist.discard', (node: ResourceNode) => discard(node)),
+		vscode.commands.registerCommand('changelist.discardAll', (node: GroupNode | FolderNode) => discardAll(node)),
 		vscode.commands.registerCommand('changelist.stageAll', (node: RepositoryNode | GroupNode | FolderNode) =>
 			stageAll(node),
 		),
@@ -76,6 +77,32 @@ async function discard(node: ResourceNode): Promise<void> {
 	const choice = await vscode.window.showWarningMessage(message, { modal: true }, 'Discard')
 	if (choice === 'Discard') {
 		await node.repository.clean([node.change.uri.fsPath])
+	}
+}
+
+function count(n: number, noun: string): string {
+	return `${n} ${noun}${n === 1 ? '' : 's'}`
+}
+
+async function discardAll(node: GroupNode | FolderNode): Promise<void> {
+	const changes = node.changes
+
+	if (changes.length === 0) return
+
+	const untracked = changes.filter(c => node.kind === 'untracked' || c.status === Status.UNTRACKED).length
+	const tracked = changes.length - untracked
+	const parts = [
+		tracked > 0 ? `discard ALL changes in ${count(tracked, 'file')}` : '',
+		untracked > 0 ? `DELETE ${count(untracked, 'untracked file')}` : '',
+	].filter(Boolean)
+	const choice = await vscode.window.showWarningMessage(
+		`Are you sure you want to ${parts.join(' and ')}? This is IRREVERSIBLE!`,
+		{ modal: true },
+		'Discard',
+	)
+
+	if (choice === 'Discard') {
+		await node.repository.clean(paths(changes))
 	}
 }
 
