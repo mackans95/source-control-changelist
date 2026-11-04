@@ -13,6 +13,18 @@
 	font-weight: normal;
 }
 
+/* In the Repositories panel, the `*` for uncommitted changes is in the label with the name, so it
+   sits right after a short name too, and only the name is cut off when the view is narrow. */
+.repository.sync .label {
+	display: flex;
+}
+
+.label-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 /* Normally the name shrinks to make room. Once it can't, the branch label shrinks too, but never
    past its icon. tree.ts marks the rows where that's needed: `narrow` when the row doesn't
    fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
