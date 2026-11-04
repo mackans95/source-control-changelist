@@ -1,5 +1,5 @@
 // Types only the Changelist view's webview script uses.
-import type { WebviewMessage } from './shared.ts'
+import type { WebviewAction, WebviewMessage } from './shared.ts'
 
 /** How a change category looks in a repository's counts. */
 export interface CategoryDisplay {
@@ -9,6 +9,15 @@ export interface CategoryDisplay {
 	readonly label: string
 	/** Theme color ID for the icon and count, like `gitDecoration.addedResourceForeground`. */
 	readonly color: string
+}
+
+/** The button a repository gets in the Repositories panel for its sync state. */
+export interface SyncButton {
+	/** The `changelist.*` command it runs, which runs the Git extension's own. */
+	readonly action: WebviewAction
+	/** Codicon shown before the label. */
+	readonly icon: string
+	readonly label: string
 }
 
 /** What the webview keeps while it's hidden and reloaded. */

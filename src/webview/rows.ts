@@ -1,4 +1,5 @@
-// The rows for each repository, its groups, and their folders and files, with their buttons.
+// The rows for each repository, its groups, and their folders and files, with their buttons. The
+// Repositories panel (syncRows.ts) builds its rows with the same functions.
 import { themeColor } from '../helpers/shared.ts'
 import { run } from './api.ts'
 import { collapsedRows } from './collapse.ts'
@@ -37,7 +38,7 @@ function actionButton(icon: string, title: string, action: WebviewAction, target
 }
 
 /** A button with an icon and text, like the branch on a repository's row. */
-function textButton(
+export function textButton(
 	icon: string,
 	text: string,
 	title: string,
@@ -53,7 +54,7 @@ function textButton(
  * A row, added to `rows`, with its right-click menu context. The tree notes its parent and what
  * clicking it does.
  */
-function createRow(
+export function createRow(
 	rows: HTMLElement[],
 	id: string,
 	level: number,
@@ -74,6 +75,11 @@ function createRow(
 	tree.addRow(id, parentId, onActivate)
 	rows.push(row)
 	return row
+}
+
+/** The branch on a repository's row, which switches branch. */
+export function branchButton(branch: string, target: ActionTarget): HTMLButtonElement {
+	return textButton('git-branch', branch, `${branch}, Switch Branch...`, 'checkout', target)
 }
 
 /** Adds the arrow, and returns whether the row is expanded. */
@@ -228,9 +234,7 @@ export function renderRepository(rows: HTMLElement[], repository: RepositoryItem
 	const toolbar = span('toolbar')
 
 	if (repository.branch) {
-		toolbar.append(
-			textButton('git-branch', repository.branch, `${repository.branch}, Switch Branch...`, 'checkout', target),
-		)
+		toolbar.append(branchButton(repository.branch, target))
 	}
 
 	const actions = span('actions')

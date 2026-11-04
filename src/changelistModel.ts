@@ -3,7 +3,7 @@
 import * as path from 'path'
 import { Status } from './constants/git.ts'
 import type { Change, Repository } from './types/git.ts'
-import type { ChangeCategory, ChangeCounts, GroupKind } from './types/shared.ts'
+import type { ChangeCategory, ChangeCounts, GroupKind, SyncState } from './types/shared.ts'
 import type { Directory, FolderNode, ResourceNode } from './types/extension.ts'
 
 // The groups, in the order the view shows them, with the built-in Source Control view's names.
@@ -60,6 +60,37 @@ export function hasChanges(repository: Repository): boolean {
 	return (Object.keys(GROUP_LABELS) as GroupKind[]).some(kind => getChanges(repository, kind).length > 0)
 }
 
+/** Where the repository's branch stands against its upstream, as far as Git knows since its last fetch. */
+export function syncState(repository: Repository): SyncState {
+	const head = repository.state.HEAD
+	const hasName = head?.name
+	const hasUpstream = head?.upstream
+	const isAhead = (head?.ahead ?? 0) > 0
+	const isBehind = (head?.behind ?? 0) > 0
+
+	switch (true) {
+		case !hasName:
+			return 'detached'
+		case !hasUpstream:
+			return 'unpublished'
+		case isAhead && isBehind:
+			return 'diverged'
+		case isAhead:
+			return 'ahead'
+		case isBehind:
+			return 'behind'
+		default:
+			return 'synced'
+	}
+}
+
+/** Whether the repository has commits to push or pull. A branch that isn't published doesn't count. */
+export function needsSync(repository: Repository): boolean {
+	const state = syncState(repository)
+
+	return state === 'ahead' || state === 'behind' || state === 'diverged'
+}
+
 /** How many files are added, modified, deleted and in conflict, each file counted once. */
 export function countChanges(repository: Repository): ChangeCounts {
 	const categories = new Map<string, ChangeCategory>()
@@ -87,6 +118,11 @@ export function countChanges(repository: Repository): ChangeCounts {
 /** The repository's folder name, which the view shows as its name. */
 export function repositoryName(repository: Repository): string {
 	return path.basename(repository.rootUri.fsPath)
+}
+
+/** Sorts repositories by their name, for the view and the Repositories panel. */
+export function byName(a: Repository, b: Repository): number {
+	return repositoryName(a).localeCompare(repositoryName(b))
 }
 
 /** Sorts changes by their path, for list mode and for the files in a folder. */

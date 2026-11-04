@@ -87,11 +87,31 @@ export interface RepositoryItem {
 	readonly groups: readonly GroupItem[]
 }
 
+/** Where a repository's branch stands against its upstream. */
+export type SyncState = 'synced' | 'ahead' | 'behind' | 'diverged' | 'unpublished' | 'detached'
+
+/** A repository's row in the Repositories panel. */
+export interface SyncRepositoryItem {
+	/** The repository's root URI. */
+	readonly id: string
+	readonly name: string
+	readonly path: string
+	/** The branch name, the short commit for a detached HEAD, or empty before the first commit. */
+	readonly branch: string
+	readonly state: SyncState
+	/** How many commits there are to push. */
+	readonly ahead: number
+	/** How many commits there are to pull, as far as Git knows since its last fetch. */
+	readonly behind: number
+}
+
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */
 export type ExtensionMessage =
 	| {
 			readonly type: 'update'
 			readonly repositories: readonly RepositoryItem[]
+			/** Every repository, while the Repositores panel is shown instead of the changes. */
+			readonly syncRepositories?: readonly SyncRepositoryItem[]
 			readonly fonts: readonly IconFont[]
 			/** VS Code's `scm.alwaysShowActions`: show the actions on every row, not just on hover. */
 			readonly alwaysShowActions: boolean
@@ -103,6 +123,10 @@ export type ExtensionMessage =
 /** The `changelist.*` commands the webview can run. */
 export type WebviewAction =
 	| 'checkout'
+	| 'push'
+	| 'pull'
+	| 'sync'
+	| 'publish'
 	| 'commit'
 	| 'stageAll'
 	| 'unstageAll'
@@ -123,8 +147,8 @@ export interface ActionTarget {
 	readonly uri?: string
 }
 
-/** The kinds of rows, for the right-click menu's `when` clauses. */
-export type RowSection = 'repository' | 'group' | 'folder' | 'file'
+/** The kinds of rows, for the right-click menu's `when` clauses. `sync` is a repository in the Repositories panel. */
+export type RowSection = 'repository' | 'group' | 'folder' | 'file' | 'sync'
 
 /**
  * A row's `data-vscode-context`. Its properties are context keys in the right-click menu's `when`
@@ -137,9 +161,10 @@ export interface MenuContext extends ActionTarget {
 
 /**
  * What the webview sends the extension: that it's ready for data, a row's action, or whether every
- * repository is collapsed.
+ * repository is collapsed, or that Escape closed the Repositories panel.
  */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }
 	| { readonly type: 'allCollapsed'; readonly value: boolean }
+	| { readonly type: 'closeRepositories' }

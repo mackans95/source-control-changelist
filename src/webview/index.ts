@@ -1,6 +1,7 @@
 // Renders the Changelist view in its webview. The extension sends the repositories with changes;
 // this draws them as a tree that looks and behaves like VS Code's own, and sends clicks back as
-// actions. It keeps which rows are collapsed, also while the view is hidden.
+// actions. It keeps which rows are collapsed, also while the view is hidden. While the Repositories
+// panel is open, the extension sends every repository's sync status too, which is drawn instead.
 import { post } from './api.ts'
 import { collapsedRows } from './collapse.ts'
 import { getRoot } from './dom.ts'
@@ -17,7 +18,7 @@ function onMessage(message: ExtensionMessage): void {
 			loadFonts(message.fonts)
 			getRoot().classList.toggle('always-show-actions', message.alwaysShowActions)
 			tooltip.setDelay(message.hoverDelay)
-			tree.update(message.repositories)
+			tree.update(message.repositories, message.syncRepositories)
 			break
 		case 'setAllExpanded':
 			tree.setAllExpanded(message.expanded)

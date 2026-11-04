@@ -1,11 +1,13 @@
 // Keeps the Changelist view up to date: it listens to every repository and the settings the view
 // depends on, and sends the webview its data once the page says it's ready. Messages from the page
-// run the `changelist.*` commands on the row they came from.
+// run the `changelist.*` commands on the row they came from. The Repositories button in the title
+// bar swaps the changes for every repository's sync status, and gets a dot from
+// `changelist.needsSync` when a repository has commits to push or pull.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './changelistHtml.ts'
-import { toRepositoryItem } from './changelistItems.ts'
-import { getChanges, hasChanges, repositoryName } from './changelistModel.ts'
+import { toRepositoryItem, toSyncRepositoryItem } from './changelistItems.ts'
+import { byName, getChanges, hasChanges, needsSync } from './changelistModel.ts'
 import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Repository } from './types/git.ts'
@@ -40,6 +42,10 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
+	// What `changelist.needsSync` was set to last, so it's only set again when that changes.
+	private lastNeedsSync = false
+	// Whether the view shows the Repositories panel instead of the changes.
+	private showingRepositories = false
 	// The wait before the next update, see UPDATE_DELAY_MS.
 	private refreshTimer: NodeJS.Timeout | undefined
 	// Listeners for the current view, replaced when VS Code resolves the view again.
@@ -79,6 +85,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.viewDisposables.forEach(d => d.dispose())
 		this.view = webviewView
 		this.ready = false
+		this.updateDescription()
 
 		webviewView.webview.options = this.webviewOptions()
 		webviewView.webview.html = viewHtml(webviewView.webview, this.extensionUri)
@@ -108,6 +115,23 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	/** The view's Expand All and Collapse All buttons. */
 	setAllExpanded(expanded: boolean): void {
 		this.postMessage({ type: 'setAllExpanded', expanded })
+	}
+
+	/**
+	 * The Repositories button and the Back button in the view's title bar: shows every repository's
+	 * sync status instead of the changes, or the changes again.
+	 */
+	showRepositories(show: boolean): void {
+		this.showingRepositories = show
+		void vscode.commands.executeCommand('setContext', 'changelist.showingRepositories', show)
+		this.updateDescription()
+
+		if (show) {
+			// From the Command Palette, the view may be hidden.
+			void vscode.commands.executeCommand('changelist.view.focus')
+		}
+
+		this.postUpdate()
 	}
 
 	/**
@@ -194,7 +218,27 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	/** Updates the view once Git has been quiet for UPDATE_DELAY_MS. */
 	private scheduleUpdate(): void {
 		clearTimeout(this.refreshTimer)
-		this.refreshTimer = setTimeout(() => this.postUpdate(), UPDATE_DELAY_MS)
+		this.refreshTimer = setTimeout(() => {
+			this.updateNeedsSync()
+			this.postUpdate()
+		}, UPDATE_DELAY_MS)
+	}
+
+	/** Says next to the view's title when it shows the Repositories panel. */
+	private updateDescription(): void {
+		if (this.view) {
+			this.view.description = this.showingRepositories ? 'Repositories' : undefined
+		}
+	}
+
+	/** Sets `changelist.needsSync` when a repository has commits to push or pull, for the Repositories button. */
+	private updateNeedsSync(): void {
+		const value = this.git.repositories.some(needsSync)
+
+		if (value !== this.lastNeedsSync) {
+			this.lastNeedsSync = value
+			void vscode.commands.executeCommand('setContext', 'changelist.needsSync', value)
+		}
 	}
 
 	/** Sends the page every repository that has changes, unless that is what it shows already. */
@@ -205,11 +249,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		const icons = this.fileIcons.resolver(this.view.webview)
 		const repositories = this.git.repositories
 			.filter(hasChanges)
-			.sort((a, b) => repositoryName(a).localeCompare(repositoryName(b)))
+			.sort(byName)
 			.map(repository => toRepositoryItem(repository, viewMode, icons))
 		const message: ExtensionMessage = {
 			type: 'update',
 			repositories,
+			syncRepositories: this.showingRepositories
+				? [...this.git.repositories].sort(byName).map(toSyncRepositoryItem)
+				: undefined,
 			fonts: icons.fonts(),
 			alwaysShowActions: vscode.workspace.getConfiguration('scm').get<boolean>('alwaysShowActions', false),
 			hoverDelay: vscode.workspace
@@ -234,7 +281,10 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
-	/** Handles a message from the page: it's ready, every repository is collapsed or not, or a row's action. */
+	/**
+	 * Handles a message from the page: it's ready, every repository is collapsed or not, Escape closed
+	 * the Repositories panel, or a row's action.
+	 */
 	private async onDidReceiveMessage(message: WebviewMessage): Promise<void> {
 		switch (message.type) {
 			case 'ready':
@@ -245,6 +295,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				return
 			case 'allCollapsed':
 				await vscode.commands.executeCommand('setContext', 'changelist.allCollapsed', message.value)
+				return
+			case 'closeRepositories':
+				this.showRepositories(false)
 				return
 			case 'run': {
 				const node = this.resolveTarget(message.target)

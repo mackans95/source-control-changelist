@@ -150,18 +150,89 @@
         "title": "Switch Branch...",
         "category": "Changelist",
         "icon": "$(git-branch)"
+      },
+      {
+        "command": "changelist.showRepositories",
+        "title": "Repositories",
+        "category": "Changelist",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "changelist.showRepositoriesNeedsSync",
+        "title": "Repositories (Commits to Push or Pull)",
+        "category": "Changelist",
+        "icon": {
+          "light": "media/repositories-needs-sync-light.svg",
+          "dark": "media/repositories-needs-sync-dark.svg"
+        }
+      },
+      {
+        "command": "changelist.hideRepositories",
+        "title": "Back to Changes",
+        "category": "Changelist",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "changelist.fetchAll",
+        "title": "Fetch All",
+        "category": "Changelist",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "changelist.push",
+        "title": "Push",
+        "category": "Changelist",
+        "icon": "$(repo-push)"
+      },
+      {
+        "command": "changelist.pull",
+        "title": "Pull",
+        "category": "Changelist",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "changelist.sync",
+        "title": "Sync Changes",
+        "category": "Changelist",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "changelist.publish",
+        "title": "Publish Branch",
+        "category": "Changelist",
+        "icon": "$(cloud-upload)"
       }
     ],
     "menus": {
       "view/title": [
         {
+          "command": "changelist.showRepositories",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && !changelist.needsSync",
+          "group": "navigation@0"
+        },
+        {
+          "command": "changelist.showRepositoriesNeedsSync",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && changelist.needsSync",
+          "group": "navigation@0"
+        },
+        {
+          "command": "changelist.hideRepositories",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories",
+          "group": "navigation@0"
+        },
+        {
+          "command": "changelist.fetchAll",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories",
+          "group": "navigation@1"
+        },
+        {
           "command": "changelist.viewAsTree",
-          "when": "view == changelist.view && changelist.active && config.changelist.viewMode == list",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && config.changelist.viewMode == list",
           "group": "navigation@1"
         },
         {
           "command": "changelist.viewAsList",
-          "when": "view == changelist.view && changelist.active && config.changelist.viewMode == tree",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && config.changelist.viewMode == tree",
           "group": "navigation@1"
         },
         {
@@ -171,12 +242,12 @@
         },
         {
           "command": "changelist.collapseAll",
-          "when": "view == changelist.view && changelist.active && !changelist.allCollapsed",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && !changelist.allCollapsed",
           "group": "navigation@3"
         },
         {
           "command": "changelist.expandAll",
-          "when": "view == changelist.view && changelist.active && changelist.allCollapsed",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && changelist.allCollapsed",
           "group": "navigation@3"
         }
       ],
@@ -238,6 +309,38 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "changelist.showRepositories",
+          "when": "changelist.active"
+        },
+        {
+          "command": "changelist.showRepositoriesNeedsSync",
+          "when": "false"
+        },
+        {
+          "command": "changelist.hideRepositories",
+          "when": "changelist.showingRepositories"
+        },
+        {
+          "command": "changelist.fetchAll",
+          "when": "changelist.active"
+        },
+        {
+          "command": "changelist.push",
+          "when": "false"
+        },
+        {
+          "command": "changelist.pull",
+          "when": "false"
+        },
+        {
+          "command": "changelist.sync",
+          "when": "false"
+        },
+        {
+          "command": "changelist.publish",
+          "when": "false"
+        },
         {
           "command": "changelist.commit",
           "when": "false"

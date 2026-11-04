@@ -1,11 +1,12 @@
 // The tree of rows: the repositories the extension sent last, drawn again after every change, and
-// what clicking a row does.
+// what clicking a row does. While the Repositories panel is open, it shows that instead.
 import { collapsedRows } from './collapse.ts'
 import { getRoot, rowElements, rowOf, span } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { renderRepository } from './rows.ts'
 import { tooltip } from './tooltip.ts'
-import type { RepositoryItem } from '../types/shared.ts'
+import { renderSyncRepositories } from './syncRows.ts'
+import type { RepositoryItem, SyncRepositoryItem } from '../types/shared.ts'
 
 /**
  * Marks the repository rows whose name has shrunk as far as it can, without and with their
@@ -28,10 +29,17 @@ function fitRepositoryRows(): void {
 class Tree {
 	// The repositories from the extension's latest update.
 	private repositories: readonly RepositoryItem[] = []
+	// Every repository's sync status, while the Repositories panel is open.
+	private syncRepositories: readonly SyncRepositoryItem[] | undefined
 	// Each row's parent row, filled in on each render.
 	private readonly parents = new Map<string, string>()
 	// What clicking each row does, filled in on each render.
 	private readonly activations = new Map<string, () => void>()
+
+	/** Whether the Repositories panel is open, instead of the changes. */
+	get showingRepositories(): boolean {
+		return this.syncRepositories !== undefined
+	}
 
 	/** Listens for clicks on the rows, and for the view changing size. */
 	init(): void {
@@ -40,8 +48,13 @@ class Tree {
 		root.addEventListener('click', e => {
 			const row = rowOf(e.target)
 
-			if (row?.dataset.id) {
-				rowFocus.set(row)
+			if (!row?.dataset.id) return
+
+			rowFocus.set(row)
+
+			// In the Repositories panel, a click only selects the row, so a stray click doesn't push or
+			// pull. Enter runs its button.
+			if (!this.showingRepositories) {
 				this.activate(row.dataset.id)
 			}
 		})
@@ -53,9 +66,10 @@ class Tree {
 		new ResizeObserver(fitRepositoryRows).observe(root)
 	}
 
-	/** Draws the repositories from the extension's latest update. */
-	update(repositories: readonly RepositoryItem[]): void {
+	/** Draws the repositories from the extension's latest update, or the Repositories panel when it sent one. */
+	update(repositories: readonly RepositoryItem[], syncRepositories: readonly SyncRepositoryItem[] | undefined): void {
 		this.repositories = repositories
+		this.syncRepositories = syncRepositories
 		this.render()
 	}
 
@@ -101,12 +115,18 @@ class Tree {
 		this.parents.clear()
 		this.activations.clear()
 
-		for (const repository of this.repositories) {
-			renderRepository(rows, repository)
+		if (this.syncRepositories) {
+			renderSyncRepositories(rows, this.syncRepositories)
+		} else {
+			for (const repository of this.repositories) {
+				renderRepository(rows, repository)
+			}
 		}
 
 		if (rows.length === 0) {
-			root.replaceChildren(span('empty', 'No changes in any repository.'))
+			root.replaceChildren(
+				span('empty', this.syncRepositories ? 'No repositories.' : 'No changes in any repository.'),
+			)
 		} else {
 			root.replaceChildren(...rows)
 		}

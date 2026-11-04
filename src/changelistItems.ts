@@ -1,12 +1,21 @@
 // What the view's rows show of each repository: Git's state turned into the plain data the webview
-// draws. It doesn't use `vscode`, so the tests can run it in Node.
+// draws, for the changes and for the Repositories panel. It doesn't use `vscode`, so the tests can
+// run it in Node.
 import * as path from 'path'
-import { GROUP_LABELS, buildTree, byPath, countChanges, getChanges, repositoryName } from './changelistModel.ts'
+import {
+	GROUP_LABELS,
+	buildTree,
+	byPath,
+	countChanges,
+	getChanges,
+	repositoryName,
+	syncState,
+} from './changelistModel.ts'
 import { Status } from './constants/git.ts'
 import { themeColor } from './helpers/shared.ts'
 import type { Change, Repository } from './types/git.ts'
 import type { FolderNode, IconResolver, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
-import type { FileItem, FolderItem, GroupItem, GroupKind, RepositoryItem } from './types/shared.ts'
+import type { FileItem, FolderItem, GroupItem, GroupKind, RepositoryItem, SyncRepositoryItem } from './types/shared.ts'
 
 // The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
 const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {
@@ -126,6 +135,13 @@ const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDec
 	},
 }
 
+/** The branch's name, or for a detached HEAD its short commit like the built-in view shows it. */
+function branchLabel(repository: Repository): string {
+	const head = repository.state.HEAD
+
+	return head?.name ?? head?.commit?.slice(0, 8) ?? ''
+}
+
 /** A file's row: its name, icon and status, and its folder in list mode. */
 function toFileItem(
 	repository: Repository,
@@ -179,16 +195,29 @@ function toGroupItem(repository: Repository, kind: GroupKind, viewMode: ViewMode
 
 /** A repository's row, with its counts and the groups that have changes. */
 export function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: IconResolver): RepositoryItem {
-	const head = repository.state.HEAD
 	return {
 		id: repository.rootUri.toString(),
 		name: repositoryName(repository),
 		path: repository.rootUri.fsPath,
-		// A detached HEAD has no branch name, so show its commit like the built-in view does.
-		branch: head?.name ?? head?.commit?.slice(0, 8) ?? '',
+		branch: branchLabel(repository),
 		counts: countChanges(repository),
 		groups: (Object.keys(GROUP_LABELS) as GroupKind[])
 			.filter(kind => getChanges(repository, kind).length > 0)
 			.map(kind => toGroupItem(repository, kind, viewMode, icons)),
+	}
+}
+
+/** A repository's row in the Repositories panel: its branch, and how far that is from its upstream. */
+export function toSyncRepositoryItem(repository: Repository): SyncRepositoryItem {
+	const head = repository.state.HEAD
+
+	return {
+		id: repository.rootUri.toString(),
+		name: repositoryName(repository),
+		path: repository.rootUri.fsPath,
+		branch: branchLabel(repository),
+		state: syncState(repository),
+		ahead: head?.ahead ?? 0,
+		behind: head?.behind ?? 0,
 	}
 }

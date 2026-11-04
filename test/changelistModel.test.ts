@@ -1,9 +1,19 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
-import { buildTree, byPath, countChanges, getChanges, hasChanges, repositoryName } from '../src/changelistModel.ts'
+import {
+	buildTree,
+	byName,
+	byPath,
+	countChanges,
+	getChanges,
+	hasChanges,
+	needsSync,
+	repositoryName,
+	syncState,
+} from '../src/changelistModel.ts'
 import { Status } from '../src/constants/git.ts'
-import type { Change, Repository } from '../src/types/git.ts'
+import type { Branch, Change, Repository } from '../src/types/git.ts'
 import type { FolderNode, ResourceNode } from '../src/types/extension.ts'
 
 // Just enough of a URI for the model, which only reads `path` and `fsPath` and makes folders with `with`.
@@ -36,6 +46,13 @@ function repository(groups: {
 		},
 	} as never
 }
+
+// A clean repository whose HEAD is this branch, or a detached HEAD without one.
+function onBranch(head: Partial<Branch> | undefined, path = '/repo'): Repository {
+	return { rootUri: uri(path), state: { HEAD: head } } as never
+}
+
+const upstream = { remote: 'origin', name: 'main' }
 
 // The tree as nested labels: a folder as `{ label: children }`, a file as its name.
 function shape(nodes: readonly (FolderNode | ResourceNode)[]): unknown[] {
@@ -137,6 +154,33 @@ describe('buildTree', () => {
 	})
 })
 
+describe('syncState and needsSync', () => {
+	test('compares the branch with its upstream', () => {
+		assert.equal(syncState(onBranch({ name: 'main', upstream, ahead: 0, behind: 0 })), 'synced')
+		assert.equal(syncState(onBranch({ name: 'main', upstream, ahead: 2, behind: 0 })), 'ahead')
+		assert.equal(syncState(onBranch({ name: 'main', upstream, ahead: 0, behind: 1 })), 'behind')
+		assert.equal(syncState(onBranch({ name: 'main', upstream, ahead: 2, behind: 1 })), 'diverged')
+	})
+	test('treats missing counts as none', () => {
+		assert.equal(syncState(onBranch({ name: 'main', upstream })), 'synced')
+	})
+	test('knows a branch without an upstream, and a detached HEAD', () => {
+		assert.equal(syncState(onBranch({ name: 'feature', ahead: 3 })), 'unpublished')
+		assert.equal(syncState(onBranch({ commit: 'abc' })), 'detached')
+		assert.equal(syncState(onBranch(undefined)), 'detached')
+	})
+	test('needs a sync with commits to push or pull', () => {
+		assert.equal(needsSync(onBranch({ name: 'main', upstream, ahead: 1 })), true)
+		assert.equal(needsSync(onBranch({ name: 'main', upstream, behind: 1 })), true)
+		assert.equal(needsSync(onBranch({ name: 'main', upstream, ahead: 2, behind: 1 })), true)
+	})
+	test('needs no sync when up to date, unpublished or detached', () => {
+		assert.equal(needsSync(onBranch({ name: 'main', upstream })), false)
+		assert.equal(needsSync(onBranch({ name: 'feature', ahead: 3 })), false)
+		assert.equal(needsSync(onBranch({ commit: 'abc' })), false)
+	})
+})
+
 describe('byPath and repositoryName', () => {
 	test('sorts changes by their path', () => {
 		const sorted = [change('b.ts'), change('a/c.ts'), change('a.ts')].sort(byPath)
@@ -147,5 +191,9 @@ describe('byPath and repositoryName', () => {
 	})
 	test('names a repository after its folder', () => {
 		assert.equal(repositoryName(repository({})), 'repo')
+	})
+	test('sorts repositories by their name', () => {
+		const sorted = [onBranch(undefined, '/b/web'), onBranch(undefined, '/a/api')].sort(byName)
+		assert.deepEqual(sorted.map(repositoryName), ['api', 'web'])
 	})
 })

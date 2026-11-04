@@ -1,6 +1,7 @@
 // The `changelist.*` commands: the view's title buttons, and the actions on its rows. A row's
 // action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
-// turned back into the node first.
+// turned back into the node first. Push, pull, sync, publish and switching branch run the Git
+// extension's own commands.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { getChanges, repositoryName } from './changelistModel.ts'
@@ -12,6 +13,8 @@ import type { GroupKind, MenuContext } from './types/shared.ts'
 
 // The groups a repository's Stage All button stages.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
+// Where the progress bar shows while a sync button or Fetch All runs.
+const VIEW_PROGRESS: vscode.ProgressOptions = { location: { viewId: 'changelist.view' } }
 
 /** The View as Tree and View as List buttons: saves the choice in the user's settings. */
 function setViewMode(mode: ViewMode): Thenable<void> {
@@ -21,6 +24,11 @@ function setViewMode(mode: ViewMode): Thenable<void> {
 // The Git extension's commands take the repository as their first argument, and then skip the repository picker.
 function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown> {
 	return vscode.commands.executeCommand(command, node.repository)
+}
+
+/** Runs one of the Git extension's commands on a repository, with the view's progress bar while it runs. */
+function runWithProgress(command: string, node: RepositoryNode): Thenable<unknown> {
+	return vscode.window.withProgress(VIEW_PROGRESS, () => runGitCommand(command, node))
 }
 
 /** The changes' paths, which the Git API's add, revert and clean take. */
@@ -168,6 +176,19 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 	}
 }
 
+/** Fetches every repository that has a remote, so the Repositories panel knows what there is to pull. */
+async function fetchAll(git: API): Promise<void> {
+	const repositories = git.repositories.filter(r => r.state.remotes.length > 0)
+	const results = await vscode.window.withProgress(VIEW_PROGRESS, () =>
+		Promise.allSettled(repositories.map(r => r.fetch())),
+	)
+	const failed = repositories.filter((_, i) => results[i].status === 'rejected').map(repositoryName)
+
+	if (failed.length > 0) {
+		void vscode.window.showWarningMessage(`Couldn't fetch ${failed.join(', ')}.`)
+	}
+}
+
 /** Registers the `changelist.*` commands, for the view to run on its rows and in its title bar. */
 export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
 	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
@@ -185,6 +206,10 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
 		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
 		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
+		vscode.commands.registerCommand('changelist.showRepositories', () => provider.showRepositories(true)),
+		vscode.commands.registerCommand('changelist.showRepositoriesNeedsSync', () => provider.showRepositories(true)),
+		vscode.commands.registerCommand('changelist.hideRepositories', () => provider.showRepositories(false)),
+		vscode.commands.registerCommand('changelist.fetchAll', () => fetchAll(git)),
 		vscode.commands.registerCommand(
 			'changelist.openChange',
 			withNode((node: ResourceNode) => openChange(git, node)),
@@ -224,6 +249,22 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 		vscode.commands.registerCommand(
 			'changelist.checkout',
 			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.push',
+			withNode((node: RepositoryNode) => runWithProgress('git.push', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.pull',
+			withNode((node: RepositoryNode) => runWithProgress('git.pull', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.sync',
+			withNode((node: RepositoryNode) => runWithProgress('git.sync', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.publish',
+			withNode((node: RepositoryNode) => runWithProgress('git.publish', node)),
 		),
 	]
 }

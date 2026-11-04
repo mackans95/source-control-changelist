@@ -25,9 +25,9 @@
 	overflow: hidden;
 }
 
-.repository.narrow .text-button,
-.repository.narrow-with-actions:hover .text-button,
-#root:focus-within .repository.narrow-with-actions.focused .text-button {
+.repository.narrow .toolbar .text-button,
+.repository.narrow-with-actions:hover .toolbar .text-button,
+#root:focus-within .repository.narrow-with-actions.focused .toolbar .text-button {
 	flex: 0 1 auto;
 	min-width: 22px;
 }

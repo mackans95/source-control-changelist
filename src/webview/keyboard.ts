@@ -1,4 +1,5 @@
 // Moving through the rows with the keyboard, like in VS Code's trees.
+import { post } from './api.ts'
 import { findRow, rowElements } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { tree } from './tree.ts'
@@ -13,7 +14,8 @@ function openMenu(row: HTMLElement): void {
 
 /**
  * A key pressed in the view: the arrows, Home and End move the selection, Right and Left expand and
- * collapse, Enter and Space do what a click does, and Shift+F10 opens the right-click menu.
+ * collapse, Enter and Space do what a click does or run the Repositories panel's button, Shift+F10
+ * opens the right-click menu, and Escape closes the Repositories panel.
  */
 export function onKeydown(event: KeyboardEvent): void {
 	const rows = rowElements()
@@ -63,6 +65,10 @@ export function onKeydown(event: KeyboardEvent): void {
 		case 'Enter':
 		case ' ':
 			tree.activate(id)
+			break
+		case 'Escape':
+			if (!tree.showingRepositories) return
+			post({ type: 'closeRepositories' })
 			break
 		default:
 			return
