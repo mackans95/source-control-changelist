@@ -7,7 +7,7 @@ export interface CategoryDisplay {
 	readonly icon: string
 	/** Follows the count in the row's tooltip, like `3 added`. */
 	readonly label: string
-	/** CSS variable of the theme color for the icon and count. */
+	/** Theme color ID for the icon and count, like `gitDecoration.addedResourceForeground`. */
 	readonly color: string
 }
 

@@ -1,4 +1,5 @@
 // The rows for each repository, its groups, and their folders and files, with their buttons.
+import { themeColor } from '../helpers/shared.ts'
 import { run } from './api.ts'
 import { collapsedRows } from './collapse.ts'
 import { button, codicon, span } from './dom.ts'
@@ -20,13 +21,13 @@ import type { CategoryDisplay } from '../types/webview.ts'
 
 // In the order they're shown on the repository's row.
 const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
-	added: { icon: 'diff-added', label: 'added', color: '--vscode-gitDecoration-addedResourceForeground' },
-	modified: { icon: 'diff-modified', label: 'modified', color: '--vscode-gitDecoration-modifiedResourceForeground' },
-	deleted: { icon: 'diff-removed', label: 'deleted', color: '--vscode-gitDecoration-deletedResourceForeground' },
+	added: { icon: 'diff-added', label: 'added', color: 'gitDecoration.addedResourceForeground' },
+	modified: { icon: 'diff-modified', label: 'modified', color: 'gitDecoration.modifiedResourceForeground' },
+	deleted: { icon: 'diff-removed', label: 'deleted', color: 'gitDecoration.deletedResourceForeground' },
 	conflict: {
 		icon: 'warning',
 		label: 'with conflicts',
-		color: '--vscode-gitDecoration-conflictingResourceForeground',
+		color: 'gitDecoration.conflictingResourceForeground',
 	},
 }
 
@@ -92,7 +93,7 @@ function countsElement(counts: ChangeCounts): HTMLSpanElement {
 		if (counts[category] > 0) {
 			const { icon, label, color } = CATEGORIES[category]
 			const count = span('count')
-			count.style.setProperty('color', `var(${color})`)
+			count.style.setProperty('color', themeColor(color))
 			count.append(codicon(icon, 'count-icon'), span('count-number', String(counts[category])))
 			element.append(count)
 			descriptions.push(`${counts[category]} ${label}`)
@@ -131,7 +132,7 @@ function renderFile(
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: file.uri }
 	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
 	row.dataset.tooltip = file.tooltip
-	row.style.setProperty('--decoration-color', `var(${file.color})`)
+	row.style.setProperty('--decoration-color', file.color)
 	if (file.strikethrough) {
 		row.classList.add('strikethrough')
 	}

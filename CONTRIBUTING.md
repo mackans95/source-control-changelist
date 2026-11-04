@@ -12,7 +12,7 @@ The view is a webview in the Source Control container, so it can draw things a t
 - `src/commands.ts` has the `changelist.*` commands: stage, unstage and discard, commit, and switching branch through the Git extension's own command.
 - `src/fileIcons.ts` reads your file icon theme, which VS Code doesn't share with extensions, and gives files and folders their icons as webview URIs. `src/iconMatching.ts` matches names to icons the way VS Code does, also without `vscode`.
 - `src/webview/` is the webview's script. `index.ts` starts it; `tree.ts` draws the rows that `rows.ts` builds, and the other files each hold one part, like `keyboard.ts`, `tooltip.ts`, `collapse.ts` and `focus.ts`. `src/webview/styles/` styles the rows with your theme's colors, one file per part, like `rows.css`, `actions.css` and `tooltip.css`. `index.css` imports them all, and the build bundles them with the codicon font into `dist/`.
-- `src/types/` holds the types: `extension.ts` for the extension, like the nodes the commands take, `webview.ts` for the webview's script, `shared.ts` for what the extension and the webview send each other, `iconTheme.ts` for icon themes, and `git.ts` for the Git extension's API. `src/constants/` holds values: `git.ts` the Git API's enums, and `shared.ts` what both sides have to agree on, like the id of the element the rows are drawn in.
+- `src/types/` holds the types: `extension.ts` for the extension, like the nodes the commands take, `webview.ts` for the webview's script, `shared.ts` for what the extension and the webview send each other, `iconTheme.ts` for icon themes, and `git.ts` for the Git extension's API. `src/constants/` holds values: `git.ts` the Git API's enums, and `shared.ts` what both sides have to agree on, like the id of the element the rows are drawn in. `src/helpers/shared.ts` has the helpers both sides use, like `themeColor()`, which turns a theme color ID into the CSS variable webviews have for it.
 
 ## Development
 
@@ -33,7 +33,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm run format` | Formats with Oxfmt; `npm run format:check` only checks. |
 | `npm test` | Runs the tests. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts and folder tree in `changelistModel.ts`, and the icon matching in `iconMatching.ts`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts and folder tree in `changelistModel.ts`, the icon matching in `iconMatching.ts`, and `themeColor()`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
 
 ## Releasing
 

@@ -3,6 +3,7 @@
 import * as path from 'path'
 import { GROUP_LABELS, buildTree, byPath, countChanges, getChanges, repositoryName } from './changelistModel.ts'
 import { Status } from './constants/git.ts'
+import { themeColor } from './helpers/shared.ts'
 import type { Change, Repository } from './types/git.ts'
 import type { FolderNode, IconResolver, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
 import type { FileItem, FolderItem, GroupItem, GroupKind, RepositoryItem } from './types/shared.ts'
@@ -125,11 +126,6 @@ const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDec
 	},
 }
 
-/** Theme colors are CSS variables in webviews, with the dot as a dash: `--vscode-gitDecoration-…`. */
-function cssVariable(themeColor: string): string {
-	return `--vscode-${themeColor.replace(/\./g, '-')}`
-}
-
 /** A file's row: its name, icon and status, and its folder in list mode. */
 function toFileItem(
 	repository: Repository,
@@ -149,7 +145,7 @@ function toFileItem(
 		icon: icons.file(change.uri),
 		folder: viewMode === 'list' && folder !== '.' ? folder : '',
 		letter: decoration.letter,
-		color: cssVariable(decoration.color),
+		color: themeColor(decoration.color),
 		strikethrough: decoration.strikethrough,
 		tooltip: `${relativePath} • ${decoration.text}`,
 	}

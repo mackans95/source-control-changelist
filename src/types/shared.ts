@@ -49,7 +49,7 @@ export interface FileItem {
 	/** The file's folder relative to the repository, shown next to the name in list mode. Empty in tree mode. */
 	readonly folder: string
 	readonly letter: string
-	/** CSS variable of the theme color for the name and letter. */
+	/** The theme color for the name and letter, as a CSS value like `var(--vscode-…)`. */
 	readonly color: string
 	readonly strikethrough: boolean
 	readonly tooltip: string
