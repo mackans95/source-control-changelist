@@ -26,6 +26,7 @@ describe('toSyncRepositoryItem', () => {
 			state: 'diverged',
 			ahead: 2,
 			behind: 1,
+			needsSync: true,
 		})
 	})
 	test('treats missing counts as none', () => {
@@ -33,6 +34,7 @@ describe('toSyncRepositoryItem', () => {
 		assert.equal(item.state, 'unpublished')
 		assert.equal(item.ahead, 0)
 		assert.equal(item.behind, 0)
+		assert.equal(item.needsSync, false)
 	})
 	test('shows the short commit for a detached HEAD, and nothing before the first commit', () => {
 		assert.equal(toSyncRepositoryItem(onBranch({ commit: '0123456789abcdef' })).branch, '01234567')

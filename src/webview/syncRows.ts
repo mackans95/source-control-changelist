@@ -53,6 +53,7 @@ function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryIte
 
 	// Looks like a repository's row in the changes, and shrinks the same way when the view is narrow.
 	row.classList.add('repository')
+	row.classList.toggle('needs-sync', repository.needsSync)
 	row.dataset.tooltip = repository.path
 
 	const toolbar = span('toolbar')

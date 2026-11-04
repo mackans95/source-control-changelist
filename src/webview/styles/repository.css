@@ -7,6 +7,12 @@
 	font-weight: bold;
 }
 
+/* In the Repositories panel (syncRows.ts), only the names of repositories with commits to push or
+   pull are bold. */
+.repository.sync:not(.needs-sync) .label {
+	font-weight: normal;
+}
+
 /* Normally the name shrinks to make room. Once it can't, the branch label shrinks too, but never
    past its icon. tree.ts marks the rows where that's needed: `narrow` when the row doesn't
    fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */

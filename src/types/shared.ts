@@ -103,6 +103,8 @@ export interface SyncRepositoryItem {
 	readonly ahead: number
 	/** How many commits there are to pull, as far as Git knows since its last fetch. */
 	readonly behind: number
+	/** Whether it has commits to push or pull, which makes its name bold. */
+	readonly needsSync: boolean
 }
 
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */
@@ -110,7 +112,7 @@ export type ExtensionMessage =
 	| {
 			readonly type: 'update'
 			readonly repositories: readonly RepositoryItem[]
-			/** Every repository, while the Repositores panel is shown instead of the changes. */
+			/** Every repository, while the Repositories panel is shown instead of the changes. */
 			readonly syncRepositories?: readonly SyncRepositoryItem[]
 			readonly fonts: readonly IconFont[]
 			/** VS Code's `scm.alwaysShowActions`: show the actions on every row, not just on hover. */

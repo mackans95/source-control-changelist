@@ -8,6 +8,7 @@ import {
 	byPath,
 	countChanges,
 	getChanges,
+	needsSync,
 	repositoryName,
 	syncState,
 } from './changelistModel.ts'
@@ -219,5 +220,6 @@ export function toSyncRepositoryItem(repository: Repository): SyncRepositoryItem
 		state: syncState(repository),
 		ahead: head?.ahead ?? 0,
 		behind: head?.behind ?? 0,
+		needsSync: needsSync(repository),
 	}
 }
