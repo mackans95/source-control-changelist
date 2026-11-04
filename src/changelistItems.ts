@@ -8,6 +8,7 @@ import {
 	byPath,
 	countChanges,
 	getChanges,
+	hasChanges,
 	needsSync,
 	repositoryName,
 	syncState,
@@ -221,5 +222,6 @@ export function toSyncRepositoryItem(repository: Repository): SyncRepositoryItem
 		ahead: head?.ahead ?? 0,
 		behind: head?.behind ?? 0,
 		needsSync: needsSync(repository),
+		hasChanges: hasChanges(repository),
 	}
 }

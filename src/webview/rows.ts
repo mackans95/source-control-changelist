@@ -32,6 +32,9 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 	},
 }
 
+// Staged Changes is green, like `git status` shows staged files, so it's clear which group is shown.
+const STAGED_COLOR = 'gitDecoration.addedResourceForeground'
+
 /** An icon button that runs a command on the row's target. */
 function actionButton(icon: string, title: string, action: WebviewAction, target: ActionTarget): HTMLButtonElement {
 	return button(`action codicon codicon-${icon}`, title, () => run(action, target))
@@ -217,7 +220,13 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	const expanded = addTwistie(row, group.id)
 	const actions = groupActions(group, target)
 
-	row.append(span('label', group.label), span('spacer'), actions, span('badge', String(group.count)))
+	const label = span('label', group.label)
+
+	if (group.kind === 'staged') {
+		label.style.setProperty('color', themeColor(STAGED_COLOR))
+	}
+
+	row.append(label, span('spacer'), actions, span('badge', String(group.count)))
 
 	if (expanded) {
 		renderEntries(rows, repository, group, group.children, 3, group.id)

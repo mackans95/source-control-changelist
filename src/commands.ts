@@ -1,6 +1,6 @@
 // The `changelist.*` commands: the view's title buttons, and the actions on its rows. A row's
 // action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
-// turned back into the node first. Push, pull, sync, publish and switching branch run the Git
+// turned back into the node first. Push, pull, sync, publish, fetch and switching branch run the Git
 // extension's own commands.
 import * as path from 'path'
 import * as vscode from 'vscode'
@@ -176,6 +176,11 @@ async function openChange(git: API, node: ResourceNode): Promise<void> {
 	}
 }
 
+/** Reveals the repository's folder in Finder, or in the file manager on Windows and Linux. */
+function revealInOS(node: RepositoryNode): Thenable<unknown> {
+	return vscode.commands.executeCommand('revealFileInOS', node.repository.rootUri)
+}
+
 /** Fetches every repository that has a remote, so the Repositories panel knows what there is to pull. */
 async function fetchAll(git: API): Promise<void> {
 	const repositories = git.repositories.filter(r => r.state.remotes.length > 0)
@@ -265,6 +270,22 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 		vscode.commands.registerCommand(
 			'changelist.publish',
 			withNode((node: RepositoryNode) => runWithProgress('git.publish', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.fetch',
+			withNode((node: RepositoryNode) => runWithProgress('git.fetch', node)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.openInNewWindow',
+			withNode((node: RepositoryNode) =>
+				vscode.commands.executeCommand('vscode.openFolder', node.repository.rootUri, { forceNewWindow: true }),
+			),
+		),
+		vscode.commands.registerCommand('changelist.revealInFinder', withNode(revealInOS)),
+		vscode.commands.registerCommand('changelist.revealInFileExplorer', withNode(revealInOS)),
+		vscode.commands.registerCommand(
+			'changelist.copyPath',
+			withNode((node: RepositoryNode) => vscode.env.clipboard.writeText(node.repository.rootUri.fsPath)),
 		),
 	]
 }

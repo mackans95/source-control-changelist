@@ -220,15 +220,18 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		clearTimeout(this.refreshTimer)
 		this.refreshTimer = setTimeout(() => {
 			this.updateNeedsSync()
+			this.updateDescription()
 			this.postUpdate()
 		}, UPDATE_DELAY_MS)
 	}
 
-	/** Says next to the view's title when it shows the Repositories panel. */
+	/** Says next to the view's title when it shows the Repositories panel, and how many need a sync. */
 	private updateDescription(): void {
-		if (this.view) {
-			this.view.description = this.showingRepositories ? 'Repositories' : undefined
-		}
+		if (!this.view) return
+
+		const count = this.git.repositories.filter(needsSync).length
+		const description = count > 0 ? `Repositories · ${count} to sync` : 'Repositories'
+		this.view.description = this.showingRepositories ? description : undefined
 	}
 
 	/** Sets `changelist.needsSync` when a repository has commits to push or pull, for the Repositories button. */

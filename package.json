@@ -80,6 +80,31 @@
         "icon": "$(list-flat)"
       },
       {
+        "command": "changelist.fetch",
+        "title": "Fetch",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.openInNewWindow",
+        "title": "Open in New Window",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.revealInFinder",
+        "title": "Reveal in Finder",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.revealInFileExplorer",
+        "title": "Reveal in File Explorer",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.copyPath",
+        "title": "Copy Path",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.commit",
         "title": "Commit",
         "category": "Changelist",
@@ -253,6 +278,46 @@
       ],
       "webview/context": [
         {
+          "command": "changelist.pull",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "1_sync@1"
+        },
+        {
+          "command": "changelist.push",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "1_sync@2"
+        },
+        {
+          "command": "changelist.fetch",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "1_sync@3"
+        },
+        {
+          "command": "changelist.checkout",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "2_branch@1"
+        },
+        {
+          "command": "changelist.openInNewWindow",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "3_open@1"
+        },
+        {
+          "command": "changelist.revealInFinder",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync' && isMac",
+          "group": "3_open@2"
+        },
+        {
+          "command": "changelist.revealInFileExplorer",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync' && !isMac",
+          "group": "3_open@2"
+        },
+        {
+          "command": "changelist.copyPath",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'sync'",
+          "group": "4_copy@1"
+        },
+        {
           "command": "changelist.commit",
           "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
           "group": "1_commit@1"
@@ -379,6 +444,26 @@
         },
         {
           "command": "changelist.checkout",
+          "when": "false"
+        },
+        {
+          "command": "changelist.fetch",
+          "when": "false"
+        },
+        {
+          "command": "changelist.openInNewWindow",
+          "when": "false"
+        },
+        {
+          "command": "changelist.revealInFinder",
+          "when": "false"
+        },
+        {
+          "command": "changelist.revealInFileExplorer",
+          "when": "false"
+        },
+        {
+          "command": "changelist.copyPath",
           "when": "false"
         }
       ]

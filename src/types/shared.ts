@@ -105,6 +105,8 @@ export interface SyncRepositoryItem {
 	readonly behind: number
 	/** Whether it has commits to push or pull, which makes its name bold. */
 	readonly needsSync: boolean
+	/** Whether it has uncommitted changes, which puts a `*` after its name. */
+	readonly hasChanges: boolean
 }
 
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */

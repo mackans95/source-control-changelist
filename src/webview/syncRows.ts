@@ -62,7 +62,16 @@ function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryIte
 		toolbar.append(branchButton(repository.branch, target))
 	}
 
-	row.append(codicon('repo'), span('label', repository.name), syncCounts(repository), span('spacer'), toolbar)
+	row.append(codicon('repo'), span('label', repository.name))
+
+	// Like the branch in the status bar: `*` when there's something to commit.
+	if (repository.hasChanges) {
+		const changes = span('changes-mark', '*')
+		changes.dataset.tooltip = 'Uncommitted changes'
+		row.append(changes)
+	}
+
+	row.append(syncCounts(repository), span('spacer'), toolbar)
 
 	// After the toolbar, so the branch shrinks when the view is narrow and the button keeps its text.
 	if (sync) {
