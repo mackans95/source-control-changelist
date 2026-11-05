@@ -5,6 +5,7 @@ CONTRIBUTING.md
 src/**
 scripts/**
 test/**
+.fake-repos/**
 dist/**/*.map
 tsconfig*.json
 .github/**

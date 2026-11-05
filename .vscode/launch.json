@@ -20,6 +20,17 @@
       "postDebugTask": "stop watch",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/.."]
+    },
+    {
+      // Same as Run Extension, but opens fresh fake repositories (scripts/fakeRepos.ts), one in every
+      // state the view shows, instead of the folder this project is in.
+      "name": "Run Extension (fake repositories)",
+      "type": "extensionHost",
+      "request": "launch",
+      "preLaunchTask": "fake repos and watch",
+      "postDebugTask": "stop watch",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/.fake-repos/repos"]
     }
   ]
 }

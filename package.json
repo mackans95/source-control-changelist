@@ -493,6 +493,7 @@
     "typecheck": "tsc -p . && tsc -p src/webview && tsc -p test && tsc -p scripts",
     "vscode:prepublish": "npm run build",
     "release": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/release.ts",
+    "fake-repos": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/fakeRepos.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt",

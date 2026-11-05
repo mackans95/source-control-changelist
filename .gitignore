@@ -1,6 +1,8 @@
 node_modules/
 dist/
 *.vsix
+# The fake repositories scripts/fakeRepos.ts makes for the test window.
+.fake-repos/
 !.vscode/
 # Local release notes, like in markdown-toc-sidebar.
 .vscode/RELEASING.md

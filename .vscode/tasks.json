@@ -37,6 +37,22 @@
       "presentation": { "reveal": "never" },
       "problemMatcher": [],
       "runOptions": { "instancePolicy": "silent" }
+    },
+    {
+      // Makes fresh fake repositories, then starts the watch task. launch.json's fake repositories
+      // configuration runs it before a debug session.
+      "label": "fake repos and watch",
+      "dependsOrder": "sequence",
+      "dependsOn": ["fake repos", "watch"],
+      "problemMatcher": []
+    },
+    {
+      // Deletes the fake repositories and makes them again (scripts/fakeRepos.ts).
+      "label": "fake repos",
+      "type": "npm",
+      "script": "fake-repos",
+      "presentation": { "reveal": "never" },
+      "problemMatcher": []
     }
   ],
   "inputs": [

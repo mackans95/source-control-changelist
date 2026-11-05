@@ -17,10 +17,10 @@ The view is a webview in the Source Control container, so it can draw things a t
 ## Development
 
 1. Clone the repository, run `npm install` and open it in VS Code.
-2. Press `F5` to open a test window with the extension loaded. It opens the folder the repository is in, so put it next to a few other Git repositories, or change the path in `.vscode/launch.json`.
+2. Press `F5` to open a test window with the extension loaded. It opens the folder the repository is in, so put it next to a few other Git repositories, or use the fake repositories below.
 3. Open the **Source Control** view and find **Changelist** below **Changes**.
 
-There are two launch configurations. **Run Extension (no other extensions)** disables your installed extensions in the test window, so the Debug Console only shows output from this extension and VS Code's built-ins.
+There are three launch configurations. **Run Extension (no other extensions)** disables your installed extensions in the test window, so the Debug Console only shows output from this extension and VS Code's built-ins. **Run Extension (fake repositories)** opens repositories that `scripts/fakeRepos.ts` makes in `.fake-repos/`, one in every state the view shows: with changes, ahead, behind, diverged, not published, detached, without a remote, and with a worktree. They're made again on every launch, so each test starts the same. To reset them while the test window is open, run `npm run fake-repos`, then **Developer: Reload Window** in the test window.
 
 The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm run watch` first, which rebuilds on every change; build errors show up in the Problems panel. After a change, run **Developer: Reload Window** in the test window to load it. After changing `package.json`, stop and restart debugging instead.
 
