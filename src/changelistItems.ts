@@ -9,6 +9,8 @@ import {
 	countChanges,
 	getChanges,
 	hasChanges,
+	mainRepository,
+	mainRepositoryPath,
 	needsSync,
 	repositoryName,
 	syncState,
@@ -17,7 +19,15 @@ import { Status } from './constants/git.ts'
 import { themeColor } from './helpers/shared.ts'
 import type { Change, Repository } from './types/git.ts'
 import type { FolderNode, IconResolver, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
-import type { FileItem, FolderItem, GroupItem, GroupKind, RepositoryItem, SyncRepositoryItem } from './types/shared.ts'
+import type {
+	FileItem,
+	FolderItem,
+	GroupItem,
+	GroupKind,
+	RepositoryItem,
+	RepositoryKind,
+	SyncRepositoryItem,
+} from './types/shared.ts'
 
 // The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
 const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {
@@ -144,6 +154,17 @@ function branchLabel(repository: Repository): string {
 	return head?.name ?? head?.commit?.slice(0, 8) ?? ''
 }
 
+/** A repository of its own, a worktree or a submodule. Older versions of the Git extension don't say. */
+function repositoryKind(repository: Repository): RepositoryKind {
+	return repository.kind ?? 'repository'
+}
+
+/** For a worktree, the name of the repository it belongs to. */
+function worktreeOf(repository: Repository): string | undefined {
+	const mainPath = mainRepositoryPath(repository)
+	return mainPath ? path.basename(mainPath) : undefined
+}
+
 /** A file's row: its name, icon and status, and its folder in list mode. */
 function toFileItem(
 	repository: Repository,
@@ -201,6 +222,8 @@ export function toRepositoryItem(repository: Repository, viewMode: ViewMode, ico
 		id: repository.rootUri.toString(),
 		name: repositoryName(repository),
 		path: repository.rootUri.fsPath,
+		kind: repositoryKind(repository),
+		worktreeOf: worktreeOf(repository),
 		branch: branchLabel(repository),
 		counts: countChanges(repository),
 		groups: (Object.keys(GROUP_LABELS) as GroupKind[])
@@ -209,19 +232,25 @@ export function toRepositoryItem(repository: Repository, viewMode: ViewMode, ico
 	}
 }
 
-/** A repository's row in the Repositories panel: its branch, and how far that is from its upstream. */
-export function toSyncRepositoryItem(repository: Repository): SyncRepositoryItem {
+/**
+ * A repository's row in the Repositories panel: its branch, and how far that is from its upstream.
+ * `repositories` are all the open ones, where a worktree's repository is looked for.
+ */
+export function toSyncRepositoryItem(repository: Repository, repositories: readonly Repository[]): SyncRepositoryItem {
 	const head = repository.state.HEAD
 
 	return {
 		id: repository.rootUri.toString(),
 		name: repositoryName(repository),
 		path: repository.rootUri.fsPath,
+		kind: repositoryKind(repository),
+		worktreeOf: worktreeOf(repository),
 		branch: branchLabel(repository),
 		state: syncState(repository),
 		ahead: head?.ahead ?? 0,
 		behind: head?.behind ?? 0,
 		needsSync: needsSync(repository),
 		hasChanges: hasChanges(repository),
+		parentId: mainRepository(repository, repositories)?.rootUri.toString(),
 	}
 }

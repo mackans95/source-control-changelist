@@ -8,9 +8,11 @@ import {
 	countChanges,
 	getChanges,
 	hasChanges,
+	mainRepositoryPath,
 	needsSync,
 	repositoryName,
 	syncState,
+	sortRepositories,
 } from '../src/changelistModel.ts'
 import { Status } from '../src/constants/git.ts'
 import type { Branch, Change, Repository } from '../src/types/git.ts'
@@ -50,6 +52,11 @@ function repository(groups: {
 // A clean repository whose HEAD is this branch, or a detached HEAD without one.
 function onBranch(head: Partial<Branch> | undefined, path = '/repo'): Repository {
 	return { rootUri: uri(path), state: { HEAD: head } } as never
+}
+
+// A worktree in its own folder, of the repository in `main`.
+function worktree(path: string, main: string): Repository {
+	return { rootUri: uri(path), kind: 'worktree', state: { worktrees: [{ path: main, main: true }] } } as never
 }
 
 const upstream = { remote: 'origin', name: 'main' }
@@ -195,5 +202,25 @@ describe('byPath and repositoryName', () => {
 	test('sorts repositories by their name', () => {
 		const sorted = [onBranch(undefined, '/b/web'), onBranch(undefined, '/a/api')].sort(byName)
 		assert.deepEqual(sorted.map(repositoryName), ['api', 'web'])
+	})
+})
+
+describe('mainRepositoryPath and sortRepositories', () => {
+	test('knows the repository a worktree belongs to', () => {
+		assert.equal(mainRepositoryPath(worktree('/code/feature-x', '/code/api')), '/code/api')
+		assert.equal(mainRepositoryPath(onBranch(undefined, '/code/api')), undefined)
+	})
+	test('puts each worktree right after its repository', () => {
+		const sorted = sortRepositories([
+			onBranch(undefined, '/code/web'),
+			worktree('/code/zz-fix', '/code/api'),
+			onBranch(undefined, '/code/api'),
+			worktree('/code/feature-x', '/code/api'),
+		])
+		assert.deepEqual(sorted.map(repositoryName), ['api', 'feature-x', 'zz-fix', 'web'])
+	})
+	test("sorts a worktree by its own name when its repository isn't open", () => {
+		const sorted = sortRepositories([onBranch(undefined, '/code/web'), worktree('/code/feature-x', '/code/api')])
+		assert.deepEqual(sorted.map(repositoryName), ['feature-x', 'web'])
 	})
 })

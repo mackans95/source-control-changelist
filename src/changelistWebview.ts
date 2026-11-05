@@ -7,7 +7,7 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './changelistHtml.ts'
 import { toRepositoryItem, toSyncRepositoryItem } from './changelistItems.ts'
-import { byName, getChanges, hasChanges, needsSync } from './changelistModel.ts'
+import { getChanges, hasChanges, needsSync, sortRepositories } from './changelistModel.ts'
 import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Repository } from './types/git.ts'
@@ -250,16 +250,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 		const viewMode = getViewMode()
 		const icons = this.fileIcons.resolver(this.view.webview)
-		const repositories = this.git.repositories
-			.filter(hasChanges)
-			.sort(byName)
-			.map(repository => toRepositoryItem(repository, viewMode, icons))
+		// Every open repository, sorted once for both lists.
+		const all = sortRepositories(this.git.repositories)
+		// Sorted before they're filtered, so a worktree stays below its repository when both have changes.
+		const repositories = all.filter(hasChanges).map(repository => toRepositoryItem(repository, viewMode, icons))
 		const message: ExtensionMessage = {
 			type: 'update',
 			repositories,
-			syncRepositories: this.showingRepositories
-				? [...this.git.repositories].sort(byName).map(toSyncRepositoryItem)
-				: undefined,
+			syncRepositories: this.showingRepositories ? all.map(r => toSyncRepositoryItem(r, all)) : undefined,
 			fonts: icons.fonts(),
 			alwaysShowActions: vscode.workspace.getConfiguration('scm').get<boolean>('alwaysShowActions', false),
 			hoverDelay: vscode.workspace

@@ -33,7 +33,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm run format` | Formats with Oxfmt; `npm run format:check` only checks. |
 | `npm test` | Runs the tests. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts, sync state and folder tree in `changelistModel.ts`, the Repositories panel's data in `changelistItems.ts`, the icon matching in `iconMatching.ts`, and `themeColor()`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, counts, sync state, sorting and folder tree in `changelistModel.ts`, the Repositories panel's data in `changelistItems.ts`, the icon matching in `iconMatching.ts`, and `themeColor()`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
 
 ## Releasing
 

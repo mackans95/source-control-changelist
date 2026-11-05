@@ -3,7 +3,7 @@
 // extension's Push, Pull, Sync or Publish Branch.
 import { run } from './api.ts'
 import { codicon, span } from './dom.ts'
-import { branchButton, createRow, textButton } from './rows.ts'
+import { branchButton, createRow, repositoryIcon, repositoryTooltip, textButton } from './rows.ts'
 import type { ActionTarget, SyncRepositoryItem, SyncState } from '../types/shared.ts'
 import type { SyncButton } from '../types/webview.ts'
 
@@ -47,14 +47,16 @@ function syncCounts(repository: SyncRepositoryItem): HTMLSpanElement {
 function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryItem): void {
 	const target: ActionTarget = { repository: repository.id }
 	const sync = SYNC_BUTTONS[repository.state]
-	const row = createRow(rows, repository.id, 1, 'sync', target, undefined, () =>
+	const level = repository.parentId ? 2 : 1
+	const row = createRow(rows, repository.id, level, 'sync', target, repository.parentId, () =>
 		run(sync?.action ?? 'checkout', target),
 	)
 
 	// Looks like a repository's row in the changes, and shrinks the same way when the view is narrow.
 	row.classList.add('repository')
 	row.classList.toggle('needs-sync', repository.needsSync)
-	row.dataset.tooltip = repository.path
+	row.classList.toggle('nested', repository.parentId !== undefined)
+	row.dataset.tooltip = repositoryTooltip(repository)
 
 	const toolbar = span('toolbar')
 
@@ -73,7 +75,7 @@ function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryIte
 		label.append(changes)
 	}
 
-	row.append(codicon('repo'), label, syncCounts(repository), span('spacer'), toolbar)
+	row.append(repositoryIcon(repository.kind), label, syncCounts(repository), span('spacer'), toolbar)
 
 	// After the toolbar, so the branch shrinks when the view is narrow and the button keeps its text.
 	if (sync) {

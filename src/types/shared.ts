@@ -75,12 +75,19 @@ export interface GroupItem {
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
+/** A repository of its own, a worktree of one, or a submodule, like the Git extension's `Repository.kind`. */
+export type RepositoryKind = 'repository' | 'worktree' | 'submodule'
+
 /** A repository's row, with its groups. */
 export interface RepositoryItem {
 	/** The repository's root URI. */
 	readonly id: string
 	readonly name: string
 	readonly path: string
+	/** Which icon it gets. */
+	readonly kind: RepositoryKind
+	/** For a worktree, the name of the repository it belongs to. */
+	readonly worktreeOf?: string
 	/** The branch name, the short commit for a detached HEAD, or empty before the first commit. */
 	readonly branch: string
 	readonly counts: ChangeCounts
@@ -96,6 +103,10 @@ export interface SyncRepositoryItem {
 	readonly id: string
 	readonly name: string
 	readonly path: string
+	/** Which icon it gets. */
+	readonly kind: RepositoryKind
+	/** For a worktree, the name of the repository it belongs to. */
+	readonly worktreeOf?: string
 	/** The branch name, the short commit for a detached HEAD, or empty before the first commit. */
 	readonly branch: string
 	readonly state: SyncState
@@ -107,6 +118,11 @@ export interface SyncRepositoryItem {
 	readonly needsSync: boolean
 	/** Whether it has uncommitted changes, which puts a `*` after its name. */
 	readonly hasChanges: boolean
+	/**
+	 * For a worktree, the id of the repository it belongs to, when that one is open too. Its row is
+	 * indented below that one's.
+	 */
+	readonly parentId?: string
 }
 
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */

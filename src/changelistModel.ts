@@ -120,9 +120,38 @@ export function repositoryName(repository: Repository): string {
 	return path.basename(repository.rootUri.fsPath)
 }
 
-/** Sorts repositories by their name, for the view and the Repositories panel. */
+/** Sorts repositories by their name. */
 export function byName(a: Repository, b: Repository): number {
 	return repositoryName(a).localeCompare(repositoryName(b))
+}
+
+/** For a worktree, the folder of the repository it belongs to. */
+export function mainRepositoryPath(repository: Repository): string | undefined {
+	if (repository.kind !== 'worktree') return undefined
+
+	// Older versions of the Git extension don't list worktrees.
+	return repository.state.worktrees?.find(w => w.main)?.path
+}
+
+/** For a worktree, the repository it belongs to, when that one is open too. */
+export function mainRepository(repository: Repository, repositories: readonly Repository[]): Repository | undefined {
+	const mainPath = mainRepositoryPath(repository)
+	return mainPath === undefined ? undefined : repositories.find(r => r.rootUri.fsPath === mainPath)
+}
+
+/**
+ * Sorts repositories by their name, for the view and the Repositories panel, with each worktree
+ * right after the repository it belongs to. A worktree whose repository isn't open is sorted by its
+ * own name.
+ */
+export function sortRepositories(repositories: readonly Repository[]): Repository[] {
+	const mainOf = (repository: Repository) => mainRepository(repository, repositories)
+	const worktrees = repositories.filter(mainOf)
+
+	return repositories
+		.filter(r => !mainOf(r))
+		.sort(byName)
+		.flatMap(main => [main, ...worktrees.filter(w => mainOf(w) === main).sort(byName)])
 }
 
 /** Sorts changes by their path, for list mode and for the files in a folder. */

@@ -54,6 +54,14 @@
 	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, transparent));
 }
 
+/* In the Repositories panel (syncRows.ts), a worktree sits below the repository it belongs to, with
+   its icon under that one's name and no line between them. */
+.repository.sync.nested {
+	/* The 4px every row has, and the icon and its margin. */
+	padding-left: 26px;
+	border-top: none;
+}
+
 .counts {
 	display: flex;
 	flex: none;

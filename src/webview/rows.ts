@@ -15,7 +15,9 @@ import type {
 	GroupItem,
 	MenuContext,
 	RepositoryItem,
+	RepositoryKind,
 	RowSection,
+	SyncRepositoryItem,
 	WebviewAction,
 } from '../types/shared.ts'
 import type { CategoryDisplay } from '../types/webview.ts'
@@ -30,6 +32,13 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 		label: 'with conflicts',
 		color: 'gitDecoration.conflictingResourceForeground',
 	},
+}
+
+// Each kind of repository's icon, like the built-in Source Control view.
+const REPOSITORY_ICONS: Record<RepositoryKind, string> = {
+	repository: 'repo',
+	worktree: 'worktree',
+	submodule: 'archive',
 }
 
 // Staged Changes is green, like `git status` shows staged files, so it's clear which group is shown.
@@ -78,6 +87,16 @@ export function createRow(
 	tree.addRow(id, parentId, onActivate)
 	rows.push(row)
 	return row
+}
+
+/** A repository row's tooltip: its folder, and for a worktree the repository it belongs to. */
+export function repositoryTooltip(repository: RepositoryItem | SyncRepositoryItem): string {
+	return repository.worktreeOf ? `${repository.path} • Worktree of ${repository.worktreeOf}` : repository.path
+}
+
+/** A repository row's icon, for a repository of its own, a worktree or a submodule. */
+export function repositoryIcon(kind: RepositoryKind): HTMLSpanElement {
+	return codicon(REPOSITORY_ICONS[kind])
 }
 
 /** The branch on a repository's row, which switches branch. */
@@ -238,7 +257,7 @@ export function renderRepository(rows: HTMLElement[], repository: RepositoryItem
 	const target: ActionTarget = { repository: repository.id }
 	const row = createRow(rows, repository.id, 1, 'repository', target, undefined, () => tree.toggle(repository.id))
 	const expanded = addTwistie(row, repository.id)
-	row.dataset.tooltip = repository.path
+	row.dataset.tooltip = repositoryTooltip(repository)
 
 	const toolbar = span('toolbar')
 
@@ -253,7 +272,7 @@ export function renderRepository(rows: HTMLElement[], repository: RepositoryItem
 	)
 
 	row.append(
-		codicon('repo'),
+		repositoryIcon(repository.kind),
 		span('label', repository.name),
 		countsElement(repository.counts),
 		span('spacer'),
