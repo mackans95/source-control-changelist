@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - **Every repository's sync status.** The _Repositories_ button in the view's title bar shows every repository, also the ones without changes, with its branch and how many commits it has to pull and push, and a button to push, pull, sync or publish it. The button gets a dot when a repository has commits to push or pull, and the repository gets its name in bold. A `*` after the name means uncommitted changes, and the right-click menu fetches a repository, opens it in a new window, reveals it or copies its path.
 - **Worktrees** get their own icon and are listed right below the repository they belong to, indented in the Repositories panel, with its name in the tooltip. Submodules get their own icon too.

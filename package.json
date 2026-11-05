@@ -2,7 +2,7 @@
   "name": "source-control-changelist",
   "displayName": "Changelist",
   "description": "PyCharm-style changelists in the Source Control view: only repositories with changes are shown.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "mackans95",
   "license": "MIT",
   "icon": "images/icon.png",
