@@ -4,7 +4,7 @@ import * as path from 'path'
 import { Status } from './constants/git.ts'
 import type { Change, Repository } from './types/git.ts'
 import type { ChangeCategory, ChangeCounts, GroupKind, SyncState } from './types/shared.ts'
-import type { Directory, FolderNode, ResourceNode } from './types/extension.ts'
+import type { Directory, FolderNode, RepositoryChangelists, ResourceNode } from './types/extension.ts'
 
 // The groups, in the order the view shows them, with the built-in Source Control view's names.
 export const GROUP_LABELS: Record<GroupKind, string> = {
@@ -53,6 +53,53 @@ export function getChanges(repository: Repository, kind: GroupKind): readonly Ch
 		case 'untracked':
 			return state.untrackedChanges
 	}
+}
+
+/** Which changelist a change is in, or undefined for none: the default Changes list, or Untracked Changes. */
+export function changelistOf(changelists: RepositoryChangelists, change: Change): string | undefined {
+	const name = changelists.files[change.uri.toString()]
+	return name !== undefined && changelists.lists.includes(name) ? name : undefined
+}
+
+/**
+ * A group's or changelist's changes. A changelist has the changes and untracked files moved to it,
+ * and Changes and Untracked Changes have the rest. Merge and Staged Changes are Git's own, so
+ * changelists don't change them.
+ */
+export function groupChanges(
+	repository: Repository,
+	kind: GroupKind,
+	changelists: RepositoryChangelists,
+	changelist?: string,
+): readonly Change[] {
+	if (changelist !== undefined) {
+		return [...getChanges(repository, 'changes'), ...getChanges(repository, 'untracked')].filter(
+			change => changelistOf(changelists, change) === changelist,
+		)
+	}
+
+	if (kind === 'changes' || kind === 'untracked') {
+		return getChanges(repository, kind).filter(change => changelistOf(changelists, change) === undefined)
+	}
+
+	return getChanges(repository, kind)
+}
+
+/**
+ * The changelists without the files that have no changes any more, because they were committed or
+ * discarded. A file that's only staged keeps its list, so it goes back there when it's unstaged.
+ */
+export function pruneChangelists(repository: Repository, changelists: RepositoryChangelists): RepositoryChangelists {
+	const changed = new Set(
+		(Object.keys(GROUP_LABELS) as GroupKind[])
+			.flatMap(kind => getChanges(repository, kind))
+			.map(c => c.uri.toString()),
+	)
+	const files = Object.entries(changelists.files).filter(
+		([uri, name]) => changed.has(uri) && changelists.lists.includes(name),
+	)
+
+	return { lists: changelists.lists, files: Object.fromEntries(files) }
 }
 
 /** Whether the repository has any changes, so the view shows it. */

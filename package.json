@@ -105,6 +105,32 @@
         "category": "Changelist"
       },
       {
+        "command": "changelist.commitChangelist",
+        "title": "Commit Changelist",
+        "category": "Changelist",
+        "icon": "$(check)"
+      },
+      {
+        "command": "changelist.newChangelist",
+        "title": "New Changelist...",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.renameChangelist",
+        "title": "Rename Changelist...",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.deleteChangelist",
+        "title": "Delete Changelist",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.moveToChangelist",
+        "title": "Move to Changelist...",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.commit",
         "title": "Commit",
         "category": "Changelist",
@@ -371,6 +397,36 @@
           "command": "changelist.discard",
           "when": "webviewId == 'changelist.view' && webviewSection == 'file' && kind =~ /^(changes|untracked)$/",
           "group": "1_modification@2"
+        },
+        {
+          "command": "changelist.commitChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "1_commit@1"
+        },
+        {
+          "command": "changelist.newChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "3_changelist@1"
+        },
+        {
+          "command": "changelist.newChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && kind =~ /^(changes|untracked)$/",
+          "group": "3_changelist@1"
+        },
+        {
+          "command": "changelist.moveToChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection =~ /^(group|folder|file)$/ && kind =~ /^(changes|untracked)$/",
+          "group": "3_changelist@2"
+        },
+        {
+          "command": "changelist.renameChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "3_changelist@3"
+        },
+        {
+          "command": "changelist.deleteChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "3_changelist@4"
         }
       ],
       "commandPalette": [
@@ -464,6 +520,26 @@
         },
         {
           "command": "changelist.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "changelist.commitChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.newChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.moveToChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.renameChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.deleteChangelist",
           "when": "false"
         }
       ]

@@ -28,29 +28,32 @@
     },
     {
       // Stops the watch task when the debug window closes; launch.json runs it as postDebugTask.
-      // The input runs VS Code's Terminate Task for "watch", so echo has nothing to print.
+      // The input runs VS Code's Terminate Task for "watch". The command returns nothing, so the input
+      // stays as written, and node gets it as an argument it ignores, without a shell to read it.
       // An extension debug session ends in two parts, and each runs postDebugTask. The second run
       // would otherwise ask which running "stop watch" to end, with an empty list, so it's dropped.
       "label": "stop watch",
-      "type": "shell",
-      "command": "echo ${input:terminateWatch}",
+      "type": "process",
+      "command": "node",
+      "args": ["-e", "", "${input:terminateWatch}"],
       "presentation": { "reveal": "never" },
       "problemMatcher": [],
       "runOptions": { "instancePolicy": "silent" }
     },
     {
-      // Makes fresh fake repositories, then starts the watch task. launch.json's fake repositories
-      // configuration runs it before a debug session.
+      // Makes the fake repositories if they aren't there yet, then starts the watch task. launch.json's
+      // fake repositories configuration runs it before a debug session.
       "label": "fake repos and watch",
       "dependsOrder": "sequence",
       "dependsOn": ["fake repos", "watch"],
       "problemMatcher": []
     },
     {
-      // Deletes the fake repositories and makes them again (scripts/fakeRepos.ts).
+      // Makes the fake repositories (scripts/fakeRepos.ts) when they aren't there yet. A reload of the
+      // test window runs it again, so it leaves them alone; `npm run fake-repos` starts over.
       "label": "fake repos",
-      "type": "npm",
-      "script": "fake-repos",
+      "type": "shell",
+      "command": "npm run fake-repos -- --if-missing",
       "presentation": { "reveal": "never" },
       "problemMatcher": []
     }

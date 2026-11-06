@@ -4,6 +4,7 @@ import * as vscode from 'vscode'
 import { unavailableHtml } from './changelistHtml.ts'
 import { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { registerCommands } from './commands.ts'
+import { ChangelistStore } from './changelistStore.ts'
 import type { API, GitExtension } from './types/git.ts'
 
 /** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */
@@ -55,10 +56,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	// Shows the view's title buttons, which need Git.
 	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
 
-	const provider = new ChangelistWebviewProvider(git, context.extensionUri)
+	const changelists = new ChangelistStore(context.workspaceState)
+	const provider = new ChangelistWebviewProvider(git, context.extensionUri, changelists)
 	context.subscriptions.push(
+		changelists,
 		provider,
 		vscode.window.registerWebviewViewProvider('changelist.view', provider),
-		...registerCommands(git, provider),
+		...registerCommands(git, provider, changelists),
 	)
 }

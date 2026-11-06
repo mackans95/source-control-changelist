@@ -157,7 +157,12 @@ function renderFile(
 	level: number,
 	parentId: string,
 ): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: file.uri }
+	const target: ActionTarget = {
+		repository: repository.id,
+		kind: group.kind,
+		changelist: group.changelist,
+		uri: file.uri,
+	}
 	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
 	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', file.color)
@@ -197,7 +202,12 @@ function renderFolder(
 	level: number,
 	parentId: string,
 ): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind, uri: folder.uri }
+	const target: ActionTarget = {
+		repository: repository.id,
+		kind: group.kind,
+		changelist: group.changelist,
+		uri: folder.uri,
+	}
 	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
 	const expanded = addTwistie(row, folder.id)
 	const actions = groupActions(group, target)
@@ -232,12 +242,17 @@ function renderEntries(
 	}
 }
 
-/** A group's row, and the rows below it while it's expanded. */
+/** A group's or changelist's row, and the rows below it while it's expanded. */
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind }
+	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
 	const expanded = addTwistie(row, group.id)
 	const actions = groupActions(group, target)
+
+	// A changelist commits on its own, like a repository does.
+	if (group.changelist !== undefined) {
+		actions.prepend(actionButton('check', 'Commit Changelist', 'commitChangelist', target))
+	}
 
 	const label = span('label', group.label)
 

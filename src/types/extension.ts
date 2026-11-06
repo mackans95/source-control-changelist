@@ -13,19 +13,22 @@ export interface RepositoryNode {
 	readonly repository: Repository
 }
 
-/** A group's row, with the group's changes. */
+/** A group's or changelist's row, with its changes. */
 export interface GroupNode {
 	readonly type: 'group'
 	readonly repository: Repository
 	readonly kind: GroupKind
+	/** A changelist's name. */
+	readonly changelist?: string
 	readonly changes: readonly Change[]
 }
 
-/** A file's row: one change in a group. */
+/** A file's row: one change in a group or changelist. */
 export interface ResourceNode {
 	readonly type: 'resource'
 	readonly repository: Repository
 	readonly kind: GroupKind
+	readonly changelist?: string
 	readonly change: Change
 }
 
@@ -34,6 +37,7 @@ export interface FolderNode {
 	readonly type: 'folder'
 	readonly repository: Repository
 	readonly kind: GroupKind
+	readonly changelist?: string
 	readonly uri: vscode.Uri
 	readonly label: string
 	/** All changes below this folder. */
@@ -43,6 +47,25 @@ export interface FolderNode {
 
 /** Any row, as the `changelist.*` commands take it. */
 export type Node = RepositoryNode | GroupNode | FolderNode | ResourceNode
+
+/**
+ * A repository's changelists, as they're saved in the workspace's state. Files that aren't in
+ * `files` are in the default Changes list, or in Untracked Changes.
+ */
+export interface RepositoryChangelists {
+	/** The lists the user made, in the order they were made. */
+	readonly lists: readonly string[]
+	/** Which list each moved file is in, by the file's URI. */
+	readonly files: Readonly<Record<string, string>>
+}
+
+/** A changelist in the Move to Changelist picker, or the entry that makes a new one. */
+export interface ChangelistPick extends vscode.QuickPickItem {
+	/** The list to move to, or undefined for the default Changes list. */
+	readonly changelist?: string
+	/** The entry that asks for a new list's name first. */
+	readonly isNew: boolean
+}
 
 /** A folder while buildTree sorts a group's changes into folders. */
 export interface Directory {
