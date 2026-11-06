@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
-import { toSyncRepositoryItem } from '../src/changelistItems.ts'
+import { toRepositoryItem, toSyncRepositoryItem } from '../src/changelistItems.ts'
+import { Status } from '../src/constants/git.ts'
+import type { IconResolver } from '../src/types/extension.ts'
 import type { Branch, Change, Repository } from '../src/types/git.ts'
 
 // Just enough of a URI for a repository's root.
@@ -18,6 +20,8 @@ function onBranch(head: Partial<Branch> | undefined, workingTreeChanges: Change[
 }
 
 const upstream = { remote: 'origin', name: 'main' }
+// No file icon theme.
+const icons: IconResolver = { fonts: () => [], file: () => undefined, folder: () => undefined }
 
 describe('toSyncRepositoryItem', () => {
 	test('has the repository, its branch and how far that is from its upstream', () => {
@@ -68,5 +72,24 @@ describe('toSyncRepositoryItem', () => {
 		assert.equal(item.worktreeOf, 'api')
 		assert.equal(item.parentId, 'file:///code/api')
 		assert.equal(toSyncRepositoryItem(repository, [repository]).parentId, undefined)
+	})
+})
+
+describe('toRepositoryItem', () => {
+	test('shows the changelists after Changes, also the empty ones', () => {
+		const tracked = { uri: uri('/code/api/a.ts'), status: Status.MODIFIED } as Change
+		const moved = { uri: uri('/code/api/b.ts'), status: Status.MODIFIED } as Change
+		const changelists = { lists: ['Feature', 'Later'], files: { [moved.uri.toString()]: 'Feature' } }
+		const item = toRepositoryItem(onBranch({ name: 'main' }, [tracked, moved]), changelists, 'list', icons)
+		assert.deepEqual(
+			item.groups.map(group => [group.label, group.count]),
+			[
+				['Changes', 1],
+				['Feature', 1],
+				['Later', 0],
+			],
+		)
+		assert.equal(item.groups[1].id, 'file:///code/api#changelist#Feature')
+		assert.equal(item.groups[1].changelist, 'Feature')
 	})
 })

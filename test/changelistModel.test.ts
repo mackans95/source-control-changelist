@@ -5,11 +5,14 @@ import {
 	buildTree,
 	byName,
 	byPath,
+	changelistOf,
 	countChanges,
 	getChanges,
+	groupChanges,
 	hasChanges,
 	mainRepositoryPath,
 	needsSync,
+	pruneChangelists,
 	repositoryName,
 	syncState,
 	sortRepositories,
@@ -222,5 +225,35 @@ describe('mainRepositoryPath and sortRepositories', () => {
 	test("sorts a worktree by its own name when its repository isn't open", () => {
 		const sorted = sortRepositories([onBranch(undefined, '/code/web'), worktree('/code/feature-x', '/code/api')])
 		assert.deepEqual(sorted.map(repositoryName), ['feature-x', 'web'])
+	})
+})
+
+describe('changelistOf, groupChanges and pruneChangelists', () => {
+	const tracked = change('a.ts')
+	const moved = change('b.ts')
+	const untracked = change('new.ts', Status.UNTRACKED)
+	const repo = repository({ changes: [tracked, moved], untracked: [untracked] })
+	const changelists = {
+		lists: ['Feature'],
+		files: { [moved.uri.toString()]: 'Feature', [untracked.uri.toString()]: 'Feature' },
+	}
+
+	test('puts the moved files in their changelist, also untracked ones', () => {
+		assert.deepEqual(groupChanges(repo, 'changes', changelists, 'Feature'), [moved, untracked])
+	})
+	test('leaves the moved files out of Changes and Untracked Changes', () => {
+		assert.deepEqual(groupChanges(repo, 'changes', changelists), [tracked])
+		assert.deepEqual(groupChanges(repo, 'untracked', changelists), [])
+	})
+	test("puts a file in Changes when its changelist doesn't exist any more", () => {
+		assert.equal(changelistOf({ lists: [], files: { [moved.uri.toString()]: 'Gone' } }, moved), undefined)
+	})
+	test('forgets the files without changes, but keeps the staged ones', () => {
+		const staged = change('c.ts', Status.INDEX_MODIFIED)
+		const pruned = pruneChangelists(repository({ staged: [staged] }), {
+			lists: ['Feature'],
+			files: { [moved.uri.toString()]: 'Feature', [staged.uri.toString()]: 'Feature' },
+		})
+		assert.deepEqual(pruned.files, { [staged.uri.toString()]: 'Feature' })
 	})
 })

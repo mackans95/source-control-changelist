@@ -1,17 +1,27 @@
 // The `changelist.*` commands: the view's title buttons, and the actions on its rows. A row's
 // action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
 // turned back into the node first. Push, pull, sync, publish, fetch and switching branch run the Git
-// extension's own commands.
+// extension's own commands. Changelists are the extension's own: Git only sees what they stage
+// and commit.
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { getChanges, repositoryName } from './changelistModel.ts'
-import type { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { Status } from './constants/git.ts'
-import type { API, Change } from './types/git.ts'
-import type { FolderNode, GroupNode, Node, RepositoryNode, ResourceNode, ViewMode } from './types/extension.ts'
+import { GROUP_LABELS, changelistOf, groupChanges, repositoryName } from './changelistModel.ts'
+import type { ChangelistStore } from './changelistStore.ts'
+import type { ChangelistWebviewProvider } from './changelistWebview.ts'
+import type { API, Change, Repository } from './types/git.ts'
+import type {
+	ChangelistPick,
+	FolderNode,
+	GroupNode,
+	Node,
+	RepositoryNode,
+	ResourceNode,
+	ViewMode,
+} from './types/extension.ts'
 import type { GroupKind, MenuContext } from './types/shared.ts'
 
-// The groups a repository's Stage All button stages.
+// The groups a repository's Stage All button stages. Files in a changelist aren't in them.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
 // Where the progress bar shows while a sync button or Fetch All runs.
 const VIEW_PROGRESS: vscode.ProgressOptions = { location: { viewId: 'changelist.view' } }
@@ -41,10 +51,18 @@ function count(n: number, noun: string): string {
 	return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
-/** Stages the changes in a group or folder, or every unstaged change in a repository. */
-async function stageAll(node: RepositoryNode | GroupNode | FolderNode): Promise<void> {
-	const changes =
-		node.type === 'repository' ? UNSTAGED_KINDS.flatMap(kind => getChanges(node.repository, kind)) : node.changes
+/** A repository's unstaged changes that aren't in a changelist, which its Stage All and Commit take. */
+function changesOutsideChangelists(repository: Repository, changelists: ChangelistStore): Change[] {
+	return UNSTAGED_KINDS.flatMap(kind => groupChanges(repository, kind, changelists.get(repository)))
+}
+
+/**
+ * Stages the changes in a group, changelist or folder, or a repository's unstaged changes that aren't
+ * in a changelist.
+ */
+async function stageAll(node: RepositoryNode | GroupNode | FolderNode, changelists: ChangelistStore): Promise<void> {
+	const changes = node.type === 'repository' ? changesOutsideChangelists(node.repository, changelists) : node.changes
+
 	if (changes.length > 0) {
 		await node.repository.add(paths(changes))
 	}
@@ -86,41 +104,174 @@ async function discardAll(node: GroupNode | FolderNode): Promise<void> {
 	}
 }
 
+/** Asks for the commit message, which the built-in Source Control input box shares. */
+function askCommitMessage(title: string, value: string): Thenable<string | undefined> {
+	return vscode.window.showInputBox({
+		title,
+		prompt: 'Commit message',
+		value,
+		validateInput: message => (message.trim() ? undefined : 'Please provide a commit message'),
+	})
+}
+
 /**
  * Commits the staged changes with a message the user types. When nothing is staged, it offers to
- * stage everything first.
+ * stage the changes that aren't in a changelist first.
  */
-async function commit(node: RepositoryNode): Promise<void> {
+async function commit(node: RepositoryNode, changelists: ChangelistStore): Promise<void> {
 	const repository = node.repository
 	const name = repositoryName(repository)
 
+	if (repository.state.indexChanges.length === 0 && changesOutsideChangelists(repository, changelists).length === 0) {
+		void vscode.window.showInformationMessage(
+			`Everything in ${name} is in a changelist. Commit it with the changelist's Commit button.`,
+		)
+		return
+	}
+
 	if (repository.state.indexChanges.length === 0) {
+		const what =
+			changelists.get(repository).lists.length > 0 ? "the changes that aren't in a changelist" : 'all changes'
 		const choice = await vscode.window.showWarningMessage(
-			`There are no staged changes in ${name}. Stage all changes and commit them?`,
+			`There are no staged changes in ${name}. Stage ${what} and commit them?`,
 			{ modal: true },
 			'Stage All & Commit',
 		)
-		if (choice !== 'Stage All & Commit') {
-			return
-		}
+
+		if (choice !== 'Stage All & Commit') return
 	}
 
-	// Share the commit message with the built-in Source Control input box.
-	const message = await vscode.window.showInputBox({
-		title: `Commit to ${name}`,
-		prompt: 'Commit message',
-		value: repository.inputBox.value,
-		validateInput: value => (value.trim() ? undefined : 'Please provide a commit message'),
-	})
+	const message = await askCommitMessage(`Commit to ${name}`, repository.inputBox.value)
 	if (!message) {
 		return
 	}
 
 	if (repository.state.indexChanges.length === 0) {
-		await stageAll(node)
+		await stageAll(node, changelists)
 	}
 	await repository.commit(message)
 	repository.inputBox.value = ''
+}
+
+/**
+ * Commits a changelist's files and nothing else. The Git API commits what's staged, so it stages the
+ * list's files first, and offers to unstage the files from other lists.
+ */
+async function commitChangelist(node: GroupNode, changelists: ChangelistStore): Promise<void> {
+	const { repository, changelist, changes } = node
+	const name = repositoryName(repository)
+	const lists = changelists.get(repository)
+	const staged = repository.state.indexChanges
+	const others = staged.filter(c => changelistOf(lists, c) !== changelist)
+
+	if (changes.length === 0 && staged.length === others.length) {
+		void vscode.window.showInformationMessage(`There is nothing to commit in ${changelist}.`)
+		return
+	}
+
+	if (others.length > 0) {
+		const which = others.length === 1 ? "1 staged file isn't" : `${others.length} staged files aren't`
+		const choice = await vscode.window.showWarningMessage(
+			`${which} in ${changelist}. Unstage the other files and commit only ${changelist}?`,
+			{ modal: true },
+			'Unstage & Commit',
+		)
+
+		if (choice !== 'Unstage & Commit') return
+	}
+
+	const message = await askCommitMessage(
+		`Commit ${changelist} to ${name}`,
+		repository.inputBox.value || (changelist ?? ''),
+	)
+
+	if (!message) return
+
+	if (others.length > 0) {
+		await repository.revert(paths(others))
+	}
+
+	if (changes.length > 0) {
+		await repository.add(paths(changes))
+	}
+
+	await repository.commit(message)
+	repository.inputBox.value = ''
+}
+
+/** Asks for a changelist's name, which can't be Changes or another list's. */
+function askChangelistName(
+	repository: Repository,
+	changelists: ChangelistStore,
+	title: string,
+	current?: string,
+): Thenable<string | undefined> {
+	const taken = [GROUP_LABELS.changes, ...changelists.get(repository).lists.filter(list => list !== current)]
+
+	return vscode.window.showInputBox({
+		title,
+		prompt: 'Changelist name',
+		value: current,
+		validateInput: value => {
+			const name = value.trim()
+			if (!name) return 'Please provide a name'
+			if (taken.includes(name)) return `There is already a changelist called ${name}`
+			return undefined
+		},
+	})
+}
+
+/** Makes an empty changelist in a repository, and returns its name. */
+async function newChangelist(repository: Repository, changelists: ChangelistStore): Promise<string | undefined> {
+	const name = (
+		await askChangelistName(repository, changelists, `New Changelist in ${repositoryName(repository)}`)
+	)?.trim()
+
+	if (name) {
+		await changelists.add(repository, name)
+	}
+
+	return name
+}
+
+/** Renames a changelist. */
+async function renameChangelist(node: GroupNode, changelists: ChangelistStore): Promise<void> {
+	const { repository, changelist } = node
+	const name = (await askChangelistName(repository, changelists, 'Rename Changelist', changelist))?.trim()
+
+	if (changelist && name && name !== changelist) {
+		await changelists.rename(repository, changelist, name)
+	}
+}
+
+/**
+ * Moves a file, a folder's files or a group's files to another changelist, picked from a list that
+ * can also make a new one.
+ */
+async function moveToChangelist(
+	node: GroupNode | FolderNode | ResourceNode,
+	changelists: ChangelistStore,
+): Promise<void> {
+	const { repository, changelist } = node
+	const changes = node.type === 'resource' ? [node.change] : node.changes
+	const picks: ChangelistPick[] = [
+		// Files only go back to Changes from a list. Untracked files go back to Untracked Changes.
+		...(changelist === undefined ? [] : [{ label: GROUP_LABELS.changes, isNew: false }]),
+		...changelists
+			.get(repository)
+			.lists.filter(list => list !== changelist)
+			.map(list => ({ label: list, changelist: list, isNew: false })),
+		{ label: '$(add) New Changelist...', isNew: true },
+	]
+	const pick = await vscode.window.showQuickPick(picks, { title: 'Move to Changelist', placeHolder: 'Changelist' })
+
+	if (!pick) return
+
+	const target = pick.isNew ? await newChangelist(repository, changelists) : pick.changelist
+
+	if (pick.isNew && !target) return
+
+	await changelists.move(repository, changes, target)
 }
 
 /**
@@ -195,7 +346,11 @@ async function fetchAll(git: API): Promise<void> {
 }
 
 /** Registers the `changelist.*` commands, for the view to run on its rows and in its title bar. */
-export function registerCommands(git: API, provider: ChangelistWebviewProvider): vscode.Disposable[] {
+export function registerCommands(
+	git: API,
+	provider: ChangelistWebviewProvider,
+	changelists: ChangelistStore,
+): vscode.Disposable[] {
 	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
 	// node. The menu's `when` clauses make sure it's the right kind of row.
 	const withNode =
@@ -241,7 +396,7 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 		),
 		vscode.commands.registerCommand(
 			'changelist.stageAll',
-			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node)),
+			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node, changelists)),
 		),
 		vscode.commands.registerCommand(
 			'changelist.unstageAll',
@@ -249,8 +404,29 @@ export function registerCommands(git: API, provider: ChangelistWebviewProvider):
 		),
 		vscode.commands.registerCommand(
 			'changelist.commit',
-			withNode((node: RepositoryNode) => commit(node)),
+			withNode((node: RepositoryNode) => commit(node, changelists)),
 		),
+		vscode.commands.registerCommand(
+			'changelist.commitChangelist',
+			withNode((node: GroupNode) => commitChangelist(node, changelists)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.newChangelist',
+			withNode((node: Node) => newChangelist(node.repository, changelists)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.renameChangelist',
+			withNode((node: GroupNode) => renameChangelist(node, changelists)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.deleteChangelist',
+			withNode((node: GroupNode) => node.changelist && changelists.remove(node.repository, node.changelist)),
+		),
+		vscode.commands.registerCommand(
+			'changelist.moveToChangelist',
+			withNode((node: GroupNode | FolderNode | ResourceNode) => moveToChangelist(node, changelists)),
+		),
+
 		vscode.commands.registerCommand(
 			'changelist.checkout',
 			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),

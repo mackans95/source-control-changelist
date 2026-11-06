@@ -7,12 +7,13 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './changelistHtml.ts'
 import { toRepositoryItem, toSyncRepositoryItem } from './changelistItems.ts'
-import { getChanges, hasChanges, needsSync, sortRepositories } from './changelistModel.ts'
+import { groupChanges, hasChanges, needsSync, sortRepositories } from './changelistModel.ts'
 import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Repository } from './types/git.ts'
 import type { Node, ViewMode } from './types/extension.ts'
 import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/shared.ts'
+import type { ChangelistStore } from './changelistStore.ts'
 
 // Git reports a change for each step of an operation like a checkout or a commit. The view waits
 // this long after the last one, so it's drawn again once and not for every step.
@@ -39,6 +40,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private readonly git: API
 	// The extension's folder. The page's script and stylesheet are in its dist/.
 	private readonly extensionUri: vscode.Uri
+	// Every repository's changelists.
+	private readonly changelists: ChangelistStore
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
@@ -55,9 +58,10 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	// The view, from when VS Code resolves it until it closes.
 	private view: vscode.WebviewView | undefined
 
-	constructor(git: API, extensionUri: vscode.Uri) {
+	constructor(git: API, extensionUri: vscode.Uri, changelists: ChangelistStore) {
 		this.git = git
 		this.extensionUri = extensionUri
+		this.changelists = changelists
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -68,6 +72,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			this.fileIcons.onDidChange(() => this.onDidChangeFileIcons()),
 			git.onDidOpenRepository(r => this.onDidOpenRepository(r)),
 			git.onDidCloseRepository(r => this.onDidCloseRepository(r)),
+			changelists.onDidChange(() => this.postUpdate()),
 			vscode.workspace.onDidChangeConfiguration(e => {
 				if (
 					e.affectsConfiguration('changelist.viewMode') ||
@@ -147,15 +152,15 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			return { type: 'repository', repository }
 		}
 
-		const kind = target.kind
-		const changes = getChanges(repository, kind)
+		const { kind, changelist } = target
+		const changes = groupChanges(repository, kind, this.changelists.get(repository), changelist)
 		if (!target.uri) {
-			return { type: 'group', repository, kind, changes }
+			return { type: 'group', repository, kind, changelist, changes }
 		}
 
 		const change = changes.find(c => c.uri.toString() === target.uri)
 		if (change) {
-			return { type: 'resource', repository, kind, change }
+			return { type: 'resource', repository, kind, changelist, change }
 		}
 
 		// Not a file, so a folder: the commands only need the changes below it.
@@ -165,6 +170,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			type: 'folder',
 			repository,
 			kind,
+			changelist,
 			uri,
 			label: path.basename(uri.fsPath),
 			changes: changes.filter(c => c.uri.fsPath.startsWith(prefix)),
@@ -180,11 +186,17 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.disposables.forEach(d => d.dispose())
 	}
 
-	/** Listens to a repository Git opened, and shows it when it has changes. */
+	/**
+	 * Listens to a repository Git opened, and shows it when it has changes. Each time Git has checked
+	 * its status, the files that have no changes any more leave their changelists.
+	 */
 	private onDidOpenRepository(repository: Repository): void {
 		this.repositoryListeners.set(
 			repository.rootUri.toString(),
-			repository.state.onDidChange(() => this.scheduleUpdate()),
+			repository.state.onDidChange(() => {
+				this.changelists.prune(repository)
+				this.scheduleUpdate()
+			}),
 		)
 		this.scheduleUpdate()
 	}
@@ -253,7 +265,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		// Every open repository, sorted once for both lists.
 		const all = sortRepositories(this.git.repositories)
 		// Sorted before they're filtered, so a worktree stays below its repository when both have changes.
-		const repositories = all.filter(hasChanges).map(repository => toRepositoryItem(repository, viewMode, icons))
+		const repositories = all
+			.filter(hasChanges)
+			.map(repository => toRepositoryItem(repository, this.changelists.get(repository), viewMode, icons))
 		const message: ExtensionMessage = {
 			type: 'update',
 			repositories,

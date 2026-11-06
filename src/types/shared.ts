@@ -66,10 +66,12 @@ export interface FolderItem {
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
-/** A group's row, with the rows below it. */
+/** A group's or changelist's row, with the rows below it. */
 export interface GroupItem {
 	readonly id: string
 	readonly kind: GroupKind
+	/** A changelist's name. Its `kind` is `changes`, and it has files from Untracked Changes too. */
+	readonly changelist?: string
 	readonly label: string
 	readonly count: number
 	readonly children: readonly (FolderItem | FileItem)[]
@@ -148,6 +150,7 @@ export type WebviewAction =
 	| 'sync'
 	| 'publish'
 	| 'commit'
+	| 'commitChangelist'
 	| 'stageAll'
 	| 'unstageAll'
 	| 'stage'
@@ -159,11 +162,12 @@ export type WebviewAction =
 
 /**
  * What an action runs on: a repository, a group when `kind` is set, and a folder or file in that
- * group when `uri` is set too.
+ * group when `uri` is set too. In a changelist, `changelist` is its name.
  */
 export interface ActionTarget {
 	readonly repository: string
 	readonly kind?: GroupKind
+	readonly changelist?: string
 	readonly uri?: string
 }
 

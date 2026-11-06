@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Changelists, like in PyCharm.** Named lists of changes in each repository. Move files, folders and groups to a list from the right-click menu, and commit a list on its own with its _Commit_ button. The repository's own _Commit_ and _Stage All Changes_ leave the lists alone, so a list like _Don't commit_ stays out of your commits.
+
 ## 0.2.0
 
 - **Every repository's sync status.** The _Repositories_ button in the view's title bar shows every repository, also the ones without changes, with its branch and how many commits it has to pull and push, and a button to push, pull, sync or publish it. The button gets a dot when a repository has commits to push or pull, and the repository gets its name in bold. A `*` after the name means uncommitted changes, and the right-click menu fetches a repository, opens it in a new window, reveals it or copies its path.

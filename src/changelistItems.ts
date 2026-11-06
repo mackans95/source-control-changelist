@@ -7,7 +7,7 @@ import {
 	buildTree,
 	byPath,
 	countChanges,
-	getChanges,
+	groupChanges,
 	hasChanges,
 	mainRepository,
 	mainRepositoryPath,
@@ -18,7 +18,14 @@ import {
 import { Status } from './constants/git.ts'
 import { themeColor } from './helpers/shared.ts'
 import type { Change, Repository } from './types/git.ts'
-import type { FolderNode, IconResolver, ResourceNode, StatusDecoration, ViewMode } from './types/extension.ts'
+import type {
+	FolderNode,
+	IconResolver,
+	RepositoryChangelists,
+	ResourceNode,
+	StatusDecoration,
+	ViewMode,
+} from './types/extension.ts'
 import type {
 	FileItem,
 	FolderItem,
@@ -165,10 +172,15 @@ function worktreeOf(repository: Repository): string | undefined {
 	return mainPath ? path.basename(mainPath) : undefined
 }
 
+/** A group's or changelist's row id, which its folders' and files' ids start with. */
+function groupId(repository: Repository, kind: GroupKind, changelist: string | undefined): string {
+	return changelist === undefined ? `${repository.rootUri}#${kind}` : `${repository.rootUri}#changelist#${changelist}`
+}
+
 /** A file's row: its name, icon and status, and its folder in list mode. */
 function toFileItem(
 	repository: Repository,
-	kind: GroupKind,
+	parentId: string,
 	change: Change,
 	viewMode: ViewMode,
 	icons: IconResolver,
@@ -178,7 +190,7 @@ function toFileItem(
 	const folder = path.dirname(relativePath)
 	return {
 		type: 'file',
-		id: `${repository.rootUri}#${kind}#${change.uri}`,
+		id: `${parentId}#${change.uri}`,
 		uri: change.uri.toString(),
 		name: path.basename(change.uri.fsPath),
 		icon: icons.file(change.uri),
@@ -191,33 +203,62 @@ function toFileItem(
 }
 
 /** A folder's or file's row in tree mode, with the rows below a folder. */
-function toEntry(node: FolderNode | ResourceNode, viewMode: ViewMode, icons: IconResolver): FolderItem | FileItem {
+function toEntry(
+	node: FolderNode | ResourceNode,
+	parentId: string,
+	viewMode: ViewMode,
+	icons: IconResolver,
+): FolderItem | FileItem {
 	if (node.type === 'resource') {
-		return toFileItem(node.repository, node.kind, node.change, viewMode, icons)
+		return toFileItem(node.repository, parentId, node.change, viewMode, icons)
 	}
 	return {
 		type: 'folder',
-		id: `${node.repository.rootUri}#${node.kind}#${node.uri}`,
+		id: `${parentId}#${node.uri}`,
 		uri: node.uri.toString(),
 		label: node.label,
 		icon: icons.folder(node.uri, false),
 		expandedIcon: icons.folder(node.uri, true),
-		children: node.children.map(child => toEntry(child, viewMode, icons)),
+		children: node.children.map(child => toEntry(child, parentId, viewMode, icons)),
 	}
 }
 
-/** A group's row, with its files: in folders in tree mode, or sorted by path in list mode. */
-function toGroupItem(repository: Repository, kind: GroupKind, viewMode: ViewMode, icons: IconResolver): GroupItem {
-	const changes = getChanges(repository, kind)
+/**
+ * A group's or changelist's row, with its files: in folders in tree mode, or sorted by path in list
+ * mode.
+ */
+function toGroupItem(
+	repository: Repository,
+	changelists: RepositoryChangelists,
+	kind: GroupKind,
+	changelist: string | undefined,
+	viewMode: ViewMode,
+	icons: IconResolver,
+): GroupItem {
+	const id = groupId(repository, kind, changelist)
+	const changes = groupChanges(repository, kind, changelists, changelist)
 	const children =
 		viewMode === 'tree'
-			? buildTree(repository, kind, changes).map(node => toEntry(node, viewMode, icons))
-			: [...changes].sort(byPath).map(change => toFileItem(repository, kind, change, viewMode, icons))
-	return { id: `${repository.rootUri}#${kind}`, kind, label: GROUP_LABELS[kind], count: changes.length, children }
+			? buildTree(repository, kind, changes).map(node => toEntry(node, id, viewMode, icons))
+			: [...changes].sort(byPath).map(change => toFileItem(repository, id, change, viewMode, icons))
+	return { id, kind, changelist, label: changelist ?? GROUP_LABELS[kind], count: changes.length, children }
 }
 
-/** A repository's row, with its counts and the groups that have changes. */
-export function toRepositoryItem(repository: Repository, viewMode: ViewMode, icons: IconResolver): RepositoryItem {
+/**
+ * A repository's row, with its counts, the groups that have changes, and its changelists, also the
+ * empty ones. The changelists come after Changes, like in PyCharm.
+ */
+export function toRepositoryItem(
+	repository: Repository,
+	changelists: RepositoryChangelists,
+	viewMode: ViewMode,
+	icons: IconResolver,
+): RepositoryItem {
+	const groups = (kinds: GroupKind[]) =>
+		kinds
+			.filter(kind => groupChanges(repository, kind, changelists).length > 0)
+			.map(kind => toGroupItem(repository, changelists, kind, undefined, viewMode, icons))
+
 	return {
 		id: repository.rootUri.toString(),
 		name: repositoryName(repository),
@@ -226,9 +267,11 @@ export function toRepositoryItem(repository: Repository, viewMode: ViewMode, ico
 		worktreeOf: worktreeOf(repository),
 		branch: branchLabel(repository),
 		counts: countChanges(repository),
-		groups: (Object.keys(GROUP_LABELS) as GroupKind[])
-			.filter(kind => getChanges(repository, kind).length > 0)
-			.map(kind => toGroupItem(repository, kind, viewMode, icons)),
+		groups: [
+			...groups(['merge', 'staged', 'changes']),
+			...changelists.lists.map(name => toGroupItem(repository, changelists, 'changes', name, viewMode, icons)),
+			...groups(['untracked']),
+		],
 	}
 }
 

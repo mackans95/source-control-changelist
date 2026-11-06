@@ -1,9 +1,10 @@
 // Makes .fake-repos/: Git repositories in every state the Changelist view shows, which the "Run
-// Extension (fake repositories)" launch configuration opens. Every run deletes them and starts over,
-// so `npm run fake-repos` resets them. repos/ has the repositories, and remotes/ the bare remotes
-// they push to and pull from.
+// Extension (fake repositories)" launch configuration opens. `npm run fake-repos` deletes them and
+// starts over. With `--if-missing`, which the launch configuration uses, it leaves them alone when
+// they're there. repos/ has the repositories, and remotes/ the bare remotes they push to and pull
+// from.
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 // Everything the script makes. It's in .gitignore, and .vscode/settings.json keeps this window's Git
@@ -13,7 +14,7 @@ const root = '.fake-repos'
 const repos = join(root, 'repos')
 // Their remotes, which pushing and pulling go to.
 const remotes = join(root, 'remotes')
-// The same author for every commit, whatever you Git config says.
+// The same author for every commit, whatever your Git config says.
 const env = {
 	...process.env,
 	GIT_AUTHOR_NAME: 'Fake',
@@ -70,8 +71,20 @@ function pushedElsewhere(name: string, count: number): void {
 	git('-C', join(repos, name), 'fetch', '-q')
 }
 
-rmSync(root, { recursive: true, force: true })
+// A debug session runs the launch configuration's task again when the test window reloads, while
+// the window has the repositories open.
+if (process.argv.includes('--if-missing') && existsSync(repos)) {
+	console.log(`The fake repositories are already in ${resolve(repos)}`)
+	process.exit(0)
+}
+
+// VS Code keeps a window's saved state, like its changelists, for the folder it opened as it was
+// created. A new repos/ folder would be a new workspace to it, so only what's inside is deleted.
 mkdirSync(repos, { recursive: true })
+for (const entry of readdirSync(repos)) {
+	rmSync(join(repos, entry), { recursive: true, force: true })
+}
+rmSync(remotes, { recursive: true, force: true })
 mkdirSync(remotes)
 
 // synced: clean and up to date, so only the Repositories panel shows it.
