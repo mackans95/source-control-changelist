@@ -230,6 +230,26 @@
         "icon": "$(repo-fetch)"
       },
       {
+        "command": "changelist.pullAll",
+        "title": "Pull All",
+        "category": "Changelist",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "changelist.fetchingAll",
+        "title": "Fetching...",
+        "category": "Changelist",
+        "icon": "$(repo-fetch)",
+        "enablement": "false"
+      },
+      {
+        "command": "changelist.pullingAll",
+        "title": "Pulling...",
+        "category": "Changelist",
+        "icon": "$(repo-pull)",
+        "enablement": "false"
+      },
+      {
         "command": "changelist.push",
         "title": "Push",
         "category": "Changelist",
@@ -273,8 +293,23 @@
         },
         {
           "command": "changelist.fetchAll",
-          "when": "view == changelist.view && changelist.active && changelist.showingRepositories",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation != fetch",
           "group": "navigation@1"
+        },
+        {
+          "command": "changelist.fetchingAll",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation == fetch",
+          "group": "navigation@1"
+        },
+        {
+          "command": "changelist.pullAll",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation != pull",
+          "group": "navigation@2"
+        },
+        {
+          "command": "changelist.pullingAll",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation == pull",
+          "group": "navigation@2"
         },
         {
           "command": "changelist.viewAsTree",
@@ -300,6 +335,16 @@
           "command": "changelist.expandAll",
           "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && changelist.allCollapsed",
           "group": "navigation@3"
+        },
+        {
+          "command": "changelist.refresh",
+          "when": "view == changelist.view && changelist.active && !changelist.showingRepositories",
+          "group": "navigation@2"
+        },
+        {
+          "command": "changelist.refresh",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories",
+          "group": "navigation@4"
         }
       ],
       "webview/context": [
@@ -445,6 +490,18 @@
         {
           "command": "changelist.fetchAll",
           "when": "changelist.active"
+        },
+        {
+          "command": "changelist.fetchingAll",
+          "when": "false"
+        },
+        {
+          "command": "changelist.pullAll",
+          "when": "changelist.active"
+        },
+        {
+          "command": "changelist.pullingAll",
+          "when": "false"
         },
         {
           "command": "changelist.push",

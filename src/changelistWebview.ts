@@ -14,6 +14,7 @@ import type { API, Repository } from './types/git.ts'
 import type { Node, ViewMode } from './types/extension.ts'
 import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/shared.ts'
 import type { ChangelistStore } from './changelistStore.ts'
+import type { Operations } from './operations.ts'
 
 // Git reports a change for each step of an operation like a checkout or a commit. The view waits
 // this long after the last one, so it's drawn again once and not for every step.
@@ -42,6 +43,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private readonly extensionUri: vscode.Uri
 	// Every repository's changelists.
 	private readonly changelists: ChangelistStore
+	// Fetch/Pull All and Checkout Default, with each repository's status.
+	private readonly operations: Operations
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
@@ -58,10 +61,11 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	// The view, from when VS Code resolves it until it closes.
 	private view: vscode.WebviewView | undefined
 
-	constructor(git: API, extensionUri: vscode.Uri, changelists: ChangelistStore) {
+	constructor(git: API, extensionUri: vscode.Uri, changelists: ChangelistStore, operations: Operations) {
 		this.git = git
 		this.extensionUri = extensionUri
 		this.changelists = changelists
+		this.operations = operations
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -73,6 +77,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			git.onDidOpenRepository(r => this.onDidOpenRepository(r)),
 			git.onDidCloseRepository(r => this.onDidCloseRepository(r)),
 			changelists.onDidChange(() => this.postUpdate()),
+			operations.onDidChange(() => this.postUpdate()),
 			vscode.workspace.onDidChangeConfiguration(e => {
 				if (
 					e.affectsConfiguration('changelist.viewMode') ||
@@ -271,7 +276,12 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		const message: ExtensionMessage = {
 			type: 'update',
 			repositories,
-			syncRepositories: this.showingRepositories ? all.map(r => toSyncRepositoryItem(r, all)) : undefined,
+			syncRepositories: this.showingRepositories
+				? all.map(r => ({
+						...toSyncRepositoryItem(r, all),
+						status: this.operations.get(r),
+					}))
+				: undefined,
 			fonts: icons.fonts(),
 			alwaysShowActions: vscode.workspace.getConfiguration('scm').get<boolean>('alwaysShowActions', false),
 			hoverDelay: vscode.workspace

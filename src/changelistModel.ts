@@ -138,6 +138,35 @@ export function needsSync(repository: Repository): boolean {
 	return state === 'ahead' || state === 'behind' || state === 'diverged'
 }
 
+/** Whether the repository has commits to pull, so Pull All pulls it. A diverged branch counts too. */
+export function needsPull(repository: Repository): boolean {
+	const state = syncState(repository)
+
+	return state === 'behind' || state === 'diverged'
+}
+
+/**
+ * The part of a failed Git command's error worth showing: its `fatal:` or `error:` line, or else its
+ * last line. Git's hints before it explain the options, which a tooltip has no room for.
+ */
+export function gitErrorMessage(error: unknown): string {
+	const stderr = (error as { stderr?: unknown } | undefined)?.stderr
+	const lines =
+		typeof stderr === 'string'
+			? stderr
+					.split('\n')
+					.map(line => line.trim())
+					.filter(Boolean)
+			: []
+	const reason = lines.find(line => /^(fatal|error): /.test(line) ?? lines.at(-1))
+
+	if (reason) {
+		return reason.replace(/^(fatal|error): /, '')
+	}
+
+	return error instanceof Error ? error.message : String(error)
+}
+
 /** How many files are added, modified, deleted and in conflict, each file counted once. */
 export function countChanges(repository: Repository): ChangeCounts {
 	const categories = new Map<string, ChangeCategory>()

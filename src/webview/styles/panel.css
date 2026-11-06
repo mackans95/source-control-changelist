@@ -1,0 +1,8 @@
+/* What only the Repositories panel (syncRows.ts) has: the `wt:` before a worktree's name, the status
+   of Fetch All, Pull All or Checkout Default at the end of a row, and the notice about
+   `git.autofetch` above the rows. */
+
+.status-icon {
+	flex: none;
+	margin-left: 6px;
+}

@@ -4,8 +4,9 @@
 import { run } from './api.ts'
 import { codicon, span } from './dom.ts'
 import { branchButton, createRow, repositoryIcon, repositoryTooltip, textButton } from './rows.ts'
-import type { ActionTarget, SyncRepositoryItem, SyncState } from '../types/shared.ts'
-import type { SyncButton } from '../types/webview.ts'
+import { themeColor } from '../helpers/shared.ts'
+import type { ActionTarget, OperationState, SyncRepositoryItem, SyncState } from '../types/shared.ts'
+import type { StatusIcon, SyncButton } from '../types/webview.ts'
 
 // The button each state gets, which Enter on the row runs too. Synced and detached repositories have
 // none, so Enter switches branch.
@@ -16,6 +17,13 @@ const SYNC_BUTTONS: Record<SyncState, SyncButton | undefined> = {
 	diverged: { action: 'sync', icon: 'sync', label: 'Sync' },
 	unpublished: { action: 'publish', icon: 'cloud-upload', label: 'Publish' },
 	detached: undefined,
+}
+// The icon at the end of a row for each state of Fetch/Pull All or Checkout Default.
+const STATUS_ICONS: Record<OperationState, StatusIcon> = {
+	running: { icon: 'loading', color: 'foreground' },
+	done: { icon: 'check', color: 'testing.iconPassed' },
+	failed: { icon: 'error', color: 'errorForeground' },
+	skipped: { icon: 'circle-slash', color: 'descriptionForeground' },
 }
 
 /** How many commits there are to pull and push, like the status bar's `1↓ 2↑`, with a tooltip that spells them out. */
@@ -40,6 +48,18 @@ function syncCounts(repository: SyncRepositoryItem): HTMLSpanElement {
 		element.dataset.tooltip = descriptions.join(', ')
 	}
 
+	return element
+}
+
+/** The icon for how Fetch/Pull All or Checkout Default went, with the reason in its tooltip. */
+function statusIcon(repository: SyncRepositoryItem): HTMLSpanElement | undefined {
+	if (!repository.status) return undefined
+
+	const { icon, color } = STATUS_ICONS[repository.status.state]
+	const element = codicon(icon, 'status-icon')
+	element.classList.toggle('codicon-modifier-spin', repository.status.state === 'running')
+	element.style.setProperty('color', themeColor(color))
+	element.dataset.tooltip = repository.status.message
 	return element
 }
 
@@ -82,6 +102,12 @@ function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryIte
 		const button = textButton(sync.icon, sync.label, sync.label, sync.action, target)
 		button.classList.add('sync-button')
 		row.append(button)
+	}
+
+	const status = statusIcon(repository)
+
+	if (status) {
+		row.append(status)
 	}
 }
 

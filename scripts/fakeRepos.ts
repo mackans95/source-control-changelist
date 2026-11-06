@@ -22,6 +22,8 @@ const env = {
 	GIT_COMMITTER_NAME: 'Fake',
 	GIT_COMMITTER_EMAIL: 'fake@example.com',
 }
+// How many remotes have been made, which picks each one's delay.
+let remoteCount = 0
 
 /**
  * Runs git without signing commits, with `main` as the first branch. Throws with Git's error if it fails.
@@ -43,6 +45,7 @@ function commit(repo: string, file: string, message: string): void {
 
 /**
  * Makes a repository with a remote, with one commit pushed, and returns its folder.
+ * Its remote answers slowly, like one over the network.
  */
 function published(name: string): string {
 	const remote = join(remotes, `${name}.git`)
@@ -51,6 +54,11 @@ function published(name: string): string {
 	git('clone', '-q', remote, repo)
 	commit(repo, 'README.md', `# ${name}`)
 	git('-C', repo, 'push', '-q', '-u', 'origin', 'main')
+	// Like a remote over the network, it takes a while to answer, 1 to 3 seconds, so the spinners of
+	// Fetch All and Pull All can be seen, and the rows finish one by one.
+	const delay = 1 + (remoteCount++ % 3)
+	git('-C', repo, 'config', 'remote.origin.uploadpack', `sleep ${delay}; git-upload-pack`)
+	git('-C', repo, 'config', 'remote.origin.receivepack', `sleep ${delay}; git-receive-pack`)
 	return repo
 }
 

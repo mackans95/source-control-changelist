@@ -99,6 +99,16 @@ export interface RepositoryItem {
 /** Where a repository's branch stands against its upstream. */
 export type SyncState = 'synced' | 'ahead' | 'behind' | 'diverged' | 'unpublished' | 'detached'
 
+/** Where Fetch All, Pull All or Checkout Default is with a repository. */
+export type OperationState = 'running' | 'done' | 'failed' | 'skipped'
+
+/** What Fetch All, Pull All or Checkout Default is doing with a repository, shown at the end of its row. */
+export interface OperationStatus {
+	readonly state: OperationState
+	/** The status icon's tooltip: what it's doing, or why it failed or was skipped. */
+	readonly message: string
+}
+
 /** A repository's row in the Repositories panel. */
 export interface SyncRepositoryItem {
 	/** The repository's root URI. */
@@ -125,6 +135,8 @@ export interface SyncRepositoryItem {
 	 * indented below that one's.
 	 */
 	readonly parentId?: string
+	/** What Fetch All, Pull All or Checkout Default last did with it. */
+	readonly status?: OperationStatus
 }
 
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */
