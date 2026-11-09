@@ -5,7 +5,7 @@ import { getRoot, rowElements, rowOf, span } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { renderRepository } from './rows.ts'
 import { tooltip } from './tooltip.ts'
-import { renderSyncRepositories } from './syncRows.ts'
+import { autoFetchNotice, renderSyncRepositories } from './syncRows.ts'
 import type { RepositoryItem, SyncRepositoryItem } from '../types/shared.ts'
 
 /**
@@ -31,6 +31,8 @@ class Tree {
 	private repositories: readonly RepositoryItem[] = []
 	// Every repository's sync status, while the Repositories panel is open.
 	private syncRepositories: readonly SyncRepositoryItem[] | undefined
+	// Whether Git fetches by itself; without it, the Repositories panel says so.
+	private autoFetch = true
 	// Each row's parent row, filled in on each render.
 	private readonly parents = new Map<string, string>()
 	// What clicking each row does, filled in on each render.
@@ -53,9 +55,11 @@ class Tree {
 			rowFocus.set(row)
 
 			// In the Repositories panel, a click only selects the row, so a stray click doesn't push or
-			// pull. Enter runs its button.
+			// pull, or folds a repository's worktrees. Enter runs its button.
 			if (!this.showingRepositories) {
 				this.activate(row.dataset.id)
+			} else if (row.hasAttribute('aria-expanded')) {
+				this.toggle(row.dataset.id)
 			}
 		})
 
@@ -67,9 +71,14 @@ class Tree {
 	}
 
 	/** Draws the repositories from the extension's latest update, or the Repositories panel when it sent one. */
-	update(repositories: readonly RepositoryItem[], syncRepositories: readonly SyncRepositoryItem[] | undefined): void {
+	update(
+		repositories: readonly RepositoryItem[],
+		syncRepositories: readonly SyncRepositoryItem[] | undefined,
+		autoFetch: boolean,
+	): void {
 		this.repositories = repositories
 		this.syncRepositories = syncRepositories
+		this.autoFetch = autoFetch
 		this.render()
 	}
 
@@ -127,6 +136,8 @@ class Tree {
 			root.replaceChildren(
 				span('empty', this.syncRepositories ? 'No repositories.' : 'No changes in any repository.'),
 			)
+		} else if (this.syncRepositories && !this.autoFetch) {
+			root.replaceChildren(autoFetchNotice(), ...rows)
 		} else {
 			root.replaceChildren(...rows)
 		}

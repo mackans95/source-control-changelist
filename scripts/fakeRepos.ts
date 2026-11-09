@@ -45,7 +45,8 @@ function commit(repo: string, file: string, message: string): void {
 
 /**
  * Makes a repository with a remote, with one commit pushed, and returns its folder.
- * Its remote answers slowly, like one over the network.
+ * Its remote answers slowly, like one over the network. Like a clone, it knows the
+ * remote's default branch as `origin/HEAD`.
  */
 function published(name: string): string {
 	const remote = join(remotes, `${name}.git`)
@@ -54,6 +55,7 @@ function published(name: string): string {
 	git('clone', '-q', remote, repo)
 	commit(repo, 'README.md', `# ${name}`)
 	git('-C', repo, 'push', '-q', '-u', 'origin', 'main')
+	git('-C', repo, 'remote', 'set-head', 'origin', '--auto')
 	// Like a remote over the network, it takes a while to answer, 1 to 3 seconds, so the spinners of
 	// Fetch All and Pull All can be seen, and the rows finish one by one.
 	const delay = 1 + (remoteCount++ % 3)
@@ -95,8 +97,11 @@ for (const entry of readdirSync(repos)) {
 rmSync(remotes, { recursive: true, force: true })
 mkdirSync(remotes)
 
-// synced: clean and up to date, so only the Repositories panel shows it.
-published('docs')
+// synced: clean and up to date, so only the Repositories panel shows it. It's on a release branch,
+// so Checkout Default switches it to main.
+const docs = published('docs')
+git('-C', docs, 'switch', '-q', '-c', 'release')
+git('-C', docs, 'push', '-q', '-u', 'origin', 'release')
 
 // ahead: 2 commits to push, and changes, so the changes show it too.
 const api = published('api')

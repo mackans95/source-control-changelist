@@ -250,6 +250,19 @@
         "enablement": "false"
       },
       {
+        "command": "changelist.checkoutDefault",
+        "title": "Checkout Default Branch",
+        "category": "Changelist",
+        "icon": "$(home)"
+      },
+      {
+        "command": "changelist.checkingOutDefault",
+        "title": "Switching to the Default Branch...",
+        "category": "Changelist",
+        "icon": "$(home)",
+        "enablement": "false"
+      },
+      {
         "command": "changelist.push",
         "title": "Push",
         "category": "Changelist",
@@ -310,6 +323,16 @@
           "command": "changelist.pullingAll",
           "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation == pull",
           "group": "navigation@2"
+        },
+        {
+          "command": "changelist.checkoutDefault",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation != checkout",
+          "group": "navigation@3"
+        },
+        {
+          "command": "changelist.checkingOutDefault",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.operation == checkout",
+          "group": "navigation@3"
         },
         {
           "command": "changelist.viewAsTree",
@@ -597,6 +620,14 @@
         },
         {
           "command": "changelist.deleteChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.checkoutDefault",
+          "when": "changelist.active"
+        },
+        {
+          "command": "changelist.checkingOutDefault",
           "when": "false"
         }
       ]

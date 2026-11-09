@@ -18,7 +18,7 @@ function onMessage(message: ExtensionMessage): void {
 			loadFonts(message.fonts)
 			getRoot().classList.toggle('always-show-actions', message.alwaysShowActions)
 			tooltip.setDelay(message.hoverDelay)
-			tree.update(message.repositories, message.syncRepositories)
+			tree.update(message.repositories, message.syncRepositories, message.autoFetch)
 			break
 		case 'setAllExpanded':
 			tree.setAllExpanded(message.expanded)
