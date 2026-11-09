@@ -3,6 +3,7 @@ import { post } from './api.ts'
 import { findRow, rowElements } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { tree } from './tree.ts'
+import { repositoryDrag } from './drag.ts'
 
 /** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
 function openMenu(row: HTMLElement): void {
@@ -15,7 +16,8 @@ function openMenu(row: HTMLElement): void {
 /**
  * A key pressed in the view: the arrows, Home and End move the selection, Right and Left expand and
  * collapse, Enter and Space do what a click does or run the Repositories panel's button, Shift+F10
- * opens the right-click menu, and Escape closes the Repositories panel.
+ * opens the right-click menu, and Escape closes the Repositories panel. In the panel, Alt+Up and
+ * Alt+Down move a repository.
  */
 export function onKeydown(event: KeyboardEvent): void {
 	const rows = rowElements()
@@ -31,6 +33,18 @@ export function onKeydown(event: KeyboardEvent): void {
 	// does by itself.
 	if (event.key === 'F10' && event.shiftKey) {
 		openMenu(row)
+		event.preventDefault()
+		return
+	}
+
+	// Moves the repository like dragging it does, so its row stays selected.
+	if (
+		event.altKey &&
+		row.draggable &&
+		row.dataset.repository &&
+		(event.key === 'ArrowUp' || event.key === 'ArrowDown')
+	) {
+		repositoryDrag.moveByKeyboard(row.dataset.repository, event.key === 'ArrowDown')
 		event.preventDefault()
 		return
 	}

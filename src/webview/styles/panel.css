@@ -1,6 +1,6 @@
 /* What only the Repositories panel (syncRows.ts) has: the `wt:` before a worktree's name, the status
-   of Fetch All, Pull All or Checkout Default at the end of a row, and the notice about
-   `git.autofetch` above the rows. */
+   of Fetch All, Pull All or Checkout Default at the end of a row, the notice about
+   `git.autofetch` above the rows, and dragging a repository (drag.ts). */
 
 .worktree-prefix {
 	flex: none;
@@ -34,4 +34,18 @@
 .notice-link:hover {
 	color: var(--vscode-textLink-activeForeground);
 	text-decoration: underline;
+}
+
+/* The repository being dragged, with its worktrees. */
+.row.dragging {
+	opacity: 0.5;
+}
+
+/* The line where a dragged repository lands, like in VS Code's own trees. */
+.row.drop-before {
+	box-shadow: inset 0 2px 0 var(--vscode-list-dropBetweenBackground, var(--vscode-focusBorder));
+}
+
+.row.drop-after {
+	box-shadow: inset 0 -2px 0 var(--vscode-list-dropBetweenBackground, var(--vscode-focusBorder));
 }

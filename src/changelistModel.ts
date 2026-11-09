@@ -233,19 +233,50 @@ export function folderIndex(repository: Repository, folders: readonly string[]):
 }
 
 /**
- * Sorts repositories like the workspace's folders, for the view and the Repositories panel: in a
- * `.code-workspace` file's order, and by name within the same folder. Each worktree comes right
- * after the repository it belongs to, and one whose repository isn't open is sorted like any other.
+ * Puts repositories in the order the user dragged them into, by root URI. One that isn't in that order
+ * yet, like a repository opened since, goes right after the one it comes after in `sorted`.
  */
-export function sortRepositories(repositories: readonly Repository[], folders: readonly string[] = []): Repository[] {
+export function applyOrder(sorted: readonly Repository[], order: readonly string[]): Repository[] {
+	const ordered = order.flatMap(uri => sorted.filter(r => r.rootUri.toString() === uri))
+
+	sorted.forEach((repo, i) => {
+		if (ordered.includes(repo)) return
+		const previous = sorted[i - 1]
+		ordered.splice(previous ? ordered.indexOf(previous) + 1 : 0, 0, repo)
+	})
+
+	return ordered
+}
+
+/** An order of root URIs with one moved right before or after another. */
+export function moveInOrder(order: readonly string[], uri: string, target: string, after: boolean): string[] {
+	const rest = order.filter(o => o !== uri)
+	const index = rest.indexOf(target)
+
+	if (uri === target || index === -1) return [...order]
+
+	rest.splice(after ? index + 1 : index, 0, uri)
+
+	return rest
+}
+
+/**
+ * Sorts repositories for the view and the Repositories panel: in the order the user dragged them
+ * into, or else like the workspace's folders, in a `.code-workspace` file's order and by name within
+ * the same folder. Each worktree comes right after the repository it belongs to, and one whose
+ * repository isn't open is sorted like any other.
+ */
+export function sortRepositories(
+	repositories: readonly Repository[],
+	folders: readonly string[] = [],
+	order: readonly string[] = [],
+): Repository[] {
 	const mainOf = (repository: Repository) => mainRepository(repository, repositories)
 	const worktrees = repositories.filter(mainOf)
 	const byFolder = (a: Repository, b: Repository) => folderIndex(a, folders) - folderIndex(b, folders) || byName(a, b)
+	const mains = applyOrder(repositories.filter(r => !mainOf(r)).sort(byFolder), order)
 
-	return repositories
-		.filter(r => !mainOf(r))
-		.sort(byFolder)
-		.flatMap(main => [main, ...worktrees.filter(w => mainOf(w) === main).sort(byName)])
+	return mains.flatMap(main => [main, ...worktrees.filter(w => mainOf(w) === main).sort(byName)])
 }
 
 /** Sorts changes by their path, for list mode and for the files in a folder. */

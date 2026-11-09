@@ -12,6 +12,7 @@ import { type Operations, VIEW_PROGRESS } from './operations.ts'
 import type { ChangelistStore } from './changelistStore.ts'
 import type { ChangelistWebviewProvider } from './changelistWebview.ts'
 import type { DefaultBranches } from './defaultBranches.ts'
+import type { RepositoryOrder } from './repositoryOrder.ts'
 import type { API, Change, Repository } from './types/git.ts'
 import type {
 	ChangelistPick,
@@ -428,6 +429,7 @@ export function registerCommands(
 	changelists: ChangelistStore,
 	operations: Operations,
 	defaultBranches: DefaultBranches,
+	repositoryOrder: RepositoryOrder,
 ): vscode.Disposable[] {
 	/**
 	 * Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
@@ -457,6 +459,7 @@ export function registerCommands(
 		register('fetchAll', () => fetchAll(git, operations)),
 		register('pullAll', () => pullAll(git, operations)),
 		register('checkoutDefault', () => checkoutDefault(git, operations, defaultBranches)),
+		register('resetRepositoryOrder', () => repositoryOrder.reset()),
 		register(
 			'openChange',
 			withNode(['resource'], node => openChange(git, node)),

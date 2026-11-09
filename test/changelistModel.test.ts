@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
 import {
+	applyOrder,
 	buildTree,
 	byName,
 	byPath,
@@ -13,6 +14,7 @@ import {
 	groupChanges,
 	hasChanges,
 	mainRepositoryPath,
+	moveInOrder,
 	needsSync,
 	needsPull,
 	pruneChangelists,
@@ -263,6 +265,44 @@ describe('mainRepositoryPath, folderIndex and sortRepositories', () => {
 			],
 			['/code/feature-x', '/code/web', '/code/api'],
 		)
+		assert.deepEqual(sorted.map(repositoryName), ['web', 'api', 'feature-x'])
+	})
+})
+
+describe('applyOrder and moveInOrder', () => {
+	const [api, web, docs, tools] = ['/code/api', '/code/web', '/code/docs', '/code/tools'].map(p =>
+		onBranch(undefined, p),
+	)
+	const uriOf = (repository: Repository) => repository.rootUri.toString()
+
+	test('puts repositories in the saved order', () => {
+		const ordered = applyOrder([api, docs, web], [web, api, docs].map(uriOf))
+		assert.deepEqual(ordered.map(repositoryName), ['web', 'api', 'docs'])
+	})
+	test("puts a repository that isn't in the saved order after the one it comes after", () => {
+		const ordered = applyOrder([api, docs, tools, web], [web, api, tools].map(uriOf))
+		assert.deepEqual(ordered.map(repositoryName), ['web', 'api', 'docs', 'tools'])
+	})
+	test('puts one that comes first first, and leaves out saved ones that are closed', () => {
+		const ordered = applyOrder([api, web], ['file:///code/gone', uriOf(web)])
+		assert.deepEqual(ordered.map(repositoryName), ['api', 'web'])
+	})
+	test('keeps the sorted order without a saved one', () => {
+		assert.deepEqual(applyOrder([api, web], []).map(repositoryName), ['api', 'web'])
+	})
+	test('moves a repository before or after another', () => {
+		const order = ['a', 'b', 'c', 'd']
+		assert.deepEqual(moveInOrder(order, 'd', 'b', false), ['a', 'd', 'b', 'c'])
+		assert.deepEqual(moveInOrder(order, 'a', 'c', true), ['b', 'c', 'a', 'd'])
+		assert.deepEqual(moveInOrder(order, 'b', 'd', true), ['a', 'c', 'd', 'b'])
+	})
+	test('leaves the order alone when the target is itself or not in it', () => {
+		assert.deepEqual(moveInOrder(['a', 'b'], 'a', 'a', true), ['a', 'b'])
+		assert.deepEqual(moveInOrder(['a', 'b'], 'a', 'x', true), ['a', 'b'])
+	})
+	test('keeps worktrees after their repository in the saved order', () => {
+		const featureX = worktree('/code/feature-x', '/code/api')
+		const sorted = sortRepositories([api, web, featureX], [], [web, api].map(uriOf))
 		assert.deepEqual(sorted.map(repositoryName), ['web', 'api', 'feature-x'])
 	})
 })
