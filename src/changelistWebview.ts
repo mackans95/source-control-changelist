@@ -89,6 +89,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			changelists.onDidChange(() => this.postUpdate()),
 			operations.onDidChange(() => this.postUpdate()),
 			defaultBranches.onDidChange(() => this.postUpdate()),
+			// The repositories are sorted like the folders, which can be added, removed and reordered.
+			vscode.workspace.onDidChangeWorkspaceFolders(() => this.postUpdate()),
 			vscode.workspace.onDidChangeConfiguration(e => {
 				if (
 					e.affectsConfiguration('changelist.viewMode') ||
@@ -288,8 +290,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 		const viewMode = getViewMode()
 		const icons = this.fileIcons.resolver(this.view.webview)
-		// Every open repository, sorted once for both lists.
-		const all = sortRepositories(this.git.repositories)
+		// Every open repository, sorted once for both lists, in the order of the workspace's folders.
+		const folders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) ?? []
+		const all = sortRepositories(this.git.repositories, folders)
 		// Sorted before they're filtered, so a worktree stays below its repository when both have changes.
 		const repositories = all
 			.filter(hasChanges)

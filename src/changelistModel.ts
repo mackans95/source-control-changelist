@@ -215,18 +215,36 @@ export function mainRepository(repository: Repository, repositories: readonly Re
 	return mainPath === undefined ? undefined : repositories.find(r => r.rootUri.fsPath === mainPath)
 }
 
+/** Whether a path is a folder or inside it. */
+function isInside(child: string, folder: string): boolean {
+	return child === folder || child.startsWith(folder.endsWith(path.sep) ? folder : folder + path.sep)
+}
+
 /**
- * Sorts repositories by their name, for the view and the Repositories panel, with each worktree
- * right after the repository it belongs to. A worktree whose repository isn't open is sorted by its
- * own name.
+ * Where a repository's workspace folder is in the workspace's folders: the folder it's in, or the
+ * first one inside it, when a folder is part of a repository. Repositories outside every folder come
+ * after them all.
  */
-export function sortRepositories(repositories: readonly Repository[]): Repository[] {
+export function folderIndex(repository: Repository, folders: readonly string[]): number {
+	const root = repository.rootUri.fsPath
+	const index = folders.findIndex(folder => isInside(root, folder) || isInside(folder, root))
+
+	return index === -1 ? folders.length : index
+}
+
+/**
+ * Sorts repositories like the workspace's folders, for the view and the Repositories panel: in a
+ * `.code-workspace` file's order, and by name within the same folder. Each worktree comes right
+ * after the repository it belongs to, and one whose repository isn't open is sorted like any other.
+ */
+export function sortRepositories(repositories: readonly Repository[], folders: readonly string[] = []): Repository[] {
 	const mainOf = (repository: Repository) => mainRepository(repository, repositories)
 	const worktrees = repositories.filter(mainOf)
+	const byFolder = (a: Repository, b: Repository) => folderIndex(a, folders) - folderIndex(b, folders) || byName(a, b)
 
 	return repositories
 		.filter(r => !mainOf(r))
-		.sort(byName)
+		.sort(byFolder)
 		.flatMap(main => [main, ...worktrees.filter(w => mainOf(w) === main).sort(byName)])
 }
 
