@@ -263,6 +263,11 @@
         "enablement": "false"
       },
       {
+        "command": "changelist.resetRepositoryOrder",
+        "title": "Reset Repository Order",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.push",
         "title": "Push",
         "category": "Changelist",
@@ -335,6 +340,11 @@
           "group": "navigation@3"
         },
         {
+          "command": "changelist.resetRepositoryOrder",
+          "when": "view == changelist.view && changelist.active && changelist.showingRepositories && changelist.repositoriesOrdered",
+          "group": "1_order"
+        },
+        {
           "command": "changelist.viewAsTree",
           "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && config.changelist.viewMode == list",
           "group": "navigation@1"
@@ -343,11 +353,6 @@
           "command": "changelist.viewAsList",
           "when": "view == changelist.view && changelist.active && !changelist.showingRepositories && config.changelist.viewMode == tree",
           "group": "navigation@1"
-        },
-        {
-          "command": "changelist.refresh",
-          "when": "view == changelist.view && changelist.active",
-          "group": "navigation@2"
         },
         {
           "command": "changelist.collapseAll",
@@ -629,6 +634,10 @@
         {
           "command": "changelist.checkingOutDefault",
           "when": "false"
+        },
+        {
+          "command": "changelist.resetRepositoryOrder",
+          "when": "changelist.active && changelist.repositoriesOrdered"
         }
       ]
     },

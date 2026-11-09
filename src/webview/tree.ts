@@ -37,6 +37,10 @@ class Tree {
 	private readonly parents = new Map<string, string>()
 	// What clicking each row does, filled in on each render.
 	private readonly activations = new Map<string, () => void>()
+	// Whether a repository is being dragged. Drawing the rows again would end the drag.
+	private dragging = false
+	// Whether an update came in during the drag, so the rows are drawn once it ends.
+	private renderAfterDrag = false
 
 	/** Whether the Repositories panel is open, instead of the changes. */
 	get showingRepositories(): boolean {
@@ -113,8 +117,23 @@ class Tree {
 		this.render()
 	}
 
-	/** Draws all rows again, keeping the selected row. */
+	/** Notes a drag starting or ending, and draws the rows from an update that came in during it. */
+	setDragging(dragging: boolean): void {
+		this.dragging = dragging
+
+		if (!dragging && this.renderAfterDrag) {
+			this.renderAfterDrag = false
+			this.render()
+		}
+	}
+
+	/** Draws all rows again, keeping the selected row. While a repository is dragged, it waits. */
 	render(): void {
+		if (this.dragging) {
+			this.renderAfterDrag = true
+			return
+		}
+
 		// The element the tooltip belongs to is about to be replaced.
 		tooltip.hide()
 		const root = getRoot()

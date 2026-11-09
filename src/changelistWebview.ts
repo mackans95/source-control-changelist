@@ -7,7 +7,14 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './changelistHtml.ts'
 import { toRepositoryItem, toSyncRepositoryItem } from './changelistItems.ts'
-import { groupChanges, hasChanges, needsSync, sortRepositories } from './changelistModel.ts'
+import {
+	groupChanges,
+	hasChanges,
+	mainRepository,
+	moveInOrder,
+	needsSync,
+	sortRepositories,
+} from './changelistModel.ts'
 import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Repository } from './types/git.ts'
@@ -16,6 +23,7 @@ import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/sha
 import type { ChangelistStore } from './changelistStore.ts'
 import type { Operations } from './operations.ts'
 import type { DefaultBranches } from './defaultBranches.ts'
+import type { RepositoryOrder } from './repositoryOrder.ts'
 
 // Git reports a change for each step of an operation like a checkout or a commit. The view waits
 // this long after the last one, so it's drawn again once and not for every step.
@@ -48,6 +56,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private readonly operations: Operations
 	// Every repository's default branch, for the Repositories panel.
 	private readonly defaultBranches: DefaultBranches
+	// The order the user dragged the repositories into.
+	private readonly repositoryOrder: RepositoryOrder
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
@@ -70,12 +80,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		changelists: ChangelistStore,
 		operations: Operations,
 		defaultBranches: DefaultBranches,
+		repositoryOrder: RepositoryOrder,
 	) {
 		this.git = git
 		this.extensionUri = extensionUri
 		this.changelists = changelists
 		this.operations = operations
 		this.defaultBranches = defaultBranches
+		this.repositoryOrder = repositoryOrder
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -89,6 +101,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			changelists.onDidChange(() => this.postUpdate()),
 			operations.onDidChange(() => this.postUpdate()),
 			defaultBranches.onDidChange(() => this.postUpdate()),
+			repositoryOrder.onDidChange(() => this.postUpdate()),
 			// The repositories are sorted like the folders, which can be added, removed and reordered.
 			vscode.workspace.onDidChangeWorkspaceFolders(() => this.postUpdate()),
 			vscode.workspace.onDidChangeConfiguration(e => {
@@ -284,15 +297,34 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
+	/** Every open repository, in the user's order, or else in the order of the workspace's folders. */
+	private sortedRepositories(): Repository[] {
+		const folders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) ?? []
+		return sortRepositories(this.git.repositories, folders, this.repositoryOrder.get())
+	}
+
+	/**
+	 * Moves a repository right before or after another, and saves the order of every repository that
+	 * isn't a worktree below its own. Nothing is saved when the order stays the same.
+	 */
+	private async moveRepository(repository: string, target: string, after: boolean): Promise<void> {
+		const all = this.sortedRepositories()
+		const current = all.filter(r => !mainRepository(r, all)).map(r => r.rootUri.toString())
+		const order = moveInOrder(current, repository, target, after)
+
+		if (order.some((uri, i) => uri !== current[i])) {
+			await this.repositoryOrder.set(order)
+		}
+	}
+
 	/** Sends the page every repository that has changes, unless that is what it shows already. */
 	private postUpdate(): void {
 		if (!this.view || !this.ready) return
 
 		const viewMode = getViewMode()
 		const icons = this.fileIcons.resolver(this.view.webview)
-		// Every open repository, sorted once for both lists, in the order of the workspace's folders.
-		const folders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) ?? []
-		const all = sortRepositories(this.git.repositories, folders)
+		// Every open repository, sorted once for both lists.
+		const all = this.sortedRepositories()
 		// Sorted before they're filtered, so a worktree stays below its repository when both have changes.
 		const repositories = all
 			.filter(hasChanges)
@@ -334,7 +366,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/**
 	 * Handles a message from the page: it's ready, every repository is collapsed or not, Escape closed
-	 * the Repositories panel, the panel's notice turns on `git.autofetch`, or a row's action.
+	 * the Repositories panel, the panel's notice turns on `git.autofetch`, a repository was dragged,
+	 * or a row's action.
 	 */
 	private async onDidReceiveMessage(message: WebviewMessage): Promise<void> {
 		switch (message.type) {
@@ -354,6 +387,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				await vscode.workspace
 					.getConfiguration('git')
 					.update('autofetch', true, vscode.ConfigurationTarget.Global)
+				return
+			case 'moveRepository':
+				await this.moveRepository(message.repository, message.target, message.after)
 				return
 			case 'run': {
 				const node = this.resolveTarget(message.target)

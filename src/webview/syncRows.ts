@@ -81,6 +81,10 @@ function renderSyncRepository(rows: HTMLElement[], repository: SyncRepositoryIte
 	const row = createRow(rows, rowId(repository.id), level, 'sync', target, parentId, () =>
 		run(sync?.action ?? 'checkout', target),
 	)
+	// Each row knows the repository it moves with when it's dragged: its own, or a worktree's
+	// repository. Only a repository that isn't a worktree below its own can be dragged.
+	row.dataset.repository = repository.parentId ?? repository.id
+	row.draggable = repository.parentId === undefined
 	// A click folds the worktrees, and Enter still runs the button.
 	const expanded = worktrees > 0 ? addTwistie(row, rowId(repository.id)) : true
 

@@ -201,8 +201,8 @@ export interface MenuContext extends ActionTarget {
 
 /**
  * What the webview sends the extension: that it's ready for data, a row's action, whether every
- * repository is collapsed, that Escape closed the Repositories panel, or that the panel's notice
- * turns on `git.autofetch`.
+ * repository is collapsed, that Escape closed the Repositories panel, that the panel's notice
+ * turns on `git.autofetch`, or that a repository was dragged before or after another.
  */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
@@ -210,3 +210,4 @@ export type WebviewMessage =
 	| { readonly type: 'allCollapsed'; readonly value: boolean }
 	| { readonly type: 'closeRepositories' }
 	| { readonly type: 'turnOnAutoFetch' }
+	| { readonly type: 'moveRepository'; readonly repository: string; readonly target: string; readonly after: boolean }

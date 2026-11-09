@@ -7,6 +7,7 @@
 - **Progress on every row.** _Fetch All_, _Pull All_, _Checkout Default Branch_ and the buttons on the Repositories panel's rows show a progress bar, and a spinner on each repository's row. Then the row gets a check mark, an error with Git's message, or the reason it was skipped. The title bar button says what's running.
 - **Worktrees fold** under their repository in the Repositories panel when you click the repository's row, and their names start with `wt:`.
 - **Sorted like your workspace.** Repositories follow your `.code-workspace` file's folder order, and are sorted by name within the same folder.
+- **Drag repositories into your own order** in the Repositories panel, or move one with `Alt+Up` and `Alt+Down`. The changes follow it, and _Reset Repository Order_ in the panel's `...` menu goes back to the workspace's order.
 - The Repositories panel offers to turn on `git.autofetch`, so it knows what there is to pull.
 
 ## 0.2.0

@@ -37,3 +37,10 @@ export interface VsCodeApi {
 	getState(): WebviewState | undefined
 	setState(state: WebviewState): void
 }
+
+/** Where a dragged repository lands: right before or after another repository and its worktrees. */
+export interface DropTarget {
+	/** The other repository's root URI. */
+	readonly repository: string
+	readonly after: boolean
+}
