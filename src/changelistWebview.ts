@@ -14,6 +14,8 @@ import type { API, Repository } from './types/git.ts'
 import type { Node, ViewMode } from './types/extension.ts'
 import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/shared.ts'
 import type { ChangelistStore } from './changelistStore.ts'
+import type { Operations } from './operations.ts'
+import type { DefaultBranches } from './defaultBranches.ts'
 
 // Git reports a change for each step of an operation like a checkout or a commit. The view waits
 // this long after the last one, so it's drawn again once and not for every step.
@@ -42,6 +44,10 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private readonly extensionUri: vscode.Uri
 	// Every repository's changelists.
 	private readonly changelists: ChangelistStore
+	// Fetch/Pull All and Checkout Default, with each repository's status.
+	private readonly operations: Operations
+	// Every repository's default branch, for the Repositories panel.
+	private readonly defaultBranches: DefaultBranches
 
 	// What the webview shows now, as JSON, so it isn't sent the same update again.
 	private lastUpdate: string | undefined
@@ -58,10 +64,18 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	// The view, from when VS Code resolves it until it closes.
 	private view: vscode.WebviewView | undefined
 
-	constructor(git: API, extensionUri: vscode.Uri, changelists: ChangelistStore) {
+	constructor(
+		git: API,
+		extensionUri: vscode.Uri,
+		changelists: ChangelistStore,
+		operations: Operations,
+		defaultBranches: DefaultBranches,
+	) {
 		this.git = git
 		this.extensionUri = extensionUri
 		this.changelists = changelists
+		this.operations = operations
+		this.defaultBranches = defaultBranches
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -73,9 +87,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			git.onDidOpenRepository(r => this.onDidOpenRepository(r)),
 			git.onDidCloseRepository(r => this.onDidCloseRepository(r)),
 			changelists.onDidChange(() => this.postUpdate()),
+			operations.onDidChange(() => this.postUpdate()),
+			defaultBranches.onDidChange(() => this.postUpdate()),
+			// The repositories are sorted like the folders, which can be added, removed and reordered.
+			vscode.workspace.onDidChangeWorkspaceFolders(() => this.postUpdate()),
 			vscode.workspace.onDidChangeConfiguration(e => {
 				if (
 					e.affectsConfiguration('changelist.viewMode') ||
+					e.affectsConfiguration('git.autofetch') ||
 					e.affectsConfiguration('scm.alwaysShowActions') ||
 					e.affectsConfiguration('workbench.hover.delay')
 				) {
@@ -111,9 +130,17 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		]
 	}
 
-	/** The view's Refresh button: has Git check every repository's status again, then updates the view. */
+	/**
+	 * The view's Refresh button: has Git check every repository's status again, then updates the view.
+	 * In the Repositories panel, it looks up the default branches again too.
+	 */
 	async refresh(): Promise<void> {
 		await Promise.all(this.git.repositories.map(r => r.status()))
+
+		if (this.showingRepositories) {
+			await this.defaultBranches.refresh(this.git.repositories)
+		}
+
 		this.postUpdate()
 	}
 
@@ -134,6 +161,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		if (show) {
 			// From the Command Palette, the view may be hidden.
 			void vscode.commands.executeCommand('changelist.view.focus')
+			void this.defaultBranches.refresh(this.git.repositories)
 		}
 
 		this.postUpdate()
@@ -262,8 +290,9 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 		const viewMode = getViewMode()
 		const icons = this.fileIcons.resolver(this.view.webview)
-		// Every open repository, sorted once for both lists.
-		const all = sortRepositories(this.git.repositories)
+		// Every open repository, sorted once for both lists, in the order of the workspace's folders.
+		const folders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) ?? []
+		const all = sortRepositories(this.git.repositories, folders)
 		// Sorted before they're filtered, so a worktree stays below its repository when both have changes.
 		const repositories = all
 			.filter(hasChanges)
@@ -271,7 +300,14 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		const message: ExtensionMessage = {
 			type: 'update',
 			repositories,
-			syncRepositories: this.showingRepositories ? all.map(r => toSyncRepositoryItem(r, all)) : undefined,
+			syncRepositories: this.showingRepositories
+				? all.map(r => ({
+						...toSyncRepositoryItem(r, all),
+						defaultBranch: this.defaultBranches.get(r),
+						status: this.operations.get(r),
+					}))
+				: undefined,
+			autoFetch: vscode.workspace.getConfiguration('git').get<boolean | string>('autofetch', false) !== false,
 			fonts: icons.fonts(),
 			alwaysShowActions: vscode.workspace.getConfiguration('scm').get<boolean>('alwaysShowActions', false),
 			hoverDelay: vscode.workspace
@@ -298,7 +334,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/**
 	 * Handles a message from the page: it's ready, every repository is collapsed or not, Escape closed
-	 * the Repositories panel, or a row's action.
+	 * the Repositories panel, the panel's notice turns on `git.autofetch`, or a row's action.
 	 */
 	private async onDidReceiveMessage(message: WebviewMessage): Promise<void> {
 		switch (message.type) {
@@ -313,6 +349,11 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				return
 			case 'closeRepositories':
 				this.showRepositories(false)
+				return
+			case 'turnOnAutoFetch':
+				await vscode.workspace
+					.getConfiguration('git')
+					.update('autofetch', true, vscode.ConfigurationTarget.Global)
 				return
 			case 'run': {
 				const node = this.resolveTarget(message.target)

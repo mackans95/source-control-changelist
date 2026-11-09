@@ -99,13 +99,22 @@ export function repositoryIcon(kind: RepositoryKind): HTMLSpanElement {
 	return codicon(REPOSITORY_ICONS[kind])
 }
 
-/** The branch on a repository's row, which switches branch. */
-export function branchButton(branch: string, target: ActionTarget): HTMLButtonElement {
-	return textButton('git-branch', branch, `${branch}, Switch Branch...`, 'checkout', target)
+/**
+ * The branch on a repository's row, which switches branch. In the Repositories panel, its tooltip
+ * also says which branch is the default.
+ */
+export function branchButton(branch: string, target: ActionTarget, defaultBranch?: string): HTMLButtonElement {
+	let name = branch
+
+	if (defaultBranch !== undefined) {
+		name = branch === defaultBranch ? `${branch} (default)` : `${branch} (default is ${defaultBranch})`
+	}
+
+	return textButton('git-branch', branch, `${name}, Switch Branch...`, 'checkout', target)
 }
 
 /** Adds the arrow, and returns whether the row is expanded. */
-function addTwistie(row: HTMLDivElement, id: string): boolean {
+export function addTwistie(row: HTMLDivElement, id: string): boolean {
 	const expanded = !collapsedRows.has(id)
 	collapsedRows.addCollapsible(id)
 	row.setAttribute('aria-expanded', String(expanded))

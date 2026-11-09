@@ -99,6 +99,16 @@ export interface RepositoryItem {
 /** Where a repository's branch stands against its upstream. */
 export type SyncState = 'synced' | 'ahead' | 'behind' | 'diverged' | 'unpublished' | 'detached'
 
+/** Where Fetch All, Pull All or Checkout Default is with a repository. */
+export type OperationState = 'running' | 'done' | 'failed' | 'skipped'
+
+/** What Fetch All, Pull All or Checkout Default is doing with a repository, shown at the end of its row. */
+export interface OperationStatus {
+	readonly state: OperationState
+	/** The status icon's tooltip: what it's doing, or why it failed or was skipped. */
+	readonly message: string
+}
+
 /** A repository's row in the Repositories panel. */
 export interface SyncRepositoryItem {
 	/** The repository's root URI. */
@@ -125,6 +135,10 @@ export interface SyncRepositoryItem {
 	 * indented below that one's.
 	 */
 	readonly parentId?: string
+	/** The branch Checkout Default switches to, once it's been looked up. */
+	readonly defaultBranch?: string
+	/** What Fetch All, Pull All or Checkout Default last did with it. */
+	readonly status?: OperationStatus
 }
 
 /** What the extension sends the webview: the rows to draw, or to expand or collapse them all. */
@@ -134,6 +148,8 @@ export type ExtensionMessage =
 			readonly repositories: readonly RepositoryItem[]
 			/** Every repository, while the Repositories panel is shown instead of the changes. */
 			readonly syncRepositories?: readonly SyncRepositoryItem[]
+			/** The Git extension's `git.autofetch`. Without it, the panel says how to turn it on. */
+			readonly autoFetch: boolean
 			readonly fonts: readonly IconFont[]
 			/** VS Code's `scm.alwaysShowActions`: show the actions on every row, not just on hover. */
 			readonly alwaysShowActions: boolean
@@ -184,11 +200,13 @@ export interface MenuContext extends ActionTarget {
 }
 
 /**
- * What the webview sends the extension: that it's ready for data, a row's action, or whether every
- * repository is collapsed, or that Escape closed the Repositories panel.
+ * What the webview sends the extension: that it's ready for data, a row's action, whether every
+ * repository is collapsed, that Escape closed the Repositories panel, or that the panel's notice
+ * turns on `git.autofetch`.
  */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }
 	| { readonly type: 'allCollapsed'; readonly value: boolean }
 	| { readonly type: 'closeRepositories' }
+	| { readonly type: 'turnOnAutoFetch' }

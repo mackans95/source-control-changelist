@@ -67,6 +67,22 @@ export interface ChangelistPick extends vscode.QuickPickItem {
 	readonly isNew: boolean
 }
 
+/**
+ * What the Repositories panel runs on a repository and shows the status of: Fetch All, Pull All and
+ * Checkout Default on many at once, and a row's own buttons on one.
+ */
+export type OperationKind = 'fetch' | 'pull' | 'push' | 'sync' | 'publish' | 'checkout'
+
+/** How an operation is named while it runs, when it's done, and when it fails. */
+export interface OperationLabels {
+	/** Its button's name, for "Fetch All is still running". */
+	readonly name: string
+	readonly running: string
+	readonly done: string
+	/** The verb in "Couldn't fetch api, web". */
+	readonly verb: string
+}
+
 /** A folder while buildTree sorts a group's changes into folders. */
 export interface Directory {
 	readonly directories: Map<string, Directory>

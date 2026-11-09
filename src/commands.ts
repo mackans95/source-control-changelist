@@ -1,14 +1,17 @@
 // The `changelist.*` commands: the view's title buttons, and the actions on its rows. A row's
 // action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
-// turned back into the node first. Push, pull, sync, publish, fetch and switching branch run the Git
-// extension's own commands. Changelists are the extension's own: Git only sees what they stage
-// and commit.
+// turned back into the node first. Switching branch runs the Git extension's own command.
+// Changelists are the extension's own: Git only sees what they stage and commit. Fetch All, Pull
+// All, Checkout Default and the Repositories panel's row buttons run through operations.ts, which
+// shows each repository's status on its row.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { Status } from './constants/git.ts'
-import { GROUP_LABELS, changelistOf, groupChanges, repositoryName } from './changelistModel.ts'
+import { GROUP_LABELS, hasChanges, changelistOf, groupChanges, needsPull, repositoryName } from './changelistModel.ts'
+import { type Operations, VIEW_PROGRESS } from './operations.ts'
 import type { ChangelistStore } from './changelistStore.ts'
 import type { ChangelistWebviewProvider } from './changelistWebview.ts'
+import type { DefaultBranches } from './defaultBranches.ts'
 import type { API, Change, Repository } from './types/git.ts'
 import type {
 	ChangelistPick,
@@ -23,8 +26,6 @@ import type { GroupKind, MenuContext } from './types/shared.ts'
 
 // The groups a repository's Stage All button stages. Files in a changelist aren't in them.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']
-// Where the progress bar shows while a sync button or Fetch All runs.
-const VIEW_PROGRESS: vscode.ProgressOptions = { location: { viewId: 'changelist.view' } }
 
 /** The View as Tree and View as List buttons: saves the choice in the user's settings. */
 function setViewMode(mode: ViewMode): Thenable<void> {
@@ -36,9 +37,19 @@ function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown>
 	return vscode.commands.executeCommand(command, node.repository)
 }
 
-/** Runs one of the Git extension's commands on a repository, with the view's progress bar while it runs. */
-function runWithProgress(command: string, node: RepositoryNode): Thenable<unknown> {
-	return vscode.window.withProgress(VIEW_PROGRESS, () => runGitCommand(command, node))
+/**
+ * Publishes the branch to the repository's only remote. With several remotes or none, the Git
+ * extension's own Publish Branch asks where to, or offers GitHub, with the progress bar only.
+ */
+function publish(node: RepositoryNode, operations: Operations): Thenable<unknown> {
+	const { remotes, HEAD } = node.repository.state
+
+	if (remotes.length === 1 && HEAD?.name) {
+		const branch = HEAD.name
+		return operations.runSingle('publish', node.repository, r => r.push(remotes[0].name, branch, true))
+	}
+
+	return vscode.window.withProgress(VIEW_PROGRESS, () => runGitCommand('git.publish', node))
 }
 
 /** The changes' paths, which the Git API's add, revert and clean take. */
@@ -333,16 +344,81 @@ function revealInOS(node: RepositoryNode): Thenable<unknown> {
 }
 
 /** Fetches every repository that has a remote, so the Repositories panel knows what there is to pull. */
-async function fetchAll(git: API): Promise<void> {
+function fetchAll(git: API, operations: Operations): Promise<void> {
 	const repositories = git.repositories.filter(r => r.state.remotes.length > 0)
-	const results = await vscode.window.withProgress(VIEW_PROGRESS, () =>
-		Promise.allSettled(repositories.map(r => r.fetch())),
-	)
-	const failed = repositories.filter((_, i) => results[i].status === 'rejected').map(repositoryName)
+	return operations.run('fetch', repositories, r => r.fetch())
+}
 
-	if (failed.length > 0) {
-		void vscode.window.showWarningMessage(`Couldn't fetch ${failed.join(', ')}.`)
+/**
+ * Pulls every repository that has commits to pull, also the diverged ones. Those can fail, depending
+ * on how the repository is set to reconcile them, and their row says why.
+ */
+async function pullAll(git: API, operations: Operations): Promise<void> {
+	const repositories = git.repositories.filter(needsPull)
+
+	if (repositories.length === 0) {
+		void vscode.window.showInformationMessage('No repository has commits to pull.')
+		return
 	}
+
+	await operations.run('pull', repositories, r => r.pull())
+}
+
+/**
+ * Why Checkout Default leaves a repository alone, or undefined when it switches it. A repository
+ * that's on its default branch already gets neither, so it's left out without a reason.
+ */
+function checkoutSkipReason(repository: Repository, branch: string | undefined): string | undefined {
+	switch (true) {
+		case branch === undefined:
+			return 'Skipped: no default branch found'
+		case repository.kind === 'worktree':
+			return "Skipped: it's a worktree"
+		case hasChanges(repository):
+			return 'Skipped: it has uncommitted changes'
+		default:
+			return undefined
+	}
+}
+
+/**
+ * Switches every repository to its default branch, after asking. Worktrees and repositories with
+ * uncommitted changes are skipped, with the reason on their row.
+ */
+async function checkoutDefault(git: API, operations: Operations, defaultBranches: DefaultBranches): Promise<void> {
+	await defaultBranches.refresh(git.repositories)
+
+	// The repositories that switch, with the branch they switch to.
+	const targets = new Map<Repository, string>()
+	const skipped: [Repository, string][] = []
+
+	for (const repo of git.repositories) {
+		const branch = defaultBranches.get(repo)
+
+		if (branch !== undefined && repo.state.HEAD?.name === branch) continue
+
+		const reason = checkoutSkipReason(repo, branch)
+
+		if (reason !== undefined) {
+			skipped.push([repo, reason])
+		} else if (branch !== undefined) {
+			targets.set(repo, branch)
+		}
+	}
+
+	if (targets.size > 0) {
+		const choice = await vscode.window.showWarningMessage(
+			`Switch ${targets.size === 1 ? '1 repository' : `${targets.size} repositories`} to the default branch?`,
+			{ modal: true, detail: [...targets].map(([r, branch]) => `${repositoryName(r)}: ${branch}`).join('\n') },
+			'Switch',
+		)
+
+		if (choice !== 'Switch') return
+	} else {
+		void vscode.window.showInformationMessage('Every repository that can switch is on its default branch.')
+	}
+
+	await operations.run('checkout', [...targets.keys()], r => r.checkout(targets.get(r) ?? ''), skipped)
 }
 
 /** Registers the `changelist.*` commands, for the view to run on its rows and in its title bar. */
@@ -350,118 +426,135 @@ export function registerCommands(
 	git: API,
 	provider: ChangelistWebviewProvider,
 	changelists: ChangelistStore,
+	operations: Operations,
+	defaultBranches: DefaultBranches,
 ): vscode.Disposable[] {
-	// Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
-	// node. The menu's `when` clauses make sure it's the right kind of row.
+	/**
+	 * Commands run from the view's right-click menu get the row's `data-vscode-context` instead of a
+	 * node. The menu's `when` clauses make sure it's the right kind of row.
+	 */
 	const withNode =
-		<T extends Node>(run: (node: T) => unknown) =>
-		(arg: T | MenuContext) => {
+		<K extends Node['type']>(types: readonly K[], run: (node: Extract<Node, { type: K }>) => unknown) =>
+		(arg: Node | MenuContext) => {
 			const node = 'webviewSection' in arg ? provider.resolveTarget(arg) : arg
-			return node && run(node as T)
+			return node && types.includes(node.type as K) ? run(node as Extract<Node, { type: K }>) : undefined
 		}
 
-	return [
-		vscode.commands.registerCommand('changelist.refresh', () => provider.refresh()),
-		vscode.commands.registerCommand('changelist.viewAsTree', () => setViewMode('tree')),
-		vscode.commands.registerCommand('changelist.viewAsList', () => setViewMode('list')),
-		vscode.commands.registerCommand('changelist.collapseAll', () => provider.setAllExpanded(false)),
-		vscode.commands.registerCommand('changelist.expandAll', () => provider.setAllExpanded(true)),
-		vscode.commands.registerCommand('changelist.showRepositories', () => provider.showRepositories(true)),
-		vscode.commands.registerCommand('changelist.showRepositoriesNeedsSync', () => provider.showRepositories(true)),
-		vscode.commands.registerCommand('changelist.hideRepositories', () => provider.showRepositories(false)),
-		vscode.commands.registerCommand('changelist.fetchAll', () => fetchAll(git)),
-		vscode.commands.registerCommand(
-			'changelist.openChange',
-			withNode((node: ResourceNode) => openChange(git, node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.openFile',
-			withNode((node: ResourceNode) => vscode.window.showTextDocument(node.change.uri)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.stage',
-			withNode((node: ResourceNode) => node.repository.add([node.change.uri.fsPath])),
-		),
-		vscode.commands.registerCommand(
-			'changelist.unstage',
-			withNode((node: ResourceNode) => node.repository.revert([node.change.uri.fsPath])),
-		),
-		vscode.commands.registerCommand(
-			'changelist.discard',
-			withNode((node: ResourceNode) => discard(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.discardAll',
-			withNode((node: GroupNode | FolderNode) => discardAll(node)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.stageAll',
-			withNode((node: RepositoryNode | GroupNode | FolderNode) => stageAll(node, changelists)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.unstageAll',
-			withNode((node: GroupNode | FolderNode) => node.repository.revert(paths(node.changes))),
-		),
-		vscode.commands.registerCommand(
-			'changelist.commit',
-			withNode((node: RepositoryNode) => commit(node, changelists)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.commitChangelist',
-			withNode((node: GroupNode) => commitChangelist(node, changelists)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.newChangelist',
-			withNode((node: Node) => newChangelist(node.repository, changelists)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.renameChangelist',
-			withNode((node: GroupNode) => renameChangelist(node, changelists)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.deleteChangelist',
-			withNode((node: GroupNode) => node.changelist && changelists.remove(node.repository, node.changelist)),
-		),
-		vscode.commands.registerCommand(
-			'changelist.moveToChangelist',
-			withNode((node: GroupNode | FolderNode | ResourceNode) => moveToChangelist(node, changelists)),
-		),
+	/** Registers a command under changelist. */
+	const register = (name: string, action: (...args: any) => unknown) => {
+		return vscode.commands.registerCommand(`changelist.${name}`, action)
+	}
 
-		vscode.commands.registerCommand(
-			'changelist.checkout',
-			withNode((node: RepositoryNode) => runGitCommand('git.checkout', node)),
+	return [
+		register('refresh', () => provider.refresh()),
+		register('viewAsTree', () => setViewMode('tree')),
+		register('viewAsList', () => setViewMode('list')),
+		register('collapseAll', () => provider.setAllExpanded(false)),
+		register('expandAll', () => provider.setAllExpanded(true)),
+		register('showRepositories', () => provider.showRepositories(true)),
+		register('showRepositoriesNeedsSync', () => provider.showRepositories(true)),
+		register('hideRepositories', () => provider.showRepositories(false)),
+		register('fetchAll', () => fetchAll(git, operations)),
+		register('pullAll', () => pullAll(git, operations)),
+		register('checkoutDefault', () => checkoutDefault(git, operations, defaultBranches)),
+		register(
+			'openChange',
+			withNode(['resource'], node => openChange(git, node)),
 		),
-		vscode.commands.registerCommand(
-			'changelist.push',
-			withNode((node: RepositoryNode) => runWithProgress('git.push', node)),
+		register(
+			'openFile',
+			withNode(['resource'], node => vscode.window.showTextDocument(node.change.uri)),
 		),
-		vscode.commands.registerCommand(
-			'changelist.pull',
-			withNode((node: RepositoryNode) => runWithProgress('git.pull', node)),
+		register(
+			'stage',
+			withNode(['resource'], node => node.repository.add([node.change.uri.fsPath])),
 		),
-		vscode.commands.registerCommand(
-			'changelist.sync',
-			withNode((node: RepositoryNode) => runWithProgress('git.sync', node)),
+		register(
+			'unstage',
+			withNode(['resource'], node => node.repository.revert([node.change.uri.fsPath])),
 		),
-		vscode.commands.registerCommand(
-			'changelist.publish',
-			withNode((node: RepositoryNode) => runWithProgress('git.publish', node)),
+		register(
+			'discard',
+			withNode(['resource'], node => discard(node)),
 		),
-		vscode.commands.registerCommand(
-			'changelist.fetch',
-			withNode((node: RepositoryNode) => runWithProgress('git.fetch', node)),
+		register(
+			'discardAll',
+			withNode(['group', 'folder'], node => discardAll(node)),
 		),
-		vscode.commands.registerCommand(
-			'changelist.openInNewWindow',
-			withNode((node: RepositoryNode) =>
+		register(
+			'stageAll',
+			withNode(['repository', 'group', 'folder'], node => stageAll(node, changelists)),
+		),
+		register(
+			'unstageAll',
+			withNode(['group', 'folder'], node => node.repository.revert(paths(node.changes))),
+		),
+		register(
+			'commit',
+			withNode(['repository'], node => commit(node, changelists)),
+		),
+		register(
+			'commitChangelist',
+			withNode(['group'], node => commitChangelist(node, changelists)),
+		),
+		register(
+			'newChangelist',
+			withNode(['folder', 'group', 'repository', 'resource'], node =>
+				newChangelist(node.repository, changelists),
+			),
+		),
+		register(
+			'renameChangelist',
+			withNode(['group'], node => renameChangelist(node, changelists)),
+		),
+		register(
+			'deleteChangelist',
+			withNode(['group'], node => node.changelist && changelists.remove(node.repository, node.changelist)),
+		),
+		register(
+			'moveToChangelist',
+			withNode(['group', 'folder', 'resource'], node => moveToChangelist(node, changelists)),
+		),
+		register(
+			'checkout',
+			withNode(['repository'], node => runGitCommand('git.checkout', node)),
+		),
+		register(
+			'push',
+			withNode(['repository'], node => operations.runSingle('push', node.repository, r => r.push())),
+		),
+		register(
+			'pull',
+			withNode(['repository'], node => operations.runSingle('pull', node.repository, r => r.pull())),
+		),
+		register(
+			'sync',
+			withNode(['repository'], node =>
+				operations.runSingle('sync', node.repository, async r => {
+					await r.pull()
+					await r.push()
+				}),
+			),
+		),
+		register(
+			'publish',
+			withNode(['repository'], node => publish(node, operations)),
+		),
+		register(
+			'fetch',
+			withNode(['repository'], node => operations.runSingle('fetch', node.repository, r => r.fetch())),
+		),
+		register(
+			'openInNewWindow',
+			withNode(['repository'], node =>
 				vscode.commands.executeCommand('vscode.openFolder', node.repository.rootUri, { forceNewWindow: true }),
 			),
 		),
-		vscode.commands.registerCommand('changelist.revealInFinder', withNode(revealInOS)),
-		vscode.commands.registerCommand('changelist.revealInFileExplorer', withNode(revealInOS)),
-		vscode.commands.registerCommand(
-			'changelist.copyPath',
-			withNode((node: RepositoryNode) => vscode.env.clipboard.writeText(node.repository.rootUri.fsPath)),
+		register('revealInFinder', withNode(['repository'], revealInOS)),
+		register('revealInFileExplorer', withNode(['repository'], revealInOS)),
+		register(
+			'copyPath',
+			withNode(['repository'], node => vscode.env.clipboard.writeText(node.repository.rootUri.fsPath)),
 		),
 	]
 }

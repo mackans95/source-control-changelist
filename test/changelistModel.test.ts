@@ -7,11 +7,14 @@ import {
 	byPath,
 	changelistOf,
 	countChanges,
+	folderIndex,
 	getChanges,
+	gitErrorMessage,
 	groupChanges,
 	hasChanges,
 	mainRepositoryPath,
 	needsSync,
+	needsPull,
 	pruneChangelists,
 	repositoryName,
 	syncState,
@@ -184,6 +187,11 @@ describe('syncState and needsSync', () => {
 		assert.equal(needsSync(onBranch({ name: 'main', upstream, behind: 1 })), true)
 		assert.equal(needsSync(onBranch({ name: 'main', upstream, ahead: 2, behind: 1 })), true)
 	})
+	test('needs a pull when behind or diverged', () => {
+		assert.equal(needsPull(onBranch({ name: 'main', upstream, behind: 1 })), true)
+		assert.equal(needsPull(onBranch({ name: 'main', upstream, ahead: 2, behind: 1 })), true)
+		assert.equal(needsPull(onBranch({ name: 'main', upstream, ahead: 1 })), false)
+	})
 	test('needs no sync when up to date, unpublished or detached', () => {
 		assert.equal(needsSync(onBranch({ name: 'main', upstream })), false)
 		assert.equal(needsSync(onBranch({ name: 'feature', ahead: 3 })), false)
@@ -208,7 +216,7 @@ describe('byPath and repositoryName', () => {
 	})
 })
 
-describe('mainRepositoryPath and sortRepositories', () => {
+describe('mainRepositoryPath, folderIndex and sortRepositories', () => {
 	test('knows the repository a worktree belongs to', () => {
 		assert.equal(mainRepositoryPath(worktree('/code/feature-x', '/code/api')), '/code/api')
 		assert.equal(mainRepositoryPath(onBranch(undefined, '/code/api')), undefined)
@@ -225,6 +233,37 @@ describe('mainRepositoryPath and sortRepositories', () => {
 	test("sorts a worktree by its own name when its repository isn't open", () => {
 		const sorted = sortRepositories([onBranch(undefined, '/code/web'), worktree('/code/feature-x', '/code/api')])
 		assert.deepEqual(sorted.map(repositoryName), ['feature-x', 'web'])
+	})
+	test("finds a repository's folder, also when the folder is part of the repository", () => {
+		const folders = ['/code/web', '/code/api/src', '/other']
+		assert.equal(folderIndex(onBranch(undefined, '/code/web'), folders), 0)
+		assert.equal(folderIndex(onBranch(undefined, '/code/api'), folders), 1)
+		assert.equal(folderIndex(onBranch(undefined, '/other/tools'), folders), 2)
+		assert.equal(folderIndex(onBranch(undefined, '/code/webapp'), folders), 3)
+	})
+	test("sorts repositories in the workspace's folder order, and by name within a folder", () => {
+		const sorted = sortRepositories(
+			[
+				onBranch(undefined, '/elsewhere/a'),
+				onBranch(undefined, '/code/web'),
+				onBranch(undefined, '/libs/zod'),
+				onBranch(undefined, '/libs/axios'),
+				onBranch(undefined, '/code/api'),
+			],
+			['/code/web', '/libs', '/code/api'],
+		)
+		assert.deepEqual(sorted.map(repositoryName), ['web', 'axios', 'zod', 'api', 'a'])
+	})
+	test('keeps a worktree after its repository, wherever its own folder is', () => {
+		const sorted = sortRepositories(
+			[
+				onBranch(undefined, '/code/web'),
+				onBranch(undefined, '/code/api'),
+				worktree('/code/feature-x', '/code/api'),
+			],
+			['/code/feature-x', '/code/web', '/code/api'],
+		)
+		assert.deepEqual(sorted.map(repositoryName), ['web', 'api', 'feature-x'])
 	})
 })
 
@@ -255,5 +294,19 @@ describe('changelistOf, groupChanges and pruneChangelists', () => {
 			files: { [moved.uri.toString()]: 'Feature', [staged.uri.toString()]: 'Feature' },
 		})
 		assert.deepEqual(pruned.files, { [staged.uri.toString()]: 'Feature' })
+	})
+})
+
+describe('gitErrorMessage', () => {
+	test("picks Git's fatal line over its hints", () => {
+		const stderr = [
+			'hint: You have divergent branches and need to specify how to reconcile them.',
+			'hint:   git config pull.rebase false  # merge',
+			'fatal: Need to specify how to reconcile divergent branches.',
+		].join('\n')
+		assert.equal(gitErrorMessage({ stderr }), 'Need to specify how to reconcile divergent branches.')
+	})
+	test("uses the error's message when Git said nothing", () => {
+		assert.equal(gitErrorMessage(new Error('Failed to execute git')), 'Failed to execute git')
 	})
 })

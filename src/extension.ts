@@ -5,6 +5,8 @@ import { unavailableHtml } from './changelistHtml.ts'
 import { ChangelistWebviewProvider } from './changelistWebview.ts'
 import { registerCommands } from './commands.ts'
 import { ChangelistStore } from './changelistStore.ts'
+import { Operations } from './operations.ts'
+import { DefaultBranches } from './defaultBranches.ts'
 import type { API, GitExtension } from './types/git.ts'
 
 /** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */
@@ -57,11 +59,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
 
 	const changelists = new ChangelistStore(context.workspaceState)
-	const provider = new ChangelistWebviewProvider(git, context.extensionUri, changelists)
+	const operations = new Operations()
+	const defaultBranches = new DefaultBranches(git.git.path)
+	const provider = new ChangelistWebviewProvider(git, context.extensionUri, changelists, operations, defaultBranches)
 	context.subscriptions.push(
 		changelists,
+		operations,
+		defaultBranches,
 		provider,
 		vscode.window.registerWebviewViewProvider('changelist.view', provider),
-		...registerCommands(git, provider, changelists),
+		...registerCommands(git, provider, changelists, operations, defaultBranches),
 	)
 }

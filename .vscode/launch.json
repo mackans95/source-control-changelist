@@ -31,6 +31,17 @@
       "postDebugTask": "stop watch",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/.fake-repos/repos"]
+    },
+    {
+      // Same fake repositories, but opened as a workspace with each repository as its own folder, in an
+      // order that isn't alphabetical, like a .code-workspace file's folders.
+      "name": "Run Extension (fake workspace)",
+      "type": "extensionHost",
+      "request": "launch",
+      "preLaunchTask": "fake repos and watch",
+      "postDebugTask": "stop watch",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/.fake-repos/fake.code-workspace"]
     }
   ]
 }

@@ -2,7 +2,8 @@
 // Extension (fake repositories)" launch configuration opens. `npm run fake-repos` deletes them and
 // starts over. With `--if-missing`, which the launch configuration uses, it leaves them alone when
 // they're there. repos/ has the repositories, and remotes/ the bare remotes they push to and pull
-// from.
+// from. fake.code-workspace opens the same repositories as a workspace, for the "Run Extension (fake
+// workspace)" launch configuration.
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -14,6 +15,11 @@ const root = '.fake-repos'
 const repos = join(root, 'repos')
 // Their remotes, which pushing and pulling go to.
 const remotes = join(root, 'remotes')
+// A workspace with each repository as its own folder.
+const workspaceFile = join(root, 'fake.code-workspace')
+// The workspace's folders. They aren't in alphabetical order, so the view shows whether it follows
+// them, and feature-x comes first, so it shows whether a worktree stays below its repository.
+const workspaceFolders = ['feature-x', 'web', 'mobile', 'api', 'tools', 'docs', 'infra', 'scratch']
 // The same author for every commit, whatever your Git config says.
 const env = {
 	...process.env,
@@ -22,6 +28,8 @@ const env = {
 	GIT_COMMITTER_NAME: 'Fake',
 	GIT_COMMITTER_EMAIL: 'fake@example.com',
 }
+// How many remotes have been made, which picks each one's delay.
+let remoteCount = 0
 
 /**
  * Runs git without signing commits, with `main` as the first branch. Throws with Git's error if it fails.
@@ -43,6 +51,8 @@ function commit(repo: string, file: string, message: string): void {
 
 /**
  * Makes a repository with a remote, with one commit pushed, and returns its folder.
+ * Its remote answers slowly, like one over the network. Like a clone, it knows the
+ * remote's default branch as `origin/HEAD`.
  */
 function published(name: string): string {
 	const remote = join(remotes, `${name}.git`)
@@ -51,6 +61,12 @@ function published(name: string): string {
 	git('clone', '-q', remote, repo)
 	commit(repo, 'README.md', `# ${name}`)
 	git('-C', repo, 'push', '-q', '-u', 'origin', 'main')
+	git('-C', repo, 'remote', 'set-head', 'origin', '--auto')
+	// Like a remote over the network, it takes a while to answer, 1 to 3 seconds, so the spinners of
+	// Fetch All and Pull All can be seen, and the rows finish one by one.
+	const delay = 1 + (remoteCount++ % 3)
+	git('-C', repo, 'config', 'remote.origin.uploadpack', `sleep ${delay}; git-upload-pack`)
+	git('-C', repo, 'config', 'remote.origin.receivepack', `sleep ${delay}; git-receive-pack`)
 	return repo
 }
 
@@ -71,6 +87,13 @@ function pushedElsewhere(name: string, count: number): void {
 	git('-C', join(repos, name), 'fetch', '-q')
 }
 
+// Written every time, so it's there also when the repositories were made before it was added.
+mkdirSync(root, { recursive: true })
+writeFileSync(
+	workspaceFile,
+	`${JSON.stringify({ folders: workspaceFolders.map(name => ({ path: `repos/${name}` })) }, null, '\t')}\n`,
+)
+
 // A debug session runs the launch configuration's task again when the test window reloads, while
 // the window has the repositories open.
 if (process.argv.includes('--if-missing') && existsSync(repos)) {
@@ -87,8 +110,11 @@ for (const entry of readdirSync(repos)) {
 rmSync(remotes, { recursive: true, force: true })
 mkdirSync(remotes)
 
-// synced: clean and up to date, so only the Repositories panel shows it.
-published('docs')
+// synced: clean and up to date, so only the Repositories panel shows it. It's on a release branch,
+// so Checkout Default switches it to main.
+const docs = published('docs')
+git('-C', docs, 'switch', '-q', '-c', 'release')
+git('-C', docs, 'push', '-q', '-u', 'origin', 'release')
 
 // ahead: 2 commits to push, and changes, so the changes show it too.
 const api = published('api')

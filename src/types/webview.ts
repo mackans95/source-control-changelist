@@ -20,6 +20,12 @@ export interface SyncButton {
 	readonly label: string
 }
 
+export interface StatusIcon {
+	readonly icon: string
+	/** Theme color ID, like `testing.iconPassed`. */
+	readonly color: string
+}
+
 /** What the webview keeps while it's hidden and reloaded. */
 export interface WebviewState {
 	readonly collapsed: readonly string[]
