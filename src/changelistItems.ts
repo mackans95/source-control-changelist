@@ -247,6 +247,7 @@ function toGroupItem(
 		kind,
 		changelist,
 		label: changelist ?? GROUP_LABELS[kind],
+		description: changelist === undefined ? undefined : changelists.descriptions?.[changelist],
 		count: changes.length,
 		active: kind === 'changes' && changelist === changelists.active,
 		children,

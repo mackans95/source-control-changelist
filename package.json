@@ -126,6 +126,11 @@
         "category": "Changelist"
       },
       {
+        "command": "changelist.editChangelistDescription",
+        "title": "Edit Description...",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.deleteChangelist",
         "title": "Delete Changelist",
         "category": "Changelist"
@@ -497,19 +502,24 @@
           "group": "3_changelist@2"
         },
         {
-          "command": "changelist.renameChangelist",
-          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "command": "changelist.setActiveChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && kind == 'changes' && !active",
           "group": "3_changelist@3"
         },
         {
-          "command": "changelist.setActiveChangelist",
-          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && kind == 'changes' && !active",
+          "command": "changelist.renameChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "3_changelist@4"
+        },
+        {
+          "command": "changelist.editChangelistDescription",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
           "group": "3_changelist@5"
         },
         {
           "command": "changelist.deleteChangelist",
           "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
-          "group": "3_changelist@4"
+          "group": "3_changelist@6"
         }
       ],
       "commandPalette": [
@@ -670,6 +680,11 @@
           ],
           "default": "list",
           "description": "Controls whether changes are shown as a list or as a tree."
+        },
+        "changelist.deleteChangelistsAfterCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Delete a changelist once its Commit has committed all of its files."
         }
       }
     }

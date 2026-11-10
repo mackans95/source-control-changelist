@@ -18,7 +18,7 @@ export class ChangelistStore implements vscode.Disposable {
 	// Where the changelists are saved.
 	private readonly state: vscode.Memento
 	// The files each repository had changes in at Git's last check, by the repository's root URI, so
-	// the ones that change after it goes to the active list.
+	// the ones that change after it go to the active list.
 	private readonly known = new Map<string, ReadonlySet<string>>()
 
 	// When the user changes a changelist.
@@ -48,6 +48,9 @@ export class ChangelistStore implements vscode.Disposable {
 			lists: changelists.lists.map(name => (name === from ? to : name)),
 			files: Object.fromEntries(files),
 			active: changelists.active === from ? to : changelists.active,
+			descriptions: Object.fromEntries(
+				Object.entries(changelists.descriptions ?? {}).map(([list, text]) => [list === from ? to : list, text]),
+			),
 		})
 	}
 
@@ -63,12 +66,27 @@ export class ChangelistStore implements vscode.Disposable {
 			lists: changelists.lists.filter(list => list !== name),
 			files: Object.fromEntries(files),
 			active: changelists.active === name ? undefined : changelists.active,
+			descriptions: Object.fromEntries(
+				Object.entries(changelists.descriptions ?? {}).filter(([list]) => list !== name),
+			),
 		})
 	}
 
 	/** Makes a changelist the one new changes go to, or none, so they stay in Changes. */
 	setActive(repository: Repository, name: string | undefined): Promise<void> {
 		return this.set(repository, { ...this.get(repository), active: name })
+	}
+
+	/** Sets a changelist's description, which its Commit uses as the message. An empty one removes it. */
+	setDescription(repository: Repository, name: string, description: string): Promise<void> {
+		const changelists = this.get(repository)
+		const descriptions = Object.entries(changelists.descriptions ?? {}).filter(([list]) => list !== name)
+
+		if (description) {
+			descriptions.push([name, description])
+		}
+
+		return this.set(repository, { ...changelists, descriptions: Object.fromEntries(descriptions) })
 	}
 
 	/** Moves changes to a changelist, or out of every changelist when `name` is undefined. */

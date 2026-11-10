@@ -59,6 +59,8 @@ export interface RepositoryChangelists {
 	readonly files: Readonly<Record<string, string>>
 	/** The list new changes go to. Without one, they stay in Changes and Untracked Changes. */
 	readonly active?: string
+	/** Each list's description, by its name, which the list's Commit uses as the commit message. */
+	readonly descriptions?: Readonly<Record<string, string>>
 }
 
 /** A changelist in the Move to Changelist picker, or the entry that makes a new one. */

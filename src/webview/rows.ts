@@ -277,12 +277,19 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	}
 
 	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
-	if (group.active && group.changelist !== undefined) {
-		row.classList.add('active-changelist')
-		row.dataset.tooltip = 'Active changelist: new changes go here'
+	const active = group.active && group.changelist !== undefined
+	row.classList.toggle('active-changelist', active)
+
+	// An empty `data-tooltip` would still show an empty tooltip, so it's only set when there's text.
+	const tooltip = [group.description, active ? 'Active changelist: new changes go here' : undefined].filter(Boolean)
+
+	if (tooltip.length > 0) {
+		row.dataset.tooltip = tooltip.join(' • ')
 	}
 
-	row.append(label, span('spacer'), actions, span('badge', String(group.count)))
+	const description = group.description ? [span('description', group.description)] : []
+
+	row.append(label, ...description, span('spacer'), actions, span('badge', String(group.count)))
 
 	if (expanded) {
 		renderEntries(rows, repository, group, group.children, 3, group.id)

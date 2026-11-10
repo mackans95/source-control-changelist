@@ -337,8 +337,10 @@ describe('changelistOf, groupChanges and pruneChangelists', () => {
 		})
 		assert.deepEqual(pruned.files, { [staged.uri.toString()]: 'Feature' })
 	})
-	test('keeps the active list when it prunes', () => {
-		assert.equal(pruneChangelists(repo, { ...changelists, active: 'Feature' }).active, 'Feature')
+	test('keeps the active list and the descriptions when it prunes', () => {
+		const pruned = pruneChangelists(repo, { ...changelists, active: 'Feature', descriptions: { Feature: 'Add X' } })
+		assert.equal(pruned.active, 'Feature')
+		assert.deepEqual(pruned.descriptions, { Feature: 'Add X' })
 	})
 })
 

@@ -73,6 +73,8 @@ export interface GroupItem {
 	/** A changelist's name. Its `kind` is `changes`, and it has files from Untracked Changes too. */
 	readonly changelist?: string
 	readonly label: string
+	/** A changelist's description, shown after its name. */
+	readonly description?: string
 	readonly count: number
 	/**
 	 * Whether new changes go here: the active changelist, or Changes when no list is active. An
