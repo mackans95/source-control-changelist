@@ -74,6 +74,11 @@ export interface GroupItem {
 	readonly changelist?: string
 	readonly label: string
 	readonly count: number
+	/**
+	 * Whether new changes go here: the active changelist, or Changes when no list is active. An
+	 * active changelist's name is bold.
+	 */
+	readonly active: boolean
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
@@ -197,6 +202,8 @@ export type RowSection = 'repository' | 'group' | 'folder' | 'file' | 'sync'
 export interface MenuContext extends ActionTarget {
 	readonly webviewSection: RowSection
 	readonly preventDefaultContextMenuItems: true
+	/** On a group's row, whether new changes go there, so Set as Active Changelist is left out. */
+	readonly active?: boolean
 }
 
 /**

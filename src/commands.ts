@@ -507,6 +507,10 @@ export function registerCommands(
 			),
 		),
 		register(
+			'setActiveChangelist',
+			withNode(['group'], node => changelists.setActive(node.repository, node.changelist)),
+		),
+		register(
 			'renameChangelist',
 			withNode(['group'], node => renameChangelist(node, changelists)),
 		),

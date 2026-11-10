@@ -57,6 +57,8 @@ export interface RepositoryChangelists {
 	readonly lists: readonly string[]
 	/** Which list each moved file is in, by the file's URI. */
 	readonly files: Readonly<Record<string, string>>
+	/** The list new changes go to. Without one, they stay in Changes and Untracked Changes. */
+	readonly active?: string
 }
 
 /** A changelist in the Move to Changelist picker, or the entry that makes a new one. */

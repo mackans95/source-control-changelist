@@ -89,6 +89,12 @@ export function createRow(
 	return row
 }
 
+/** Adds context keys to a row's right-click menu, for the `when` clauses of its items. */
+function addMenuContext(row: HTMLElement, keys: Partial<MenuContext>): void {
+	const context = JSON.parse(row.dataset.vscodeContext ?? '{}') as MenuContext
+	row.dataset.vscodeContext = JSON.stringify({ ...context, ...keys })
+}
+
 /** A repository row's tooltip: its folder, and for a worktree the repository it belongs to. */
 export function repositoryTooltip(repository: RepositoryItem | SyncRepositoryItem): string {
 	return repository.worktreeOf ? `${repository.path} • Worktree of ${repository.worktreeOf}` : repository.path
@@ -256,6 +262,7 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
 	const expanded = addTwistie(row, group.id)
+	addMenuContext(row, { active: group.active })
 	const actions = groupActions(group, target)
 
 	// A changelist commits on its own, like a repository does.
@@ -267,6 +274,12 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 
 	if (group.kind === 'staged') {
 		label.style.setProperty('color', themeColor(STAGED_COLOR))
+	}
+
+	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
+	if (group.active && group.changelist !== undefined) {
+		row.classList.add('active-changelist')
+		row.dataset.tooltip = 'Active changelist: new changes go here'
 	}
 
 	row.append(label, span('spacer'), actions, span('badge', String(group.count)))

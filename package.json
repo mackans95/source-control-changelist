@@ -121,6 +121,11 @@
         "category": "Changelist"
       },
       {
+        "command": "changelist.setActiveChangelist",
+        "title": "Set as Active Changelist",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.deleteChangelist",
         "title": "Delete Changelist",
         "category": "Changelist"
@@ -497,6 +502,11 @@
           "group": "3_changelist@3"
         },
         {
+          "command": "changelist.setActiveChangelist",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && kind == 'changes' && !active",
+          "group": "3_changelist@5"
+        },
+        {
           "command": "changelist.deleteChangelist",
           "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
           "group": "3_changelist@4"
@@ -621,6 +631,10 @@
         },
         {
           "command": "changelist.renameChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.setActiveChangelist",
           "when": "false"
         },
         {

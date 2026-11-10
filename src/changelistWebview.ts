@@ -229,13 +229,17 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/**
 	 * Listens to a repository Git opened, and shows it when it has changes. Each time Git has checked
-	 * its status, the files that have no changes any more leave their changelists.
+	 * its status, new changes go to the active changelist, and the files that have no changes any more
+	 * leave their changelists.
 	 */
 	private onDidOpenRepository(repository: Repository): void {
+		// Notes what has changed already, when Git has checked it, so only what changes after this goes
+		// to the active changelist.
+		this.changelists.track(repository)
 		this.repositoryListeners.set(
 			repository.rootUri.toString(),
 			repository.state.onDidChange(() => {
-				this.changelists.prune(repository)
+				this.changelists.track(repository)
 				this.scheduleUpdate()
 			}),
 		)
