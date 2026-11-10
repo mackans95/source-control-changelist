@@ -163,6 +163,15 @@ function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	return actions
 }
 
+/**
+ * Lets a file's or folder's row be dragged to another group, and dropped on, for its group. Merge
+ * Changes is Git's own, so its files stay where they are.
+ */
+function makeDraggable(row: HTMLDivElement, group: GroupItem): void {
+	row.dataset.group = group.id
+	row.draggable = group.kind !== 'merge'
+}
+
 /** A file's row: its icon, its name, its folder in list mode, its status letter and its actions. */
 function renderFile(
 	rows: HTMLElement[],
@@ -179,6 +188,7 @@ function renderFile(
 		uri: file.uri,
 	}
 	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
+	makeDraggable(row, group)
 	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', file.color)
 	if (file.strikethrough) {
@@ -224,6 +234,7 @@ function renderFolder(
 		uri: folder.uri,
 	}
 	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
+	makeDraggable(row, group)
 	const expanded = addTwistie(row, folder.id)
 	const actions = groupActions(group, target)
 	const icon = expanded ? folder.expandedIcon : folder.icon
@@ -261,6 +272,8 @@ function renderEntries(
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
+	// Files dropped on a group's row land in the group (changeDrag.ts).
+	row.dataset.group = group.id
 	const expanded = addTwistie(row, group.id)
 	addMenuContext(row, { active: group.active })
 	const actions = groupActions(group, target)

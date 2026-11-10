@@ -3,6 +3,8 @@
 ## Unreleased
 
 - **Changelists, like in PyCharm.** Named lists of changes in each repository. Move files, folders and groups to a list from the right-click menu, and commit a list on its own with its _Commit_ button. The repository's own _Commit_ and _Stage All Changes_ leave the lists alone, so a list like _Don't commit_ stays out of your commits.
+- **An active changelist**, where the files you change from then on go, and a **description** for each list, which its _Commit_ suggests as the message. `changelist.deleteChangelistsAfterCommit` deletes a list once its _Commit_ has emptied it.
+- **Drag files and folders** onto a changelist, out of one onto Changes or Untracked Changes, or onto Staged Changes to stage them and back to unstage them.
 - **Pull All and Checkout Default Branch** in the Repositories panel, next to _Fetch All_. _Pull All_ pulls every repository with commits to pull. _Checkout Default Branch_ asks first, then switches every repository to its default branch, and skips worktrees and repositories with uncommitted changes. The branch's tooltip says which branch is the default.
 - **Progress on every row.** _Fetch All_, _Pull All_, _Checkout Default Branch_ and the buttons on the Repositories panel's rows show a progress bar, and a spinner on each repository's row. Then the row gets a check mark, an error with Git's message, or the reason it was skipped. The title bar button says what's running.
 - **Worktrees fold** under their repository in the Repositories panel when you click the repository's row, and their names start with `wt:`.

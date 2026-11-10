@@ -322,6 +322,31 @@ async function moveToChangelist(
 }
 
 /**
+ * Drops a file's or folder's changes on another group: Staged Changes stages them, and a changelist
+ * takes them, or Changes and Untracked Changes take them out of their list. Changes dragged from
+ * Staged Changes are unstaged first.
+ */
+async function dropChanges(
+	source: FolderNode | ResourceNode,
+	target: GroupNode,
+	changelists: ChangelistStore,
+): Promise<void> {
+	const { repository } = source
+	const changes = source.type === 'resource' ? [source.change] : source.changes
+
+	if (target.kind === 'staged') {
+		await repository.add(paths(changes))
+		return
+	}
+
+	if (source.kind === 'staged') {
+		await repository.revert(paths(changes))
+	}
+
+	await changelists.move(repository, changes, target.changelist)
+}
+
+/**
  * Opens a file's changes like the built-in view does: a diff of the staged or unstaged changes, or
  * just the file when there is nothing to compare it with.
  */
@@ -560,6 +585,12 @@ export function registerCommands(
 		register(
 			'moveToChangelist',
 			withNode(['group', 'folder', 'resource'], node => moveToChangelist(node, changelists)),
+		),
+		// The view runs it when a file or folder is dropped on a group. It isn't in the menus.
+		register('dropChanges', (source: Node, target: Node) =>
+			source.type !== 'repository' && source.type !== 'group' && target.type === 'group'
+				? dropChanges(source, target, changelists)
+				: undefined,
 		),
 		register(
 			'checkout',

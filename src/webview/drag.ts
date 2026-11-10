@@ -150,6 +150,9 @@ class RepositoryDrag {
 
 	/** Ends the drag, dropped or not, and draws the rows that came in during it. */
 	private end(): void {
+		// Dragging files in the changes ends here too, so this only cleans up its own.
+		if (this.dragged === undefined) return
+
 		this.showLine(undefined)
 		rowElements().forEach(row => row.classList.remove('dragging'))
 		this.dragged = undefined
