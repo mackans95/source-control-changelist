@@ -1,8 +1,23 @@
-// Types only the extension uses: the nodes the `changelist.*` commands take, and what the provider
-// works with while it turns repositories into the webview's data.
+// Types only the extension uses, not the webview.
 import type * as vscode from 'vscode'
-import type { Change, Repository } from './git.ts'
+import type { API, Change, Repository } from './git.ts'
 import type { FileIcon, GroupKind, IconFont } from './shared.ts'
+import type { ChangelistStore } from '../state/changelistStore.ts'
+import type { DefaultBranches } from '../state/defaultBranches.ts'
+import type { Operations } from '../state/operations.ts'
+import type { RepositoryOrder } from '../state/repositoryOrder.ts'
+
+/** What the extension keeps once Git is ready, which the view and the commands share. */
+export interface Services {
+	readonly git: API
+	readonly changelists: ChangelistStore
+	readonly operations: Operations
+	readonly defaultBranches: DefaultBranches
+	readonly repositoryOrder: RepositoryOrder
+}
+
+/** The handlers of some `changelist.*` commands, by their names without `changelist.`. */
+export type CommandTable = Readonly<Record<string, (...args: any[]) => unknown>>
 
 /** How the view lays out a group's files: a flat list that shows their folders, or a folder tree. */
 export type ViewMode = 'list' | 'tree'
@@ -76,6 +91,12 @@ export interface ChangelistPick extends vscode.QuickPickItem {
  * Checkout Default on many at once, and a row's own buttons on one.
  */
 export type OperationKind = 'fetch' | 'pull' | 'push' | 'sync' | 'publish' | 'checkout'
+
+/** The repositories Checkout Default switches, with their branch, and the ones it skips, with why. */
+export interface CheckoutPlan {
+	readonly targets: Map<Repository, string>
+	readonly skipped: [Repository, string][]
+}
 
 /** How an operation is named while it runs, when it's done, and when it fails. */
 export interface OperationLabels {

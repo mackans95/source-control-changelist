@@ -9,6 +9,7 @@ import { Operations } from './state/operations.ts'
 import { DefaultBranches } from './state/defaultBranches.ts'
 import { RepositoryOrder } from './state/repositoryOrder.ts'
 import type { API, GitExtension } from './types/git.ts'
+import type { Services } from './types/extension.ts'
 
 /** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */
 async function getGitAPI(): Promise<API | undefined> {
@@ -59,25 +60,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	// Shows the view's title buttons, which need Git.
 	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
 
-	const changelists = new ChangelistStore(context.workspaceState)
-	const operations = new Operations()
-	const defaultBranches = new DefaultBranches(git.git.path)
-	const repositoryOrder = new RepositoryOrder(context.workspaceState)
-	const provider = new ChangelistWebviewProvider(
+	const services: Services = {
 		git,
-		context.extensionUri,
-		changelists,
-		operations,
-		defaultBranches,
-		repositoryOrder,
-	)
+		changelists: new ChangelistStore(context.workspaceState),
+		operations: new Operations(),
+		defaultBranches: new DefaultBranches(git.git.path),
+		repositoryOrder: new RepositoryOrder(context.workspaceState),
+	}
+	const provider = new ChangelistWebviewProvider(services, context.extensionUri)
+
 	context.subscriptions.push(
-		changelists,
-		operations,
-		defaultBranches,
-		repositoryOrder,
+		services.changelists,
+		services.operations,
+		services.defaultBranches,
+		services.repositoryOrder,
 		provider,
 		vscode.window.registerWebviewViewProvider('changelist.view', provider),
-		...registerCommands(git, provider, changelists, operations, defaultBranches, repositoryOrder),
+		...registerCommands(services, provider),
 	)
 }

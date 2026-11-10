@@ -4,6 +4,9 @@ import type { Change, Repository } from '../types/git.ts'
 import type { RepositoryChangelists } from '../types/extension.ts'
 import type { GroupKind } from '../types/shared.ts'
 
+// The groups a repository's Stage All and Commit take the changes from, outside the changelists.
+const UNSTAGED_KINDS: readonly GroupKind[] = ['merge', 'changes', 'untracked']
+
 /** The changelist a change is in, or undefined for Changes or Untracked Changes. */
 export function changelistOf(changelists: RepositoryChangelists, change: Change): string | undefined {
 	const name = changelists.files[change.uri.toString()]
@@ -29,6 +32,11 @@ export function groupChanges(
 	}
 
 	return getChanges(repository, kind)
+}
+
+/** The unstaged changes that aren't in a changelist, which a repository's Stage All and Commit take. */
+export function unlistedChanges(repository: Repository, changelists: RepositoryChangelists): Change[] {
+	return UNSTAGED_KINDS.flatMap(kind => groupChanges(repository, kind, changelists))
 }
 
 /** The changelists without the files that no longer have changes. */

@@ -2,7 +2,13 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { change, repository } from './fakes.ts'
 import { Status } from '../src/constants/git.ts'
-import { changelistOf, claimNewChanges, groupChanges, pruneChangelists } from '../src/model/changelists.ts'
+import {
+	changelistOf,
+	claimNewChanges,
+	groupChanges,
+	pruneChangelists,
+	unlistedChanges,
+} from '../src/model/changelists.ts'
 
 describe('changelistOf, groupChanges and pruneChangelists', () => {
 	const tracked = change('a.ts')
@@ -58,5 +64,22 @@ describe('claimNewChanges', () => {
 		assert.deepEqual(claimNewChanges({ ...active, active: 'Gone' }, new Set(), new Set([c])).files, {
 			[b]: 'Later',
 		})
+	})
+})
+
+describe('unlistedChanges', () => {
+	test("takes the unstaged changes that aren't in a list, with the conflicts", () => {
+		const conflict = change('c.ts', Status.BOTH_MODIFIED)
+		const tracked = change('a.ts')
+		const moved = change('b.ts')
+		const untracked = change('new.ts', Status.UNTRACKED)
+		const repo = repository({
+			merge: [conflict],
+			staged: [change('s.ts', Status.INDEX_MODIFIED)],
+			changes: [tracked, moved],
+			untracked: [untracked],
+		})
+		const changelists = { lists: ['Feature'], files: { [moved.uri.toString()]: 'Feature' } }
+		assert.deepEqual(unlistedChanges(repo, changelists), [conflict, tracked, untracked])
 	})
 })

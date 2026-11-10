@@ -15,7 +15,7 @@ import { DEFAULT_HOVER_DELAY_MS } from '../constants/shared.ts'
 import { canDropChanges } from '../helpers/shared.ts'
 import { FileIcons } from '../icons/fileIcons.ts'
 import type { API, Repository } from '../types/git.ts'
-import type { Node, ViewMode } from '../types/extension.ts'
+import type { Node, Services, ViewMode } from '../types/extension.ts'
 import type { ActionTarget, ExtensionMessage, WebviewMessage } from '../types/shared.ts'
 import type { ChangelistStore } from '../state/changelistStore.ts'
 import type { Operations } from '../state/operations.ts'
@@ -72,12 +72,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private view: vscode.WebviewView | undefined
 
 	constructor(
-		git: API,
+		{ git, changelists, operations, defaultBranches, repositoryOrder }: Services,
 		extensionUri: vscode.Uri,
-		changelists: ChangelistStore,
-		operations: Operations,
-		defaultBranches: DefaultBranches,
-		repositoryOrder: RepositoryOrder,
 	) {
 		this.git = git
 		this.extensionUri = extensionUri
