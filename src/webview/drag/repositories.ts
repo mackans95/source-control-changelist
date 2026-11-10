@@ -1,11 +1,11 @@
 // Dragging repositories in the Repositories panel into the order you want, which the changes follow
 // too. A repository moves with its worktrees, and a line shows where it lands. Alt+Up and Alt+Down
 // move the selected one with the keyboard. The extension saves the order.
-import { post } from './api.ts'
-import { rowElements, rowOf } from './dom.ts'
-import { tooltip } from './tooltip.ts'
-import { tree } from './tree.ts'
-import type { DropTarget } from '../types/webview.ts'
+import { post } from '../api.ts'
+import { rowElements, rowOf } from '../dom.ts'
+import { tooltip } from '../tooltip.ts'
+import { tree } from '../tree.ts'
+import type { DropTarget } from '../../types/webview.ts'
 
 // The drag's data type. Only this view knows it, so dropping a repository in an editor does nothing.
 const DRAG_TYPE = 'application/vnd.changelist.repository'

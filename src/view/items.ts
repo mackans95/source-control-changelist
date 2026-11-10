@@ -14,10 +14,10 @@ import {
 	needsSync,
 	repositoryName,
 	syncState,
-} from './changelistModel.ts'
-import { Status } from './constants/git.ts'
-import { themeColor } from './helpers/shared.ts'
-import type { Change, Repository } from './types/git.ts'
+} from '../changelistModel.ts'
+import { Status } from '../constants/git.ts'
+import { themeColor } from '../helpers/shared.ts'
+import type { Change, Repository } from '../types/git.ts'
 import type {
 	FolderNode,
 	IconResolver,
@@ -25,7 +25,7 @@ import type {
 	ResourceNode,
 	StatusDecoration,
 	ViewMode,
-} from './types/extension.ts'
+} from '../types/extension.ts'
 import type {
 	FileItem,
 	FolderItem,
@@ -34,7 +34,7 @@ import type {
 	RepositoryItem,
 	RepositoryKind,
 	SyncRepositoryItem,
-} from './types/shared.ts'
+} from '../types/shared.ts'
 
 // The same letters, colors and texts as the Git extension uses in the built-in Source Control view.
 const STATUS_DECORATIONS: Record<(typeof Status)[keyof typeof Status], StatusDecoration> = {

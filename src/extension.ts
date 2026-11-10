@@ -1,13 +1,13 @@
 // Starts the extension: waits for the Git extension, then registers the Changelist view and its
 // commands. With Git turned off, the view only says so.
 import * as vscode from 'vscode'
-import { unavailableHtml } from './changelistHtml.ts'
-import { ChangelistWebviewProvider } from './changelistWebview.ts'
-import { registerCommands } from './commands.ts'
-import { ChangelistStore } from './changelistStore.ts'
-import { Operations } from './operations.ts'
-import { DefaultBranches } from './defaultBranches.ts'
-import { RepositoryOrder } from './repositoryOrder.ts'
+import { unavailableHtml } from './view/html.ts'
+import { ChangelistWebviewProvider } from './view/provider.ts'
+import { registerCommands } from './commands/index.ts'
+import { ChangelistStore } from './state/changelistStore.ts'
+import { Operations } from './state/operations.ts'
+import { DefaultBranches } from './state/defaultBranches.ts'
+import { RepositoryOrder } from './state/repositoryOrder.ts'
 import type { API, GitExtension } from './types/git.ts'
 
 /** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */

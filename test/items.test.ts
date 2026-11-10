@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
-import { toRepositoryItem, toSyncRepositoryItem } from '../src/changelistItems.ts'
+import { toRepositoryItem, toSyncRepositoryItem } from '../src/view/items.ts'
 import { Status } from '../src/constants/git.ts'
 import type { IconResolver } from '../src/types/extension.ts'
 import type { Branch, Change, Repository } from '../src/types/git.ts'

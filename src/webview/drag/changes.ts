@@ -1,12 +1,12 @@
 // Dragging files and folders between the groups in the changes: into a changelist, out of one onto
 // Changes or Untracked Changes, onto Staged Changes to stage them, or from there to unstage them. The
 // group a drop would land in is highlighted, and the extension does the rest.
-import { canDropChanges } from '../helpers/shared.ts'
-import { post } from './api.ts'
-import { findRow, rowElements, rowOf } from './dom.ts'
-import { tooltip } from './tooltip.ts'
-import { tree } from './tree.ts'
-import type { ActionTarget, MenuContext } from '../types/shared.ts'
+import { canDropChanges } from '../../helpers/shared.ts'
+import { post } from '../api.ts'
+import { findRow, rowElements, rowOf } from '../dom.ts'
+import { tooltip } from '../tooltip.ts'
+import { tree } from '../tree.ts'
+import type { ActionTarget, MenuContext } from '../../types/shared.ts'
 
 // The drag's data type. Only this view knows it, so dropping files in an editor does nothing.
 const DRAG_TYPE = 'application/vnd.changelist.changes'

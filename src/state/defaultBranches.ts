@@ -3,7 +3,7 @@
 // doesn't have it, so this runs git itself.
 import { execFile } from 'child_process'
 import * as vscode from 'vscode'
-import type { Repository } from './types/git.ts'
+import type { Repository } from '../types/git.ts'
 
 // The branches to look for when the remote doesn't say, in this order.
 const FALLBACK_BRANCHES = ['main', 'master']

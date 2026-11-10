@@ -2,7 +2,7 @@
 // is turned off.
 import { randomBytes } from 'crypto'
 import * as vscode from 'vscode'
-import { ROOT_ELEMENT_ID } from './constants/shared.ts'
+import { ROOT_ELEMENT_ID } from '../constants/shared.ts'
 
 /** A page with the view's stylesheet, which may only load what `csp` allows. */
 function page(webview: vscode.Webview, extensionUri: vscode.Uri, csp: readonly string[], body: string): string {

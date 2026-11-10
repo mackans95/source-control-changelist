@@ -2,9 +2,9 @@
 // active list, where new changes go. They're saved in the workspace's state, on this machine, like
 // PyCharm saves them with the project. Git and the built-in Source Control view don't know about them.
 import * as vscode from 'vscode'
-import { changedUris, claimNewChanges, pruneChangelists } from './changelistModel.ts'
-import type { Change, Repository } from './types/git.ts'
-import type { RepositoryChangelists } from './types/extension.ts'
+import { changedUris, claimNewChanges, pruneChangelists } from '../changelistModel.ts'
+import type { Change, Repository } from '../types/git.ts'
+import type { RepositoryChangelists } from '../types/extension.ts'
 
 // The workspace state's key, with every repository's changelists by the repository's root URI.
 const STATE_KEY = 'changelists'

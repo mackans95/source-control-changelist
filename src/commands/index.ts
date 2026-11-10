@@ -2,18 +2,18 @@
 // action passes its node; a row's right-click menu passes its `data-vscode-context`, which is
 // turned back into the node first. Switching branch runs the Git extension's own command.
 // Changelists are the extension's own: Git only sees what they stage and commit. Fetch All, Pull
-// All, Checkout Default and the Repositories panel's row buttons run through operations.ts, which
+// All, Checkout Default and the Repositories panel's row buttons run through state/operations.ts, which
 // shows each repository's status on its row.
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { Status } from './constants/git.ts'
-import { GROUP_LABELS, hasChanges, changelistOf, groupChanges, needsPull, repositoryName } from './changelistModel.ts'
-import { type Operations, VIEW_PROGRESS } from './operations.ts'
-import type { ChangelistStore } from './changelistStore.ts'
-import type { ChangelistWebviewProvider } from './changelistWebview.ts'
-import type { DefaultBranches } from './defaultBranches.ts'
-import type { RepositoryOrder } from './repositoryOrder.ts'
-import type { API, Change, Repository } from './types/git.ts'
+import { Status } from '../constants/git.ts'
+import { GROUP_LABELS, hasChanges, changelistOf, groupChanges, needsPull, repositoryName } from '../changelistModel.ts'
+import { type Operations, VIEW_PROGRESS } from '../state/operations.ts'
+import type { ChangelistStore } from '../state/changelistStore.ts'
+import type { ChangelistWebviewProvider } from '../view/provider.ts'
+import type { DefaultBranches } from '../state/defaultBranches.ts'
+import type { RepositoryOrder } from '../state/repositoryOrder.ts'
+import type { API, Change, Repository } from '../types/git.ts'
 import type {
 	ChangelistPick,
 	FolderNode,
@@ -22,8 +22,8 @@ import type {
 	RepositoryNode,
 	ResourceNode,
 	ViewMode,
-} from './types/extension.ts'
-import type { GroupKind, MenuContext } from './types/shared.ts'
+} from '../types/extension.ts'
+import type { GroupKind, MenuContext } from '../types/shared.ts'
 
 // The groups a repository's Stage All button stages. Files in a changelist aren't in them.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']

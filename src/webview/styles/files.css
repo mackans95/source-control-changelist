@@ -1,4 +1,4 @@
-/* Files (rows.ts): colored by their status like Git colors them in the Explorer, with their folder
+/* Files (rows/changes.ts): colored by their status like Git colors them in the Explorer, with their folder
    after the name and their status letter at the end. */
 
 .file .label,

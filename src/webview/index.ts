@@ -9,8 +9,8 @@ import { loadFonts } from './icons.ts'
 import { onKeydown } from './keyboard.ts'
 import { tooltip } from './tooltip.ts'
 import { tree } from './tree.ts'
-import { repositoryDrag } from './drag.ts'
-import { changeDrag } from './changeDrag.ts'
+import { repositoryDrag } from './drag/repositories.ts'
+import { changeDrag } from './drag/changes.ts'
 import type { ExtensionMessage } from '../types/shared.ts'
 
 /** Handles a message from the extension. */

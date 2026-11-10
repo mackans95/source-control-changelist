@@ -3,7 +3,7 @@ import { post } from './api.ts'
 import { findRow, rowElements } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { tree } from './tree.ts'
-import { repositoryDrag } from './drag.ts'
+import { repositoryDrag } from './drag/repositories.ts'
 
 /** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
 function openMenu(row: HTMLElement): void {

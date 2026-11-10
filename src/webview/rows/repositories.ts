@@ -2,12 +2,12 @@
 // clean ones, with its branch, how many commits it has to pull and push, and a button for the Git
 // extension's Push, Pull, Sync or Publish Branch. A repository's worktrees fold under it, and the end
 // of each row shows how Fetch All, Pull All or Checkout Default went.
-import { post, run } from './api.ts'
-import { button, codicon, span } from './dom.ts'
-import { addTwistie, branchButton, createRow, repositoryIcon, repositoryTooltip, textButton } from './rows.ts'
-import { themeColor } from '../helpers/shared.ts'
-import type { ActionTarget, OperationState, SyncRepositoryItem, SyncState } from '../types/shared.ts'
-import type { StatusIcon, SyncButton } from '../types/webview.ts'
+import { post, run } from '../api.ts'
+import { button, codicon, span } from '../dom.ts'
+import { addTwistie, branchButton, createRow, repositoryIcon, repositoryTooltip, textButton } from './changes.ts'
+import { themeColor } from '../../helpers/shared.ts'
+import type { ActionTarget, OperationState, SyncRepositoryItem, SyncState } from '../../types/shared.ts'
+import type { StatusIcon, SyncButton } from '../../types/webview.ts'
 
 // The button each state gets, which Enter on the row runs too. Synced and detached repositories have
 // none, so Enter switches branch.

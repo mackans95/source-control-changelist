@@ -3,9 +3,9 @@
 import { collapsedRows } from './collapse.ts'
 import { getRoot, rowElements, rowOf, span } from './dom.ts'
 import { rowFocus } from './focus.ts'
-import { renderRepository } from './rows.ts'
+import { renderRepository } from './rows/changes.ts'
 import { tooltip } from './tooltip.ts'
-import { autoFetchNotice, renderSyncRepositories } from './syncRows.ts'
+import { autoFetchNotice, renderSyncRepositories } from './rows/repositories.ts'
 import type { RepositoryItem, SyncRepositoryItem } from '../types/shared.ts'
 
 /**

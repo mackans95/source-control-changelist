@@ -1,6 +1,6 @@
-/* What only the Repositories panel (syncRows.ts) has: the `wt:` before a worktree's name, the status
+/* What only the Repositories panel (rows/repositories.ts) has: the `wt:` before a worktree's name, the status
    of Fetch All, Pull All or Checkout Default at the end of a row, the notice about
-   `git.autofetch` above the rows, and the line where a dragged repository lands (drag.ts). */
+   `git.autofetch` above the rows, and the line where a dragged repository lands (drag/repositories.ts). */
 
 .worktree-prefix {
 	flex: none;

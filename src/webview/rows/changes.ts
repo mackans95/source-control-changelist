@@ -1,11 +1,11 @@
 // The rows for each repository, its groups, and their folders and files, with their buttons. The
-// Repositories panel (syncRows.ts) builds its rows with the same functions.
-import { themeColor } from '../helpers/shared.ts'
-import { run } from './api.ts'
-import { collapsedRows } from './collapse.ts'
-import { button, codicon, span } from './dom.ts'
-import { fileIcon } from './icons.ts'
-import { tree } from './tree.ts'
+// Repositories panel (repositories.ts) builds its rows with the same functions.
+import { themeColor } from '../../helpers/shared.ts'
+import { run } from '../api.ts'
+import { collapsedRows } from '../collapse.ts'
+import { button, codicon, span } from '../dom.ts'
+import { fileIcon } from '../icons.ts'
+import { tree } from '../tree.ts'
 import type {
 	ActionTarget,
 	ChangeCategory,
@@ -19,8 +19,8 @@ import type {
 	RowSection,
 	SyncRepositoryItem,
 	WebviewAction,
-} from '../types/shared.ts'
-import type { CategoryDisplay } from '../types/webview.ts'
+} from '../../types/shared.ts'
+import type { CategoryDisplay } from '../../types/webview.ts'
 
 // In the order they're shown on the repository's row.
 const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
@@ -272,7 +272,7 @@ function renderEntries(
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
-	// Files dropped on a group's row land in the group (changeDrag.ts).
+	// Files dropped on a group's row land in the group (drag/changes.ts).
 	row.dataset.group = group.id
 	const expanded = addTwistie(row, group.id)
 	addMenuContext(row, { active: group.active })

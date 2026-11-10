@@ -5,8 +5,8 @@
 // `changelist.needsSync` when a repository has commits to push or pull.
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { viewHtml } from './changelistHtml.ts'
-import { toRepositoryItem, toSyncRepositoryItem } from './changelistItems.ts'
+import { viewHtml } from './html.ts'
+import { toRepositoryItem, toSyncRepositoryItem } from './items.ts'
 import {
 	groupChanges,
 	hasChanges,
@@ -14,17 +14,17 @@ import {
 	moveInOrder,
 	needsSync,
 	sortRepositories,
-} from './changelistModel.ts'
-import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
-import { canDropChanges } from './helpers/shared.ts'
-import { FileIcons } from './fileIcons.ts'
-import type { API, Repository } from './types/git.ts'
-import type { Node, ViewMode } from './types/extension.ts'
-import type { ActionTarget, ExtensionMessage, WebviewMessage } from './types/shared.ts'
-import type { ChangelistStore } from './changelistStore.ts'
-import type { Operations } from './operations.ts'
-import type { DefaultBranches } from './defaultBranches.ts'
-import type { RepositoryOrder } from './repositoryOrder.ts'
+} from '../changelistModel.ts'
+import { DEFAULT_HOVER_DELAY_MS } from '../constants/shared.ts'
+import { canDropChanges } from '../helpers/shared.ts'
+import { FileIcons } from '../icons/fileIcons.ts'
+import type { API, Repository } from '../types/git.ts'
+import type { Node, ViewMode } from '../types/extension.ts'
+import type { ActionTarget, ExtensionMessage, WebviewMessage } from '../types/shared.ts'
+import type { ChangelistStore } from '../state/changelistStore.ts'
+import type { Operations } from '../state/operations.ts'
+import type { DefaultBranches } from '../state/defaultBranches.ts'
+import type { RepositoryOrder } from '../state/repositoryOrder.ts'
 
 // Git reports a change for each step of an operation like a checkout or a commit. The view waits
 // this long after the last one, so it's drawn again once and not for every step.

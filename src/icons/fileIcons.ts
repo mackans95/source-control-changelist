@@ -18,9 +18,9 @@ import type {
 	LanguageAssociations,
 	LanguageContribution,
 	LoadedIconTheme,
-} from './types/iconTheme.ts'
-import type { IconResolver } from './types/extension.ts'
-import type { FileIcon, IconFont } from './types/shared.ts'
+} from '../types/iconTheme.ts'
+import type { IconResolver } from '../types/extension.ts'
+import type { FileIcon, IconFont } from '../types/shared.ts'
 
 /** A font's family name in the webview, unique per theme so two themes' fonts can't clash. */
 function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
