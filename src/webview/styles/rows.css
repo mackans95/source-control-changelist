@@ -1,5 +1,6 @@
 /* What every row has (rows.ts): the indent, the arrow, the icon and the name, how a row looks when
-   it's hovered or selected, and the count on a group's row. */
+   it's hovered, selected or dragged, the count on a group's row, and the active changelist's bold
+   name. */
 
 .row {
 	display: flex;
@@ -64,4 +65,20 @@
 	font-size: 11px;
 	line-height: 16px;
 	text-align: center;
+}
+
+/* The active changelist, where new changes go, like PyCharm shows it. */
+.active-changelist .label {
+	font-weight: bold;
+}
+
+/* A row being dragged: a file or folder (changeDrag.ts), or a repository with its worktrees in the
+   Repositories panel (drag.ts). */
+.row.dragging {
+	opacity: 0.5;
+}
+
+/* The group a dragged file or folder would land in, with the rows in it, like VS Code's own trees. */
+.row.drop-into {
+	background-color: var(--vscode-list-dropBackground);
 }

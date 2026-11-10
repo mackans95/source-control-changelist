@@ -73,7 +73,14 @@ export interface GroupItem {
 	/** A changelist's name. Its `kind` is `changes`, and it has files from Untracked Changes too. */
 	readonly changelist?: string
 	readonly label: string
+	/** A changelist's description, shown after its name. */
+	readonly description?: string
 	readonly count: number
+	/**
+	 * Whether new changes go here: the active changelist, or Changes when no list is active. An
+	 * active changelist's name is bold.
+	 */
+	readonly active: boolean
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
@@ -197,12 +204,15 @@ export type RowSection = 'repository' | 'group' | 'folder' | 'file' | 'sync'
 export interface MenuContext extends ActionTarget {
 	readonly webviewSection: RowSection
 	readonly preventDefaultContextMenuItems: true
+	/** On a group's row, whether new changes go there, so Set as Active Changelist is left out. */
+	readonly active?: boolean
 }
 
 /**
  * What the webview sends the extension: that it's ready for data, a row's action, whether every
  * repository is collapsed, that Escape closed the Repositories panel, that the panel's notice
- * turns on `git.autofetch`, or that a repository was dragged before or after another.
+ * turns on `git.autofetch`, that a repository was dragged before or after another, or that a file's
+ * or folder's changes were dropped on another group.
  */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
@@ -211,3 +221,4 @@ export type WebviewMessage =
 	| { readonly type: 'closeRepositories' }
 	| { readonly type: 'turnOnAutoFetch' }
 	| { readonly type: 'moveRepository'; readonly repository: string; readonly target: string; readonly after: boolean }
+	| { readonly type: 'dropChanges'; readonly source: ActionTarget; readonly target: ActionTarget }

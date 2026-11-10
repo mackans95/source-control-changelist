@@ -89,6 +89,12 @@ export function createRow(
 	return row
 }
 
+/** Adds context keys to a row's right-click menu, for the `when` clauses of its items. */
+function addMenuContext(row: HTMLElement, keys: Partial<MenuContext>): void {
+	const context = JSON.parse(row.dataset.vscodeContext ?? '{}') as MenuContext
+	row.dataset.vscodeContext = JSON.stringify({ ...context, ...keys })
+}
+
 /** A repository row's tooltip: its folder, and for a worktree the repository it belongs to. */
 export function repositoryTooltip(repository: RepositoryItem | SyncRepositoryItem): string {
 	return repository.worktreeOf ? `${repository.path} • Worktree of ${repository.worktreeOf}` : repository.path
@@ -157,6 +163,15 @@ function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
 	return actions
 }
 
+/**
+ * Lets a file's or folder's row be dragged to another group, and dropped on, for its group. Merge
+ * Changes is Git's own, so its files stay where they are.
+ */
+function makeDraggable(row: HTMLDivElement, group: GroupItem): void {
+	row.dataset.group = group.id
+	row.draggable = group.kind !== 'merge'
+}
+
 /** A file's row: its icon, its name, its folder in list mode, its status letter and its actions. */
 function renderFile(
 	rows: HTMLElement[],
@@ -173,6 +188,7 @@ function renderFile(
 		uri: file.uri,
 	}
 	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
+	makeDraggable(row, group)
 	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', file.color)
 	if (file.strikethrough) {
@@ -218,6 +234,7 @@ function renderFolder(
 		uri: folder.uri,
 	}
 	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
+	makeDraggable(row, group)
 	const expanded = addTwistie(row, folder.id)
 	const actions = groupActions(group, target)
 	const icon = expanded ? folder.expandedIcon : folder.icon
@@ -255,7 +272,10 @@ function renderEntries(
 function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
 	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
 	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
+	// Files dropped on a group's row land in the group (changeDrag.ts).
+	row.dataset.group = group.id
 	const expanded = addTwistie(row, group.id)
+	addMenuContext(row, { active: group.active })
 	const actions = groupActions(group, target)
 
 	// A changelist commits on its own, like a repository does.
@@ -269,7 +289,20 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 		label.style.setProperty('color', themeColor(STAGED_COLOR))
 	}
 
-	row.append(label, span('spacer'), actions, span('badge', String(group.count)))
+	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
+	const active = group.active && group.changelist !== undefined
+	row.classList.toggle('active-changelist', active)
+
+	// An empty `data-tooltip` would still show an empty tooltip, so it's only set when there's text.
+	const tooltip = [group.description, active ? 'Active changelist: new changes go here' : undefined].filter(Boolean)
+
+	if (tooltip.length > 0) {
+		row.dataset.tooltip = tooltip.join(' • ')
+	}
+
+	const description = group.description ? [span('description', group.description)] : []
+
+	row.append(label, ...description, span('spacer'), actions, span('badge', String(group.count)))
 
 	if (expanded) {
 		renderEntries(rows, repository, group, group.children, 3, group.id)

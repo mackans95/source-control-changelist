@@ -165,9 +165,21 @@ async function commit(node: RepositoryNode, changelists: ChangelistStore): Promi
 	repository.inputBox.value = ''
 }
 
+/** The `changelist.deleteChangelistsAfterCommit` setting: whether a list goes once its commit has emptied it. */
+function deletesAfterCommit(): boolean {
+	return vscode.workspace.getConfiguration('changelist').get<boolean>('deleteChangelistsAfterCommit', false)
+}
+
+/** Whether a changelist has no files left, which after its commit means they were all committed. */
+function isEmpty(repository: Repository, changelists: ChangelistStore, changelist: string): boolean {
+	return groupChanges(repository, 'changes', changelists.get(repository), changelist).length === 0
+}
+
 /**
  * Commits a changelist's files and nothing else. The Git API commits what's staged, so it stages the
- * list's files first, and offers to unstage the files from other lists.
+ * list's files first, and offers to unstage the files from other lists. The list's description is
+ * the commit message it suggests. With `changelist.deleteChangelistsAfterCommit`, the list is deleted
+ * once the commit has emptied it.
  */
 async function commitChangelist(node: GroupNode, changelists: ChangelistStore): Promise<void> {
 	const { repository, changelist, changes } = node
@@ -192,9 +204,11 @@ async function commitChangelist(node: GroupNode, changelists: ChangelistStore): 
 		if (choice !== 'Unstage & Commit') return
 	}
 
+	// The list's description is its commit message.
+	const description = changelist === undefined ? undefined : lists.descriptions?.[changelist]
 	const message = await askCommitMessage(
 		`Commit ${changelist} to ${name}`,
-		repository.inputBox.value || (changelist ?? ''),
+		description || repository.inputBox.value || (changelist ?? ''),
 	)
 
 	if (!message) return
@@ -209,6 +223,10 @@ async function commitChangelist(node: GroupNode, changelists: ChangelistStore): 
 
 	await repository.commit(message)
 	repository.inputBox.value = ''
+
+	if (changelist !== undefined && deletesAfterCommit() && isEmpty(repository, changelists, changelist)) {
+		await changelists.remove(repository, changelist)
+	}
 }
 
 /** Asks for a changelist's name, which can't be Changes or another list's. */
@@ -244,6 +262,23 @@ async function newChangelist(repository: Repository, changelists: ChangelistStor
 	}
 
 	return name
+}
+
+/** Edits a changelist's description, which its Commit uses as the commit message. */
+async function editDescription(node: GroupNode, changelists: ChangelistStore): Promise<void> {
+	const { repository, changelist } = node
+
+	if (changelist === undefined) return
+
+	const description = await vscode.window.showInputBox({
+		title: `Description of ${changelist}`,
+		prompt: "The commit message for the changelist's Commit. Leave it empty to use the list's name.",
+		value: changelists.get(repository).descriptions?.[changelist],
+	})
+
+	if (description !== undefined) {
+		await changelists.setDescription(repository, changelist, description.trim())
+	}
 }
 
 /** Renames a changelist. */
@@ -284,6 +319,31 @@ async function moveToChangelist(
 	if (pick.isNew && !target) return
 
 	await changelists.move(repository, changes, target)
+}
+
+/**
+ * Drops a file's or folder's changes on another group: Staged Changes stages them, and a changelist
+ * takes them, or Changes and Untracked Changes take them out of their list. Changes dragged from
+ * Staged Changes are unstaged first.
+ */
+async function dropChanges(
+	source: FolderNode | ResourceNode,
+	target: GroupNode,
+	changelists: ChangelistStore,
+): Promise<void> {
+	const { repository } = source
+	const changes = source.type === 'resource' ? [source.change] : source.changes
+
+	if (target.kind === 'staged') {
+		await repository.add(paths(changes))
+		return
+	}
+
+	if (source.kind === 'staged') {
+		await repository.revert(paths(changes))
+	}
+
+	await changelists.move(repository, changes, target.changelist)
 }
 
 /**
@@ -507,8 +567,16 @@ export function registerCommands(
 			),
 		),
 		register(
+			'setActiveChangelist',
+			withNode(['group'], node => changelists.setActive(node.repository, node.changelist)),
+		),
+		register(
 			'renameChangelist',
 			withNode(['group'], node => renameChangelist(node, changelists)),
+		),
+		register(
+			'editChangelistDescription',
+			withNode(['group'], node => editDescription(node, changelists)),
 		),
 		register(
 			'deleteChangelist',
@@ -517,6 +585,12 @@ export function registerCommands(
 		register(
 			'moveToChangelist',
 			withNode(['group', 'folder', 'resource'], node => moveToChangelist(node, changelists)),
+		),
+		// The view runs it when a file or folder is dropped on a group. It isn't in the menus.
+		register('dropChanges', (source: Node, target: Node) =>
+			source.type !== 'repository' && source.type !== 'group' && target.type === 'group'
+				? dropChanges(source, target, changelists)
+				: undefined,
 		),
 		register(
 			'checkout',

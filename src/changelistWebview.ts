@@ -16,6 +16,7 @@ import {
 	sortRepositories,
 } from './changelistModel.ts'
 import { DEFAULT_HOVER_DELAY_MS } from './constants/shared.ts'
+import { canDropChanges } from './helpers/shared.ts'
 import { FileIcons } from './fileIcons.ts'
 import type { API, Repository } from './types/git.ts'
 import type { Node, ViewMode } from './types/extension.ts'
@@ -229,13 +230,17 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/**
 	 * Listens to a repository Git opened, and shows it when it has changes. Each time Git has checked
-	 * its status, the files that have no changes any more leave their changelists.
+	 * its status, new changes go to the active changelist, and the files that have no changes any more
+	 * leave their changelists.
 	 */
 	private onDidOpenRepository(repository: Repository): void {
+		// Notes what has changed already, when Git has checked it, so only what changes after this goes
+		// to the active changelist.
+		this.changelists.track(repository)
 		this.repositoryListeners.set(
 			repository.rootUri.toString(),
 			repository.state.onDidChange(() => {
-				this.changelists.prune(repository)
+				this.changelists.track(repository)
 				this.scheduleUpdate()
 			}),
 		)
@@ -367,43 +372,60 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	/**
 	 * Handles a message from the page: it's ready, every repository is collapsed or not, Escape closed
 	 * the Repositories panel, the panel's notice turns on `git.autofetch`, a repository was dragged,
-	 * or a row's action.
+	 * a file's or folder's changes were dropped on another group, or a row's action.
 	 */
 	private async onDidReceiveMessage(message: WebviewMessage): Promise<void> {
 		switch (message.type) {
-			case 'ready':
+			case 'ready': {
 				// A new page, which has nothing yet.
 				this.ready = true
 				this.lastUpdate = undefined
 				this.postUpdate()
 				return
-			case 'allCollapsed':
+			}
+			case 'allCollapsed': {
 				await vscode.commands.executeCommand('setContext', 'changelist.allCollapsed', message.value)
 				return
-			case 'closeRepositories':
+			}
+			case 'closeRepositories': {
 				this.showRepositories(false)
 				return
-			case 'turnOnAutoFetch':
+			}
+			case 'turnOnAutoFetch': {
 				await vscode.workspace
 					.getConfiguration('git')
 					.update('autofetch', true, vscode.ConfigurationTarget.Global)
 				return
-			case 'moveRepository':
+			}
+			case 'moveRepository': {
 				await this.moveRepository(message.repository, message.target, message.after)
 				return
-			case 'run': {
-				const node = this.resolveTarget(message.target)
-				if (!node) {
-					return
-				}
-				try {
-					await vscode.commands.executeCommand(`changelist.${message.action}`, node)
-				} catch (error) {
-					// Commands run from the webview don't get VS Code's own error notification.
-					void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error))
+			}
+			case 'dropChanges': {
+				const source = this.resolveTarget(message.source)
+				const target = this.resolveTarget(message.target)
+				if (source && target && canDropChanges(message.source, message.target)) {
+					await this.runCommand('dropChanges', source, target)
 				}
 				return
 			}
+			case 'run': {
+				const node = this.resolveTarget(message.target)
+				if (node) {
+					await this.runCommand(message.action, node)
+				}
+				return
+			}
+		}
+	}
+
+	/** Runs a `changelist.*` command on rows of the view, and shows its error if it fails. */
+	private async runCommand(command: string, ...nodes: Node[]): Promise<void> {
+		try {
+			await vscode.commands.executeCommand(`changelist.${command}`, ...nodes)
+		} catch (error) {
+			// Commands run from the webview don't get VS Code's own error notification.
+			void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error))
 		}
 	}
 }

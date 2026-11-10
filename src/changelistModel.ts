@@ -85,21 +85,56 @@ export function groupChanges(
 	return getChanges(repository, kind)
 }
 
+/** The URIs of every file the repository has changes in, staged or not. */
+export function changedUris(repository: Repository): Set<string> {
+	return new Set(
+		(Object.keys(GROUP_LABELS) as GroupKind[])
+			.flatMap(kind => getChanges(repository, kind))
+			.map(c => c.uri.toString()),
+	)
+}
+
 /**
  * The changelists without the files that have no changes any more, because they were committed or
  * discarded. A file that's only staged keeps its list, so it goes back there when it's unstaged.
  */
 export function pruneChangelists(repository: Repository, changelists: RepositoryChangelists): RepositoryChangelists {
-	const changed = new Set(
-		(Object.keys(GROUP_LABELS) as GroupKind[])
-			.flatMap(kind => getChanges(repository, kind))
-			.map(c => c.uri.toString()),
-	)
+	const changed = changedUris(repository)
 	const files = Object.entries(changelists.files).filter(
 		([uri, name]) => changed.has(uri) && changelists.lists.includes(name),
 	)
 
-	return { lists: changelists.lists, files: Object.fromEntries(files) }
+	return { ...changelists, files: Object.fromEntries(files) }
+}
+
+/**
+ * The changelists with the files that have changed since Git's last check in the active list: the
+ * ones in `changed` that weren't in `known`. Files already in a list stay there.
+ */
+export function claimNewChanges(
+	changelists: RepositoryChangelists,
+	known: ReadonlySet<string>,
+	changed: ReadonlySet<string>,
+): RepositoryChangelists {
+	const { active } = changelists
+
+	if (active === undefined || !changelists.lists.includes(active)) {
+		return changelists
+	}
+
+	const claimed = [...changed].filter(uri => !known.has(uri) && changelists.files[uri] === undefined)
+
+	if (claimed.length === 0) {
+		return changelists
+	}
+
+	return {
+		...changelists,
+		files: {
+			...changelists.files,
+			...Object.fromEntries(claimed.map(uri => [uri, active])),
+		},
+	}
 }
 
 /** Whether the repository has any changes, so the view shows it. */

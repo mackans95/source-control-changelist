@@ -241,7 +241,17 @@ function toGroupItem(
 		viewMode === 'tree'
 			? buildTree(repository, kind, changes).map(node => toEntry(node, id, viewMode, icons))
 			: [...changes].sort(byPath).map(change => toFileItem(repository, id, change, viewMode, icons))
-	return { id, kind, changelist, label: changelist ?? GROUP_LABELS[kind], count: changes.length, children }
+
+	return {
+		id,
+		kind,
+		changelist,
+		label: changelist ?? GROUP_LABELS[kind],
+		description: changelist === undefined ? undefined : changelists.descriptions?.[changelist],
+		count: changes.length,
+		active: kind === 'changes' && changelist === changelists.active,
+		children,
+	}
 }
 
 /**

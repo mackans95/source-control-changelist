@@ -10,6 +10,7 @@ import { onKeydown } from './keyboard.ts'
 import { tooltip } from './tooltip.ts'
 import { tree } from './tree.ts'
 import { repositoryDrag } from './drag.ts'
+import { changeDrag } from './changeDrag.ts'
 import type { ExtensionMessage } from '../types/shared.ts'
 
 /** Handles a message from the extension. */
@@ -33,6 +34,7 @@ function start(): void {
 	tooltip.init()
 	tree.init()
 	repositoryDrag.init()
+	changeDrag.init()
 	getRoot().addEventListener('keydown', onKeydown)
 	window.addEventListener('message', (event: MessageEvent<ExtensionMessage>) => onMessage(event.data))
 	// The extension sends the first update once the page says it's ready.
