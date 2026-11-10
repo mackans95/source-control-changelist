@@ -2,19 +2,11 @@
 // draws, for the changes and for the Repositories panel. It doesn't use `vscode`, so the tests can
 // run it in Node.
 import * as path from 'path'
-import {
-	GROUP_LABELS,
-	buildTree,
-	byPath,
-	countChanges,
-	groupChanges,
-	hasChanges,
-	mainRepository,
-	mainRepositoryPath,
-	needsSync,
-	repositoryName,
-	syncState,
-} from '../changelistModel.ts'
+import { GROUP_LABELS, countChanges, hasChanges } from '../model/changes.ts'
+import { groupChanges } from '../model/changelists.ts'
+import { mainRepository, mainRepositoryPath, repositoryName } from '../model/repositories.ts'
+import { needsSync, syncState } from '../model/sync.ts'
+import { buildTree, byPath } from '../model/tree.ts'
 import { Status } from '../constants/git.ts'
 import { themeColor } from '../helpers/shared.ts'
 import type { Change, Repository } from '../types/git.ts'

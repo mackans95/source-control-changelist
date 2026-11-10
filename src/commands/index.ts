@@ -7,13 +7,17 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { Status } from '../constants/git.ts'
-import { GROUP_LABELS, hasChanges, changelistOf, groupChanges, needsPull, repositoryName } from '../changelistModel.ts'
+import { GROUP_LABELS, hasChanges } from '../model/changes.ts'
+import { changelistOf, groupChanges } from '../model/changelists.ts'
+import { repositoryName } from '../model/repositories.ts'
+import { needsPull } from '../model/sync.ts'
 import { type Operations, VIEW_PROGRESS } from '../state/operations.ts'
 import type { ChangelistStore } from '../state/changelistStore.ts'
 import type { ChangelistWebviewProvider } from '../view/provider.ts'
 import type { DefaultBranches } from '../state/defaultBranches.ts'
 import type { RepositoryOrder } from '../state/repositoryOrder.ts'
 import type { API, Change, Repository } from '../types/git.ts'
+import type { GroupKind, MenuContext } from '../types/shared.ts'
 import type {
 	ChangelistPick,
 	FolderNode,
@@ -23,7 +27,6 @@ import type {
 	ResourceNode,
 	ViewMode,
 } from '../types/extension.ts'
-import type { GroupKind, MenuContext } from '../types/shared.ts'
 
 // The groups a repository's Stage All button stages. Files in a changelist aren't in them.
 const UNSTAGED_KINDS: GroupKind[] = ['merge', 'changes', 'untracked']

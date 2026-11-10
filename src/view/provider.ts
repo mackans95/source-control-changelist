@@ -7,14 +7,10 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { viewHtml } from './html.ts'
 import { toRepositoryItem, toSyncRepositoryItem } from './items.ts'
-import {
-	groupChanges,
-	hasChanges,
-	mainRepository,
-	moveInOrder,
-	needsSync,
-	sortRepositories,
-} from '../changelistModel.ts'
+import { hasChanges } from '../model/changes.ts'
+import { groupChanges } from '../model/changelists.ts'
+import { mainRepository, moveInOrder, sortRepositories } from '../model/repositories.ts'
+import { needsSync } from '../model/sync.ts'
 import { DEFAULT_HOVER_DELAY_MS } from '../constants/shared.ts'
 import { canDropChanges } from '../helpers/shared.ts'
 import { FileIcons } from '../icons/fileIcons.ts'

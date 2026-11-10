@@ -3,7 +3,8 @@
 // status shows at the end of its row, and the view's progress bar shows while anything runs. While
 // Fetch All, Pull All or Checkout Default runs, its title bar button is disabled.
 import * as vscode from 'vscode'
-import { gitErrorMessage, repositoryName } from '../changelistModel.ts'
+import { repositoryName } from '../model/repositories.ts'
+import { gitErrorMessage } from '../model/sync.ts'
 import type { Repository } from '../types/git.ts'
 import type { OperationKind, OperationLabels } from '../types/extension.ts'
 import type { OperationStatus } from '../types/shared.ts'
