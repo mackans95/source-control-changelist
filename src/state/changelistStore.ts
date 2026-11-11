@@ -40,22 +40,33 @@ export class ChangelistStore implements vscode.Disposable {
 	/** Renames a changelist, and keeps its files in it. */
 	rename(repository: Repository, from: string, to: string): Promise<void> {
 		const changelists = this.get(repository)
-		const files = Object.entries(changelists.files).map(([uri, name]) => [uri, name === from ? to : name])
+		const rename = (name: string | undefined) => (name === from ? to : name)
+		const files = Object.entries(changelists.files).map(([uri, name]) => [uri, rename(name)])
+		const hunks = Object.entries(changelists.hunks ?? {}).map(([uri, file]) => [
+			uri,
+			{ ...file, hunks: file.hunks.map(hunk => ({ ...hunk, list: rename(hunk.list) })) },
+		])
 
 		return this.set(repository, {
 			lists: changelists.lists.map(name => (name === from ? to : name)),
 			files: Object.fromEntries(files),
-			active: changelists.active === from ? to : changelists.active,
+			active: rename(changelists.active),
 			descriptions: Object.fromEntries(
-				Object.entries(changelists.descriptions ?? {}).map(([list, text]) => [list === from ? to : list, text]),
+				Object.entries(changelists.descriptions ?? {}).map(([list, text]) => [rename(list), text]),
 			),
+			hunks: changelists.hunks && Object.fromEntries(hunks),
 		})
 	}
 
-	/** Deletes a changelist. Its files go back to Changes or Untracked Changes. */
+	/** Deletes a changelist. Its files go back to Changes or Untracked Changes, and its changes to their file's list. */
 	remove(repository: Repository, name: string): Promise<void> {
 		const changelists = this.get(repository)
 		const files = Object.entries(changelists.files).filter(([, list]) => list !== name)
+		// Without its saved changes, they follow their file's list. The next check tidies up what's left.
+		const hunks = Object.entries(changelists.hunks ?? {}).map(([uri, file]) => [
+			uri,
+			{ ...file, hunks: file.hunks.filter(hunk => hunk.list !== name) },
+		])
 
 		return this.set(repository, {
 			lists: changelists.lists.filter(list => list !== name),
@@ -64,6 +75,7 @@ export class ChangelistStore implements vscode.Disposable {
 			descriptions: Object.fromEntries(
 				Object.entries(changelists.descriptions ?? {}).filter(([list]) => list !== name),
 			),
+			hunks: changelists.hunks && Object.fromEntries(hunks),
 		})
 	}
 
@@ -84,11 +96,15 @@ export class ChangelistStore implements vscode.Disposable {
 		return this.set(repository, { ...changelists, descriptions: Object.fromEntries(descriptions) })
 	}
 
-	/** Moves changes to a changelist, or out of every changelist when `name` is undefined. */
+	/** Moves whole files to a changelist, or out of every changelist when `name` is undefined. */
 	move(repository: Repository, changes: readonly Change[], name: string | undefined): Promise<void> {
 		const files = { ...this.get(repository).files }
+		// A split file moves with all of its changes.
+		const hunks = { ...this.get(repository).hunks }
 
 		for (const change of changes) {
+			delete hunks[change.uri.toString()]
+
 			if (name === undefined) {
 				delete files[change.uri.toString()]
 			} else {
@@ -96,7 +112,24 @@ export class ChangelistStore implements vscode.Disposable {
 			}
 		}
 
-		return this.set(repository, { ...this.get(repository), files })
+		return this.set(repository, {
+			...this.get(repository),
+			files,
+			hunks: Object.keys(hunks).length > 0 ? hunks : undefined,
+		})
+	}
+
+	/** Changes a repository's changelists, and draws the view again when that changed anything. */
+	async update(
+		repository: Repository,
+		change: (changelists: RepositoryChangelists) => RepositoryChangelists,
+	): Promise<void> {
+		const changelists = this.get(repository)
+		const updated = change(changelists)
+
+		if (JSON.stringify(updated) !== JSON.stringify(changelists)) {
+			await this.set(repository, updated)
+		}
 	}
 
 	/** Puts the files changed since Git's last check in the active list, and forgets the unchanged ones. */
@@ -116,7 +149,7 @@ export class ChangelistStore implements vscode.Disposable {
 		const tracked = pruneChangelists(repository, claimed)
 
 		// Without firing onDidChange: the view's update after Git's check draws it.
-		if (JSON.stringify(tracked.files) !== JSON.stringify(changelists.files)) {
+		if (JSON.stringify(tracked) !== JSON.stringify(changelists)) {
 			void this.save(repository, tracked)
 		}
 	}

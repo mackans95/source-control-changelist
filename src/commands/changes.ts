@@ -3,14 +3,19 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { changesOf, forNodes, paths } from './nodes.ts'
 import { Status } from '../constants/git.ts'
-import { unlistedChanges } from '../model/changelists.ts'
-import type { CommandTable, FolderNode, GroupNode, ResourceNode, Services } from '../types/extension.ts'
-import type { API, Change } from '../types/git.ts'
+import { GROUP_LABELS } from '#model/changes.ts'
+import { partUri } from '#view/hunkDocuments.ts'
+import { unlistedChanges } from '#model/changelists.ts'
+import type { ChangelistStore } from '#state/changelistStore.ts'
+import type { CommandTable, FolderNode, GroupNode, ResourceNode, Services } from '#types/extension.ts'
+import type { API, Change } from '#types/git.ts'
 
 /** The commands on files, folders and groups. */
 export function changeCommands({ git, changelists }: Services): CommandTable {
 	return {
-		openChange: forNodes(['resource'], node => vscode.commands.executeCommand(...openChangeCommand(git, node))),
+		openChange: forNodes(['resource'], node =>
+			vscode.commands.executeCommand(...openChangeCommand(git, changelists, node)),
+		),
 		openFile: forNodes(['resource'], node => vscode.window.showTextDocument(node.change.uri)),
 		stage: forNodes(['resource'], node => node.repository.add([node.change.uri.fsPath])),
 		unstage: forNodes(['resource'], node => node.repository.revert([node.change.uri.fsPath])),
@@ -32,8 +37,15 @@ export function changeCommands({ git, changelists }: Services): CommandTable {
 }
 
 /** The command that opens a file's changes like the built-in view: a diff, or the file alone. */
-function openChangeCommand(git: API, { change, kind }: ResourceNode): [string, ...unknown[]] {
+function openChangeCommand(git: API, changelists: ChangelistStore, node: ResourceNode): [string, ...unknown[]] {
+	const { change, kind, changelist } = node
 	const name = path.basename(change.uri.fsPath)
+
+	// A split file shows only the changes of the list its row is in.
+	if (kind === 'changes' && changelists.get(node.repository).hunks?.[change.uri.toString()]) {
+		const list = changelist ?? GROUP_LABELS.changes
+		return ['vscode.diff', partUri(change.uri, changelist), change.uri, `${name} (${list})`]
+	}
 
 	// There's nothing to compare these with.
 	if (

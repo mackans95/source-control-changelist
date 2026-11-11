@@ -3,7 +3,7 @@ import * as path from 'path'
 import { STATUS_DECORATIONS } from '../constants/statusDecorations.ts'
 import { themeColor } from '../helpers/shared.ts'
 import { GROUP_LABELS, countChanges, hasChanges } from '../model/changes.ts'
-import { groupChanges } from '../model/changelists.ts'
+import { groupChanges, listsOf } from '../model/changelists.ts'
 import { mainRepository, mainRepositoryPath, repositoryName } from '../model/repositories.ts'
 import { needsSync, syncState } from '../model/sync.ts'
 import { buildTree, byPath } from '../model/tree.ts'
@@ -96,10 +96,18 @@ function toGroupItem(
 ): GroupItem {
 	const id = groupId(repository, kind, changelist)
 	const changes = groupChanges(repository, kind, changelists, changelist)
+
+	// A split file's other lists, which its row shows.
+	const otherLists = (change: Change) =>
+		listsOf(changelists, change)
+			.filter(list => list !== changelist)
+			.map(list => list ?? GROUP_LABELS.changes)
 	const children =
 		viewMode === 'tree'
-			? buildTree(repository, kind, changes).map(node => toEntry(node, id, viewMode, icons))
-			: [...changes].sort(byPath).map(change => toFileItem(repository, id, change, viewMode, icons))
+			? buildTree(repository, kind, changes).map(node => toEntry(node, id, viewMode, icons, otherLists))
+			: [...changes]
+					.sort(byPath)
+					.map(change => toFileItem(repository, id, change, viewMode, icons, otherLists(change)))
 
 	return {
 		id,
@@ -124,9 +132,10 @@ function toEntry(
 	parentId: string,
 	viewMode: ViewMode,
 	icons: IconResolver,
+	otherLists: (change: Change) => readonly string[],
 ): FolderItem | FileItem {
 	if (node.type === 'resource') {
-		return toFileItem(node.repository, parentId, node.change, viewMode, icons)
+		return toFileItem(node.repository, parentId, node.change, viewMode, icons, otherLists(node.change))
 	}
 
 	return {
@@ -136,21 +145,23 @@ function toEntry(
 		label: node.label,
 		icon: icons.folder(node.uri, false),
 		expandedIcon: icons.folder(node.uri, true),
-		children: node.children.map(child => toEntry(child, parentId, viewMode, icons)),
+		children: node.children.map(child => toEntry(child, parentId, viewMode, icons, otherLists)),
 	}
 }
 
-/** A file's row: its name, icon and status, and its folder in list mode. */
+/** A file's row: its name, icon and status, its folder in list mode, and the other lists it's split with. */
 function toFileItem(
 	repository: Repository,
 	parentId: string,
 	change: Change,
 	viewMode: ViewMode,
 	icons: IconResolver,
+	otherLists: readonly string[],
 ): FileItem {
 	const decoration = STATUS_DECORATIONS[change.status]
 	const relativePath = path.relative(repository.rootUri.fsPath, change.uri.fsPath)
 	const folder = path.dirname(relativePath)
+	const split = otherLists.length > 0 ? ` • Also has changes in ${otherLists.join(', ')}` : ''
 
 	return {
 		type: 'file',
@@ -162,6 +173,7 @@ function toFileItem(
 		letter: decoration.letter,
 		color: themeColor(decoration.color),
 		strikethrough: decoration.strikethrough,
-		tooltip: `${relativePath} • ${decoration.text}`,
+		tooltip: `${relativePath} • ${decoration.text}${split}`,
+		otherLists,
 	}
 }

@@ -696,6 +696,11 @@
           "type": "boolean",
           "default": false,
           "description": "Delete a changelist once its Commit has committed all of its files."
+        },
+        "changelist.partialChangelists": {
+          "type": "boolean",
+          "default": true,
+          "description": "Let a file's changes be in different changelists. New changes go to the active changelist, also in a file that's in another list. Turning it off moves each file's changes back to the file's own list."
         }
       }
     }

@@ -238,7 +238,16 @@ function renderFile(
 		row.append(span('description', file.folder))
 	}
 
-	row.append(span('spacer'), fileActions(group, target), span('letter', file.letter))
+	row.append(span('spacer'), fileActions(group, target))
+
+	// A file split between lists shows its changes in each of them.
+	if (file.otherLists.length > 0) {
+		const mark = codicon('split-horizontal', 'split-mark')
+		mark.dataset.tooltip = `Also has changes in ${file.otherLists.join(', ')}`
+		row.append(mark)
+	}
+
+	row.append(span('letter', file.letter))
 }
 
 /** The actions on a file's row: Open File, Discard when it's unstaged, and Stage or Unstage. */

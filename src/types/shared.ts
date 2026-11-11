@@ -51,6 +51,8 @@ export interface FileItem {
 	readonly color: string
 	readonly strikethrough: boolean
 	readonly tooltip: string
+	/** For a file split between lists, the other lists its changes are in. */
+	readonly otherLists: readonly string[]
 }
 
 /** A folder's row in tree mode, with the rows below it. */

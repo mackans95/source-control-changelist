@@ -3,8 +3,10 @@ import * as vscode from 'vscode'
 import { registerCommands } from './commands/index.ts'
 import { ChangelistStore } from './state/changelistStore.ts'
 import { DefaultBranches } from './state/defaultBranches.ts'
+import { HunkTracker } from './state/hunkTracker.ts' // after DefaultBranches
 import { Operations } from './state/operations.ts'
 import { RepositoryOrder } from './state/repositoryOrder.ts'
+import { HunkDocuments, PART_SCHEME } from './view/hunkDocuments.ts' // before html.ts
 import { unavailableHtml } from './view/html.ts'
 import { ChangelistWebviewProvider } from './view/provider.ts'
 import type { Services } from './types/extension.ts'
@@ -26,22 +28,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	// Shows the view's title buttons, which need Git.
 	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
 
+	const changelists = new ChangelistStore(context.workspaceState)
 	const services: Services = {
 		git,
-		changelists: new ChangelistStore(context.workspaceState),
+		changelists,
+		hunks: new HunkTracker(git.git.path, changelists),
 		operations: new Operations(),
 		defaultBranches: new DefaultBranches(git.git.path),
 		repositoryOrder: new RepositoryOrder(context.workspaceState),
 	}
 	const provider = new ChangelistWebviewProvider(services, context.extensionUri)
+	const documents = new HunkDocuments(services)
 
 	context.subscriptions.push(
 		services.changelists,
+		services.hunks,
 		services.operations,
 		services.defaultBranches,
 		services.repositoryOrder,
 		provider,
 		vscode.window.registerWebviewViewProvider('changelist.view', provider),
+		documents,
+		vscode.workspace.registerTextDocumentContentProvider(PART_SCHEME, documents),
 		...registerCommands(services, provider),
 	)
 }
