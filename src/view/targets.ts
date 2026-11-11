@@ -30,7 +30,11 @@ export function resolveTarget({ git, changelists }: Services, target: ActionTarg
 		return { type: 'resource', repository, kind, changelist, change }
 	}
 
-	return folderNode(repository, kind, changelist, vscode.Uri.parse(target.uri), changes)
+	const folder = folderNode(repository, kind, changelist, vscode.Uri.parse(target.uri), changes)
+
+	// A row whose files no longer have changes, like one drawn before a commit. The Git API's add and
+	// revert would take no paths as every path.
+	return folder.changes.length > 0 ? folder : undefined
 }
 
 /** A folder's node with the group's changes below it. The commands don't need its rows. */
