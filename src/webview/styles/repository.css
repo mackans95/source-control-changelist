@@ -1,5 +1,4 @@
-/* Repositories (rows/changes.ts): a bold name, a line between them, the counts of changed files, and how
-   the name and the branch label shrink when the view is narrow. */
+/* Repositories' rows (rows/changes.ts): a bold name, a line between them, the counts, and how they shrink. */
 
 .repository .label {
 	/* The name shrinks first, like in the built-in view, but some of it always shows. */

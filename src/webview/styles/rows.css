@@ -1,6 +1,5 @@
-/* What every row has (rows/common.ts): the indent, the arrow, the icon and the name, how a row looks when
-   it's hovered, selected or dragged, the count on a group's row, and the active changelist's bold
-   name. */
+/* What every row has (rows/common.ts): the indent, arrow, icon and name, and how it looks when it's
+   hovered, selected or dragged. */
 
 .row {
 	display: flex;

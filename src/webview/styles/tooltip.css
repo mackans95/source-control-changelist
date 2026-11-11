@@ -1,5 +1,4 @@
-/* The tooltip (tooltip.ts), like VS Code's hovers. It can't go outside the view, so long text
-   wraps. */
+/* The tooltip (tooltip.ts), like VS Code's hovers. It can't go outside the view, so long text wraps. */
 
 .tooltip {
 	position: fixed;
