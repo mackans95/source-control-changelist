@@ -5,6 +5,7 @@ import { changelistCommands } from './changelists.ts'
 import { commitCommands } from './commit.ts'
 import { repositoryCommands } from './repositories.ts'
 import { viewCommands } from './view.ts'
+import { resolveTarget } from '../view/targets.ts'
 import type { CommandTable, Services } from '../types/extension.ts'
 import type { MenuContext } from '../types/shared.ts'
 import type { ChangelistWebviewProvider } from '../view/provider.ts'
@@ -21,7 +22,7 @@ export function registerCommands(services: Services, provider: ChangelistWebview
 
 	return Object.entries(commands).map(([name, run]) =>
 		vscode.commands.registerCommand(`changelist.${name}`, (...args: unknown[]) =>
-			run(...args.map(arg => (isMenuContext(arg) ? provider.resolveTarget(arg) : arg))),
+			run(...args.map(arg => (isMenuContext(arg) ? resolveTarget(services, arg) : arg))),
 		),
 	)
 }
