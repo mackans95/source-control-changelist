@@ -6,7 +6,7 @@ import {
 	normalizeDocument,
 	unescapeCharacter,
 	userLanguageAssociations,
-} from '../src/iconMatching.ts'
+} from '../src/icons/iconMatching.ts'
 import type { IconAssociations, IconLookup, IconThemeDocument, LanguageAssociations } from '../src/types/iconTheme.ts'
 
 // Every icon the tests use, defined, except `_empty`, which is left empty like vscode-icons' light file icon.

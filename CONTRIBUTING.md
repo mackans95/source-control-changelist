@@ -6,16 +6,52 @@ Issues and pull requests are welcome.
 
 The view is a webview in the Source Control container, so it can draw things a tree view can't, like the branch button and the colored counts. It gets the repositories and their changes from the built-in Git extension's API.
 
-- `src/extension.ts` waits for the Git extension, then registers the view and the commands. When Git is turned off, the view shows a message instead.
-- `src/changelistWebview.ts` is the view's provider. It listens to every repository and sends the webview the rows whenever Git reports a change, unless nothing changed. Clicks and right-click menu choices come back as targets, which it turns into the nodes the commands take. While the Repositories panel is open, it also sends every repository's sync status, default branch and the status of what runs on it. It sorts the repositories in the order the user dragged them into, or else in the order of the workspace's folders. `src/changelistItems.ts` turns each repository into that plain data, with each file's status letter, color and icon, and `src/changelistHtml.ts` has the view's pages.
-- `src/changelistModel.ts` works out what the view shows of a repository: its groups and changelists, the counts on its row, the folder tree, the order of the repositories, and the line of a Git error that says what went wrong. It doesn't use `vscode`, so the tests can run it.
-- `src/changelistStore.ts` saves each repository's changelists, with the active list and the lists' descriptions, in the workspace's state, and tells the view when they change. After each of Git's status checks, it puts the files that changed since the last one in the active list. `src/repositoryOrder.ts` does the same for the order the repositories were dragged into.
-- `src/commands.ts` has the `changelist.*` commands: stage, unstage and discard, commit, changelists, switching branch through the Git extension's own command, and push, pull, sync, publish and fetch, Fetch All, Pull All and Checkout Default through the Git API.
-- `src/operations.ts` runs those on the repositories through the Git API. It shows the view's progress bar and each repository's status on its row, with Git's error message when one fails, and disables the title bar button while it runs.
-- `src/defaultBranches.ts` looks up each repository's default branch for Checkout Default. The Git API doesn't have it, so it runs `git` itself: the remote's `HEAD`, or else `main` or `master`.
-- `src/fileIcons.ts` reads your file icon theme, which VS Code doesn't share with extensions, and gives files and folders their icons as webview URIs. `src/iconMatching.ts` matches names to icons the way VS Code does, also without `vscode`.
-- `src/webview/` is the webview's script. `index.ts` starts it; `tree.ts` draws the rows that `rows.ts` builds, or the Repositories panel's rows that `syncRows.ts` builds, and the other files each hold one part, like `keyboard.ts`, `tooltip.ts`, `collapse.ts`, `focus.ts`, `drag.ts`, which drags repositories in the Repositories panel, and `changeDrag.ts`, which drags files and folders between groups. `src/webview/styles/` styles the rows with your theme's colors, one file per part, like `rows.css`, `actions.css`, `tooltip.css` and `panel.css` for the Repositories panel. `index.css` imports them all, and the build bundles them with the codicon font into `dist/`.
-- `src/types/` holds the types: `extension.ts` for the extension, like the nodes the commands take, `webview.ts` for the webview's script, `shared.ts` for what the extension and the webview send each other, `iconTheme.ts` for icon themes, and `git.ts` for the Git extension's API. `src/constants/` holds values: `git.ts` the Git API's enums, and `shared.ts` what both sides have to agree on, like the id of the element the rows are drawn in. `src/helpers/shared.ts` has the helpers both sides use, like `themeColor()`, which turns a theme color ID into the CSS variable webviews have for it, and `canDropChanges()`, which both sides check before files are dropped on a group.
+```text
+src/
+├── extension.ts      waits for the Git extension, then makes the services, the view and the commands
+├── model/            what the view shows, worked out from Git's state; no vscode, so the tests run it
+│   ├── changes.ts        each group's changes, and the counts on a repository's row
+│   ├── changelists.ts    which list a change is in, and keeping the saved lists up to date
+│   ├── repositories.ts   names, worktrees, and the order: dragged, or else the workspace's folders
+│   ├── sync.ts           where a branch stands against its upstream, and Git's error line
+│   └── tree.ts           a group's changes as folders, for tree mode
+├── state/            what the extension keeps, with an event when it changes
+│   ├── changelistStore.ts   each repository's changelists, active list and descriptions
+│   ├── repositoryOrder.ts   the order the repositories were dragged into
+│   ├── defaultBranches.ts   each repository's default branch, which runs git itself
+│   └── operations.ts        Fetch All, Pull All, Checkout Default and a row's sync button, with each status
+├── commands/         the changelist.* commands
+│   ├── index.ts          registers the tables below, and turns a right-click menu's context into a node
+│   ├── nodes.ts          forNodes(), and what the tables share
+│   └── view.ts, changes.ts, commit.ts, changelists.ts, repositories.ts
+├── view/             the extension's side of the webview
+│   ├── provider.ts       listens to the repositories and settings, sends updates, and handles the page's messages
+│   ├── update.ts         the update message
+│   ├── items.ts          a repository as the plain data the rows are drawn from; no vscode
+│   ├── targets.ts        turns a row's target back into the node the commands take
+│   └── html.ts           the view's pages
+├── icons/            the file icon theme, which VS Code doesn't share with extensions
+│   ├── fileIcons.ts      reads the theme and gives the icons as webview URIs
+│   └── iconMatching.ts   matches names to icons like VS Code; no vscode
+├── webview/          the page's script, bundled on its own
+│   ├── index.ts, tree.ts      start the page, and draw the rows from each update
+│   ├── rows/                  common.ts, changes.ts, and repositories.ts for the Repositories panel
+│   ├── drag/                  drag.ts shared by repositories.ts and changes.ts
+│   ├── keyboard.ts, focus.ts, collapse.ts, tooltip.ts, icons.ts, dom.ts, api.ts
+│   └── styles/                one CSS file per part; index.css imports them all
+├── types/            every type: extension.ts, webview.ts, shared.ts (both sides), git.ts, iconTheme.ts
+├── constants/        git.ts (the Git API's enums as objects), statusDecorations.ts, shared.ts
+└── helpers/shared.ts themeColor() and canDropChanges(), used by both sides
+```
+
+When Git reports a change, the provider waits until it's quiet, builds the update and sends it to the page, unless it's the same as the last one. The page draws the rows. A click, a drop or a right-click menu item comes back as a target, which `view/targets.ts` turns into a node, and a `changelist.*` command runs on it.
+
+### Conventions
+
+- Each file starts with a one-line comment that says what it's for. Then come the imports, the constants, the exported functions or class with the main one first, and the private helpers below, in the order they're called.
+- A function's JSDoc is one line that says what it does. A reason or a catch goes in a `//` comment at the line it's about.
+- Types live in `src/types/` only, enums are `as const` objects in `src/constants/`, and type-only imports use `import type`.
+- Imports end in `.ts`, so Node can run what the tests import. The webview imports through the `#` aliases in `package.json`'s `imports`, like `#webview/dom.ts`, which TypeScript, esbuild and Node all read.
 
 ## Development
 
@@ -36,7 +72,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm run format` | Formats with Oxfmt; `npm run format:check` only checks. |
 | `npm test` | Runs the tests. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: the groups, changelists and the active list, counts, sync state, sorting by the workspace's folders and by a dragged order, Git's error messages and folder tree in `changelistModel.ts`, the rows' data in `changelistItems.ts`, the icon matching in `iconMatching.ts`, and `themeColor()` and `canDropChanges()`. Every relative import ends in `.ts`, so Node can run the files the tests import. Pull requests run all the checks.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), the rows' data in `view/items.ts`, the icon matching, and `themeColor()` and `canDropChanges()`. `test/fakes.ts` has the fake repositories they share. Pull requests run all the checks.
 
 ## Releasing
 

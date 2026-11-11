@@ -1,5 +1,4 @@
-/* Repositories (rows.ts): a bold name, a line between them, the counts of changed files, and how
-   the name and the branch label shrink when the view is narrow. */
+/* Repositories' rows (rows/changes.ts): a bold name, a line between them, the counts, and how they shrink. */
 
 .repository .label {
 	/* The name shrinks first, like in the built-in view, but some of it always shows. */
@@ -7,7 +6,7 @@
 	font-weight: bold;
 }
 
-/* In the Repositories panel (syncRows.ts), only the names of repositories with commits to push or
+/* In the Repositories panel (rows/repositories.ts), only the names of repositories with commits to push or
    pull are bold. */
 .repository.sync:not(.needs-sync) .label {
 	font-weight: normal;
@@ -54,7 +53,7 @@
 	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, transparent));
 }
 
-/* In the Repositories panel (syncRows.ts), a worktree sits below the repository it belongs to, with
+/* In the Repositories panel (rows/repositories.ts), a worktree sits below the repository it belongs to, with
    its icon under that one's name and no line between them. */
 .repository.sync.nested {
 	/* The 4px every row has, and the icon and its margin. */

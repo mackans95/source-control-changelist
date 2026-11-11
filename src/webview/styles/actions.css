@@ -1,5 +1,4 @@
-/* The buttons on a row (rows.ts): the actions, the branch label on a repository's row, and the sync
-   button in the Repositories panel (syncRows.ts). */
+/* The buttons on rows (rows/common.ts): the actions, the branch, and the Repositories panel's sync button. */
 
 .toolbar,
 .actions {

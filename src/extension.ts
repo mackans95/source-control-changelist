@@ -1,16 +1,52 @@
-// Starts the extension: waits for the Git extension, then registers the Changelist view and its
-// commands. With Git turned off, the view only says so.
+// Starts the extension once the Git extension is ready: makes the services, the view and the commands.
 import * as vscode from 'vscode'
-import { unavailableHtml } from './changelistHtml.ts'
-import { ChangelistWebviewProvider } from './changelistWebview.ts'
-import { registerCommands } from './commands.ts'
-import { ChangelistStore } from './changelistStore.ts'
-import { Operations } from './operations.ts'
-import { DefaultBranches } from './defaultBranches.ts'
-import { RepositoryOrder } from './repositoryOrder.ts'
+import { registerCommands } from './commands/index.ts'
+import { ChangelistStore } from './state/changelistStore.ts'
+import { DefaultBranches } from './state/defaultBranches.ts'
+import { Operations } from './state/operations.ts'
+import { RepositoryOrder } from './state/repositoryOrder.ts'
+import { unavailableHtml } from './view/html.ts'
+import { ChangelistWebviewProvider } from './view/provider.ts'
+import type { Services } from './types/extension.ts'
 import type { API, GitExtension } from './types/git.ts'
 
-/** The Git extension's API once it has found the repositories, or undefined when Git is missing or turned off. */
+/** Called by VS Code the first time the view is shown or one of its commands runs. */
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	const log = vscode.window.createOutputChannel('Changelist', { log: true })
+	context.subscriptions.push(log)
+
+	const git = await getGitAPI()
+
+	if (!git) {
+		log.warn('Git extension is not available or disabled')
+		context.subscriptions.push(registerUnavailableView(context.extensionUri))
+		return
+	}
+
+	// Shows the view's title buttons, which need Git.
+	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
+
+	const services: Services = {
+		git,
+		changelists: new ChangelistStore(context.workspaceState),
+		operations: new Operations(),
+		defaultBranches: new DefaultBranches(git.git.path),
+		repositoryOrder: new RepositoryOrder(context.workspaceState),
+	}
+	const provider = new ChangelistWebviewProvider(services, context.extensionUri)
+
+	context.subscriptions.push(
+		services.changelists,
+		services.operations,
+		services.defaultBranches,
+		services.repositoryOrder,
+		provider,
+		vscode.window.registerWebviewViewProvider('changelist.view', provider),
+		...registerCommands(services, provider),
+	)
+}
+
+/** The Git extension's API once it has found the repositories, or undefined when Git is turned off. */
 async function getGitAPI(): Promise<API | undefined> {
 	const extension = vscode.extensions.getExtension<GitExtension>('vscode.git')
 	if (!extension) {
@@ -36,48 +72,13 @@ async function getGitAPI(): Promise<API | undefined> {
 	return git
 }
 
-/** Called by VS Code the first time the view is shown or one of its commands runs. */
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	const log = vscode.window.createOutputChannel('Changelist', { log: true })
-	context.subscriptions.push(log)
-
-	const git = await getGitAPI()
-	if (!git) {
-		log.warn('Git extension is not available or disabled')
-		// Without a provider, the view would only say "There is no data provider registered".
-		context.subscriptions.push(
-			vscode.window.registerWebviewViewProvider('changelist.view', {
-				resolveWebviewView: view => {
-					view.webview.options = { localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist')] }
-					view.webview.html = unavailableHtml(view.webview, context.extensionUri)
-				},
-			}),
-		)
-		return
-	}
-
-	// Shows the view's title buttons, which need Git.
-	void vscode.commands.executeCommand('setContext', 'changelist.active', true)
-
-	const changelists = new ChangelistStore(context.workspaceState)
-	const operations = new Operations()
-	const defaultBranches = new DefaultBranches(git.git.path)
-	const repositoryOrder = new RepositoryOrder(context.workspaceState)
-	const provider = new ChangelistWebviewProvider(
-		git,
-		context.extensionUri,
-		changelists,
-		operations,
-		defaultBranches,
-		repositoryOrder,
-	)
-	context.subscriptions.push(
-		changelists,
-		operations,
-		defaultBranches,
-		repositoryOrder,
-		provider,
-		vscode.window.registerWebviewViewProvider('changelist.view', provider),
-		...registerCommands(git, provider, changelists, operations, defaultBranches, repositoryOrder),
-	)
+/** The view's page when Git is turned off, which says so. */
+function registerUnavailableView(extensionUri: vscode.Uri): vscode.Disposable {
+	// Without a provider, the view would only say "There is no data provider registered".
+	return vscode.window.registerWebviewViewProvider('changelist.view', {
+		resolveWebviewView: view => {
+			view.webview.options = { localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')] }
+			view.webview.html = unavailableHtml(view.webview, extensionUri)
+		},
+	})
 }

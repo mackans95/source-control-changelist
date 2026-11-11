@@ -1,7 +1,7 @@
 // The API VS Code gives the webview's page: messages to the extension, and the page's state, which
 // VS Code keeps while the view is hidden.
-import type { ActionTarget, WebviewAction, WebviewMessage } from '../types/shared.ts'
-import type { VsCodeApi, WebviewState } from '../types/webview.ts'
+import type { ActionTarget, WebviewAction, WebviewMessage } from '#types/shared.ts'
+import type { VsCodeApi, WebviewState } from '#types/webview.ts'
 
 // Defined by VS Code in the webview's page; this only tells TypeScript it's there.
 declare function acquireVsCodeApi(): VsCodeApi

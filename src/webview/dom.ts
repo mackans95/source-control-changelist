@@ -1,5 +1,5 @@
 // The elements the view is drawn with, and what the files creating them share.
-import { ROOT_ELEMENT_ID } from '../constants/shared.ts'
+import { ROOT_ELEMENT_ID } from '#constants/shared.ts'
 
 // Every row in the tree: repositories, groups, folders and files.
 const ROW_SELECTOR = '.row'

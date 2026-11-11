@@ -1,23 +1,7 @@
-// The Changelist view's pages: the one the script draws the changes in, and the one shown when Git
-// is turned off.
+// The view's pages: the one the rows are drawn in, and the one shown when Git is turned off.
 import { randomBytes } from 'crypto'
 import * as vscode from 'vscode'
-import { ROOT_ELEMENT_ID } from './constants/shared.ts'
-
-/** A page with the view's stylesheet, which may only load what `csp` allows. */
-function page(webview: vscode.Webview, extensionUri: vscode.Uri, csp: readonly string[], body: string): string {
-	const styles = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.css'))
-	return `<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="Content-Security-Policy" content="${csp.join('; ')}">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="${styles}">
-</head>
-${body}
-</html>`
-}
+import { ROOT_ELEMENT_ID } from '../constants/shared.ts'
 
 /** The view's page: the element the rows are drawn in, and the script that draws them. */
 export function viewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
@@ -47,4 +31,19 @@ export function unavailableHtml(webview: vscode.Webview, extensionUri: vscode.Ur
 	<div class="empty">Git is turned off. Turn on the <code>git.enabled</code> setting, then reload the window to see your changes here.</div>
 </body>`
 	return page(webview, extensionUri, csp, body)
+}
+
+/** A page with the view's stylesheet, which may only load what `csp` allows. */
+function page(webview: vscode.Webview, extensionUri: vscode.Uri, csp: readonly string[], body: string): string {
+	const styles = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.css'))
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="Content-Security-Policy" content="${csp.join('; ')}">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="${styles}">
+</head>
+${body}
+</html>`
 }

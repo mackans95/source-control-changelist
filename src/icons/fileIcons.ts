@@ -1,5 +1,4 @@
-// The file icon theme's icons and fonts, as URIs the webview can load. How a file or folder gets
-// its icon is in iconMatching.ts.
+// The file icon theme's icons and fonts, as URIs the webview can load. iconMatching.ts picks them.
 import * as path from 'path'
 import * as vscode from 'vscode'
 import {
@@ -18,72 +17,22 @@ import type {
 	LanguageAssociations,
 	LanguageContribution,
 	LoadedIconTheme,
-} from './types/iconTheme.ts'
-import type { IconResolver } from './types/extension.ts'
-import type { FileIcon, IconFont } from './types/shared.ts'
+} from '../types/iconTheme.ts'
+import type { IconResolver } from '../types/extension.ts'
+import type { FileIcon, IconFont } from '../types/shared.ts'
 
-/** A font's family name in the webview, unique per theme so two themes' fonts can't clash. */
-function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
-	return `${theme.id}-${font.id}`
-}
-
-/** Reads the file icon theme with this id from the extension that has it. */
-async function loadIconTheme(id: string): Promise<LoadedIconTheme | undefined> {
-	for (const extension of vscode.extensions.all) {
-		const themes: readonly IconThemeContribution[] = extension.packageJSON?.contributes?.iconThemes ?? []
-		const theme = themes.find(t => t.id === id)
-
-		if (theme) {
-			const uri = vscode.Uri.joinPath(extension.extensionUri, theme.path)
-			const document = JSON.parse(
-				new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)),
-			) as IconThemeDocument
-
-			return {
-				id,
-				uri,
-				extensionUri: extension.extensionUri,
-				document: normalizeDocument(document),
-			}
-		}
-	}
-
-	return undefined
-}
-
-/** The user's `files.associations` first, then the languages extensions contribute. */
-function loadLanguageAssociations(): LanguageAssociations[] {
-	const patterns = vscode.workspace.getConfiguration('files').get<Record<string, string>>('associations', {})
-	const contributed: LanguageAssociations = { fileNames: new Map(), extensions: new Map() }
-
-	for (const extension of vscode.extensions.all) {
-		const languages: readonly LanguageContribution[] = extension.packageJSON?.contributes?.languages ?? []
-
-		for (const language of languages) {
-			language.filenames?.forEach(name => contributed.fileNames.set(name.toLowerCase(), language.id))
-			language.extensions?.forEach(extension => contributed.extensions.set(extension.toLowerCase(), language.id))
-		}
-	}
-
-	return [userLanguageAssociations(patterns), contributed]
-}
-
-/**
- * The file icon theme's icons, for the Changelist view's webview. VS Code has no API for them, so
- * this reads the theme's JSON file and matches files like VS Code does: by name, then by the
- * longest extension, then by language, and otherwise the theme's default file icon.
- */
+/** The file icon theme's icons. VS Code has no API for them, so this reads the theme's JSON file. */
 export class FileIcons implements vscode.Disposable {
-	// Fires onDidChange.
-	private readonly changeEmitter = new vscode.EventEmitter<void>()
-	// Fires when the icons change: another theme, other file associations, or another color theme.
-	readonly onDidChange = this.changeEmitter.event
 	// The current file icon theme, or undefined when none is set or it can't be read.
 	private theme: LoadedIconTheme | undefined
 	// Which language each file name and extension has, for themes that pick icons by language.
 	private languages: LanguageAssociations[] = []
+	private readonly changeEmitter = new vscode.EventEmitter<void>()
 	// The emitter, and the listeners that load the theme again.
 	private readonly disposables: vscode.Disposable[]
+
+	// When the icons change: another theme, other file associations, or another color theme.
+	readonly onDidChange = this.changeEmitter.event
 
 	constructor() {
 		this.disposables = [
@@ -211,4 +160,50 @@ export class FileIcons implements vscode.Disposable {
 			style: font.style,
 		}))
 	}
+}
+
+/** Reads the file icon theme with this id from the extension that has it. */
+async function loadIconTheme(id: string): Promise<LoadedIconTheme | undefined> {
+	for (const extension of vscode.extensions.all) {
+		const themes: readonly IconThemeContribution[] = extension.packageJSON?.contributes?.iconThemes ?? []
+		const theme = themes.find(t => t.id === id)
+
+		if (theme) {
+			const uri = vscode.Uri.joinPath(extension.extensionUri, theme.path)
+			const document = JSON.parse(
+				new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)),
+			) as IconThemeDocument
+
+			return {
+				id,
+				uri,
+				extensionUri: extension.extensionUri,
+				document: normalizeDocument(document),
+			}
+		}
+	}
+
+	return undefined
+}
+
+/** The user's `files.associations` first, then the languages extensions contribute. */
+function loadLanguageAssociations(): LanguageAssociations[] {
+	const patterns = vscode.workspace.getConfiguration('files').get<Record<string, string>>('associations', {})
+	const contributed: LanguageAssociations = { fileNames: new Map(), extensions: new Map() }
+
+	for (const extension of vscode.extensions.all) {
+		const languages: readonly LanguageContribution[] = extension.packageJSON?.contributes?.languages ?? []
+
+		for (const language of languages) {
+			language.filenames?.forEach(name => contributed.fileNames.set(name.toLowerCase(), language.id))
+			language.extensions?.forEach(extension => contributed.extensions.set(extension.toLowerCase(), language.id))
+		}
+	}
+
+	return [userLanguageAssociations(patterns), contributed]
+}
+
+/** A font's family name in the webview, unique per theme so two themes' fonts can't clash. */
+function fontFamily(theme: LoadedIconTheme, font: IconThemeFont): string {
+	return `${theme.id}-${font.id}`
 }

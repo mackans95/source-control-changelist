@@ -1,9 +1,6 @@
-/* The Changelist view's styles, one file per part. scripts/build.ts bundles them into
-   dist/webview.css, which changelistHtml.ts adds to the view's pages. Sizes and colors follow VS
-   Code's own trees, through its theme variables. codicon.css comes first: actions.css and
-   repository.css override its font size with selectors of the same specificity. Otherwise, rules
-   that compete at the same specificity sit in the same file, so the order below only groups related
-   parts. */
+/* The view's styles, one file per part, which the build bundles into dist/webview.css. codicon.css
+   comes first, since actions.css and repository.css override its font size with selectors of the
+   same specificity. */
 @import '@vscode/codicons/dist/codicon.css';
 @import './variables.css';
 @import './document.css';

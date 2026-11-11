@@ -1,6 +1,6 @@
 // Icons from the file icon theme, which the extension reads and sends with every update.
 import { span } from './dom.ts'
-import type { FileIcon, IconFont } from '../types/shared.ts'
+import type { FileIcon, IconFont } from '#types/shared.ts'
 
 // The file icon theme's fonts that are added to the page already.
 const loadedFonts = new Set<string>()

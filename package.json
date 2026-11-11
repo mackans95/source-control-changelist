@@ -49,6 +49,17 @@
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
+  "imports": {
+    "#commands/*": "./src/commands/*",
+    "#constants/*": "./src/constants/*",
+    "#helpers/*": "./src/helpers/*",
+    "#icons/*": "./src/icons/*",
+    "#model/*": "./src/model/*",
+    "#state/*": "./src/state/*",
+    "#types/*": "./src/types/*",
+    "#view/*": "./src/view/*",
+    "#webview/*": "./src/webview/*"
+  },
   "contributes": {
     "views": {
       "scm": [

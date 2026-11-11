@@ -1,10 +1,10 @@
-// The changelists in each repository: the lists the user made, which files are in them, and the
-// active list, where new changes go. They're saved in the workspace's state, on this machine, like
-// PyCharm saves them with the project. Git and the built-in Source Control view don't know about them.
+// Every repository's changelists, saved in the workspace's state on this machine, like PyCharm saves
+// them with the project. Git doesn't know about them.
 import * as vscode from 'vscode'
-import { changedUris, claimNewChanges, pruneChangelists } from './changelistModel.ts'
-import type { Change, Repository } from './types/git.ts'
-import type { RepositoryChangelists } from './types/extension.ts'
+import { changedUris } from '../model/changes.ts'
+import { claimNewChanges, pruneChangelists } from '../model/changelists.ts'
+import type { Change, Repository } from '../types/git.ts'
+import type { RepositoryChangelists } from '../types/extension.ts'
 
 // The workspace state's key, with every repository's changelists by the repository's root URI.
 const STATE_KEY = 'changelists'
@@ -13,13 +13,11 @@ const NO_CHANGELISTS: RepositoryChangelists = { lists: [], files: {} }
 
 /** Every repository's changelists, saved in the workspace's state. */
 export class ChangelistStore implements vscode.Disposable {
-	// Fires when the user changes a changelist, so the view is drawn again.
-	private readonly changeEmitter = new vscode.EventEmitter<void>()
-	// Where the changelists are saved.
+	// The workspace's state.
 	private readonly state: vscode.Memento
-	// The files each repository had changes in at Git's last check, by the repository's root URI, so
-	// the ones that change after it go to the active list.
+	// The files with changes at Git's last check, by repository root URI.
 	private readonly known = new Map<string, ReadonlySet<string>>()
+	private readonly changeEmitter = new vscode.EventEmitter<void>()
 
 	// When the user changes a changelist.
 	readonly onDidChange = this.changeEmitter.event
@@ -54,10 +52,7 @@ export class ChangelistStore implements vscode.Disposable {
 		})
 	}
 
-	/**
-	 * Deletes a changelist. Its files go back to Changes, or to Untracked Changes. When it was the
-	 * active list, no list is active any more.
-	 */
+	/** Deletes a changelist. Its files go back to Changes or Untracked Changes. */
 	remove(repository: Repository, name: string): Promise<void> {
 		const changelists = this.get(repository)
 		const files = Object.entries(changelists.files).filter(([, list]) => list !== name)
@@ -104,11 +99,7 @@ export class ChangelistStore implements vscode.Disposable {
 		return this.set(repository, { ...this.get(repository), files })
 	}
 
-	/**
-	 * Keeps a repository's lists up to date after Git checks its status: files that changed since the
-	 * last check go to the active list, and files that have no changes any more leave their list. It
-	 * doesn't draw the view again: the update that follows does.
-	 */
+	/** Puts the files changed since Git's last check in the active list, and forgets the unchanged ones. */
 	track(repository: Repository): void {
 		// Before Git's first check, the repository looks like it has no changes.
 		if (!repository.state.HEAD) return
@@ -124,6 +115,7 @@ export class ChangelistStore implements vscode.Disposable {
 		const claimed = known ? claimNewChanges(changelists, known, changed) : changelists
 		const tracked = pruneChangelists(repository, claimed)
 
+		// Without firing onDidChange: the view's update after Git's check draws it.
 		if (JSON.stringify(tracked.files) !== JSON.stringify(changelists.files)) {
 			void this.save(repository, tracked)
 		}

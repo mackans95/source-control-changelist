@@ -1,6 +1,5 @@
-/* What every row has (rows.ts): the indent, the arrow, the icon and the name, how a row looks when
-   it's hovered, selected or dragged, the count on a group's row, and the active changelist's bold
-   name. */
+/* What every row has (rows/common.ts): the indent, arrow, icon and name, and how it looks when it's
+   hovered, selected or dragged. */
 
 .row {
 	display: flex;
@@ -72,8 +71,8 @@
 	font-weight: bold;
 }
 
-/* A row being dragged: a file or folder (changeDrag.ts), or a repository with its worktrees in the
-   Repositories panel (drag.ts). */
+/* A row being dragged: a file or folder (drag/changes.ts), or a repository with its worktrees in the
+   Repositories panel (drag/repositories.ts). */
 .row.dragging {
 	opacity: 0.5;
 }

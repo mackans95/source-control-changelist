@@ -1,12 +1,11 @@
-// What the Repositories panel runs on its repositories: Fetch All, Pull All and Checkout Default on
-// many at once, and a row's Push, Pull, Sync, Publish Branch and Fetch on one. Each repository's
-// status shows at the end of its row, and the view's progress bar shows while anything runs. While
-// Fetch All, Pull All or Checkout Default runs, its title bar button is disabled.
+// Runs Fetch All, Pull All and Checkout Default on many repositories, and a row's Push, Pull, Sync,
+// Publish Branch and Fetch on one, and keeps each repository's status for its row.
 import * as vscode from 'vscode'
-import { gitErrorMessage, repositoryName } from './changelistModel.ts'
-import type { Repository } from './types/git.ts'
-import type { OperationKind, OperationLabels } from './types/extension.ts'
-import type { OperationStatus } from './types/shared.ts'
+import { repositoryName } from '../model/repositories.ts'
+import { gitErrorMessage } from '../model/sync.ts'
+import type { Repository } from '../types/git.ts'
+import type { OperationKind, OperationLabels } from '../types/extension.ts'
+import type { OperationStatus } from '../types/shared.ts'
 
 // Where the progress bar shows while an operation, or a row's sync button, runs.
 export const VIEW_PROGRESS: vscode.ProgressOptions = { location: { viewId: 'changelist.view' } }
@@ -14,36 +13,11 @@ export const VIEW_PROGRESS: vscode.ProgressOptions = { location: { viewId: 'chan
 const DONE_FADE_MS = 3000
 // What each operation is called while it runs, when it's done, and when it fails.
 const OPERATION_LABELS: Record<OperationKind, OperationLabels> = {
-	fetch: {
-		name: 'Fetch All',
-		running: 'Fetching...',
-		done: 'Fetched',
-		verb: 'fetch',
-	},
-	pull: {
-		name: 'Pull All',
-		running: 'Pulling...',
-		done: 'Pulled',
-		verb: 'pull',
-	},
-	push: {
-		name: 'Push',
-		running: 'Pushing...',
-		done: 'Pushed',
-		verb: 'push',
-	},
-	sync: {
-		name: 'Sync',
-		running: 'Syncing...',
-		done: 'Synced',
-		verb: 'sync',
-	},
-	publish: {
-		name: 'Publish Branch',
-		running: 'Publishing...',
-		done: 'Published',
-		verb: 'publish',
-	},
+	fetch: { name: 'Fetch All', running: 'Fetching...', done: 'Fetched', verb: 'fetch' },
+	pull: { name: 'Pull All', running: 'Pulling...', done: 'Pulled', verb: 'pull' },
+	push: { name: 'Push', running: 'Pushing...', done: 'Pushed', verb: 'push' },
+	sync: { name: 'Sync', running: 'Syncing...', done: 'Synced', verb: 'sync' },
+	publish: { name: 'Publish Branch', running: 'Publishing...', done: 'Published', verb: 'publish' },
 	checkout: {
 		name: 'Checkout Default',
 		running: 'Switching to the default branch...',
@@ -52,20 +26,15 @@ const OPERATION_LABELS: Record<OperationKind, OperationLabels> = {
 	},
 }
 
-/**
- * Runs Fetch All, Pull All and Checkout Default one at a time, and a row's own buttons, and keeps
- * each repository's status.
- */
+/** Runs the operations and keeps their statuses, with one Fetch All, Pull All or Checkout Default at a time. */
 export class Operations implements vscode.Disposable {
-	// Fires when a repository's status changes, so the view is drawn again.
-	private readonly changeEmitter = new vscode.EventEmitter<void>()
-	// Each repository's status, by its root URI.
+	// By repository root URI.
 	private readonly statuses = new Map<string, OperationStatus>()
 	// The timers that fade the ✓s, which a new run cancels.
 	private readonly fadeTimers = new Set<NodeJS.Timeout>()
-
-	// The operation that's running, if any.
+	// The Fetch All, Pull All or Checkout Default that's running, if any.
 	private running: OperationKind | undefined
+	private readonly changeEmitter = new vscode.EventEmitter<void>()
 
 	// When a repository's status changes.
 	readonly onDidChange = this.changeEmitter.event
@@ -75,10 +44,7 @@ export class Operations implements vscode.Disposable {
 		return this.statuses.get(repository.rootUri.toString())
 	}
 
-	/**
-	 * Runs an operation on every repository in `repositories` at once, after clearing the statuses of
-	 * the last one. `skipped` repositories get their reason as their status instead.
-	 */
+	/** Runs an operation on these repositories at once. `skipped` ones get their reason as their status. */
 	async run(
 		kind: OperationKind,
 		repositories: readonly Repository[],
@@ -111,10 +77,7 @@ export class Operations implements vscode.Disposable {
 		}
 	}
 
-	/**
-	 * Runs an operation on one repository, from its row's button or right-click menu. The other
-	 * repositories keep their statuses.
-	 */
+	/** Runs an operation on one repository, from its row. The other repositories keep their statuses. */
 	async runSingle(
 		kind: OperationKind,
 		repository: Repository,

@@ -1,6 +1,4 @@
-// The order the user dragged the repositories into in the Repositories panel, which the changes
-// follow too. It's saved in the workspace's state, on this machine. Without one, the repositories are
-// in the order of the workspace's folders.
+// The order the user dragged the repositories into, saved in the workspace's state on this machine.
 import * as vscode from 'vscode'
 
 // The workspace state's key, with the repositories' root URIs in their order.
@@ -8,10 +6,9 @@ const STATE_KEY = 'repositoryOrder'
 
 /** The repositories' order, saved in the workspace's state. */
 export class RepositoryOrder implements vscode.Disposable {
-	// Fires when the order changes, so the view is drawn again.
-	private readonly changeEmitter = new vscode.EventEmitter<void>()
-	// Where the order is saved.
+	// The workspace's state.
 	private readonly state: vscode.Memento
+	private readonly changeEmitter = new vscode.EventEmitter<void>()
 
 	// When the order changes.
 	readonly onDidChange = this.changeEmitter.event
