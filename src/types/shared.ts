@@ -1,7 +1,5 @@
-// What the extension and the Changelist view's webview send each other, and the types both sides
-// use. Everything here has to survive postMessage, so it's plain data: URIs are strings, and there
-// are no Repository objects. Nothing here may depend on the vscode or Node APIs, which the webview
-// doesn't have.
+// The types both the extension and the webview use: the rows' data and their messages. It's all
+// plain data, with URIs as strings, since it goes through postMessage.
 
 /** The groups of changes, like in the built-in Source Control view. */
 export type GroupKind = 'merge' | 'staged' | 'changes' | 'untracked'
@@ -76,10 +74,7 @@ export interface GroupItem {
 	/** A changelist's description, shown after its name. */
 	readonly description?: string
 	readonly count: number
-	/**
-	 * Whether new changes go here: the active changelist, or Changes when no list is active. An
-	 * active changelist's name is bold.
-	 */
+	/** Whether new changes go here: the active changelist, or Changes when no list is active. */
 	readonly active: boolean
 	readonly children: readonly (FolderItem | FileItem)[]
 }
@@ -137,10 +132,7 @@ export interface SyncRepositoryItem {
 	readonly needsSync: boolean
 	/** Whether it has uncommitted changes, which puts a `*` after its name. */
 	readonly hasChanges: boolean
-	/**
-	 * For a worktree, the id of the repository it belongs to, when that one is open too. Its row is
-	 * indented below that one's.
-	 */
+	/** For a worktree, the id of the repository it belongs to, when that one is open too. */
 	readonly parentId?: string
 	/** The branch Checkout Default switches to, once it's been looked up. */
 	readonly defaultBranch?: string
@@ -183,10 +175,7 @@ export type WebviewAction =
 	| 'openChange'
 	| 'openFile'
 
-/**
- * What an action runs on: a repository, a group when `kind` is set, and a folder or file in that
- * group when `uri` is set too. In a changelist, `changelist` is its name.
- */
+/** What an action runs on: a repository, a group with `kind`, or a folder or file in it with `uri` too. */
 export interface ActionTarget {
 	readonly repository: string
 	readonly kind?: GroupKind
@@ -197,23 +186,19 @@ export interface ActionTarget {
 /** The kinds of rows, for the right-click menu's `when` clauses. `sync` is a repository in the Repositories panel. */
 export type RowSection = 'repository' | 'group' | 'folder' | 'file' | 'sync'
 
-/**
- * A row's `data-vscode-context`. Its properties are context keys in the right-click menu's `when`
- * clauses, and VS Code passes it to the command that runs.
- */
-export interface MenuContext extends ActionTarget {
-	readonly webviewSection: RowSection
-	readonly preventDefaultContextMenuItems: true
+/** What a row's right-click menu knows about the row, for its `when` clauses. */
+export interface RowContext extends ActionTarget {
 	/** On a group's row, whether new changes go there, so Set as Active Changelist is left out. */
 	readonly active?: boolean
 }
 
-/**
- * What the webview sends the extension: that it's ready for data, a row's action, whether every
- * repository is collapsed, that Escape closed the Repositories panel, that the panel's notice
- * turns on `git.autofetch`, that a repository was dragged before or after another, or that a file's
- * or folder's changes were dropped on another group.
- */
+/** A row's `data-vscode-context`, which VS Code passes to the menu item's command. */
+export interface MenuContext extends RowContext {
+	readonly webviewSection: RowSection
+	readonly preventDefaultContextMenuItems: true
+}
+
+/** What the webview sends the extension. */
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }

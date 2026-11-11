@@ -1,29 +1,11 @@
-// The tree of rows: the repositories the extension sent last, drawn again after every change, and
-// what clicking a row does. While the Repositories panel is open, it shows that instead.
+// The tree of rows: draws the extension's latest update, and knows each row's parent and click.
 import { collapsedRows } from './collapse.ts'
 import { getRoot, rowElements, rowOf, span } from './dom.ts'
 import { rowFocus } from './focus.ts'
 import { renderRepository } from './rows/changes.ts'
-import { tooltip } from './tooltip.ts'
 import { autoFetchNotice, renderSyncRepositories } from './rows/repositories.ts'
-import type { RepositoryItem, SyncRepositoryItem } from '../types/shared.ts'
-
-/**
- * Marks the repository rows whose name has shrunk as far as it can, without and with their
- * actions, so the branch label shrinks too (see styles/repository.css). CSS alone would shrink the
- * name and the label at the same time.
- */
-function fitRepositoryRows(): void {
-	for (const row of rowElements().filter(r => r.classList.contains('repository'))) {
-		row.classList.remove('narrow', 'narrow-with-actions')
-		const narrow = row.scrollWidth > row.clientWidth
-		row.classList.add('measuring')
-		const narrowWithActions = row.scrollWidth > row.clientWidth
-		row.classList.remove('measuring')
-		row.classList.toggle('narrow', narrow)
-		row.classList.toggle('narrow-with-actions', narrowWithActions)
-	}
-}
+import { tooltip } from './tooltip.ts'
+import type { RepositoryItem, SyncRepositoryItem } from '#types/shared.ts'
 
 /** Draws the rows, and knows each row's parent and what clicking it does. */
 class Tree {
@@ -37,7 +19,7 @@ class Tree {
 	private readonly parents = new Map<string, string>()
 	// What clicking each row does, filled in on each render.
 	private readonly activations = new Map<string, () => void>()
-	// Whether a repository is being dragged. Drawing the rows again would end the drag.
+	// Whether a row is being dragged. Drawing the rows again would end the drag.
 	private dragging = false
 	// Whether an update came in during the drag, so the rows are drawn once it ends.
 	private renderAfterDrag = false
@@ -127,7 +109,7 @@ class Tree {
 		}
 	}
 
-	/** Draws all rows again, keeping the selected row. While a repository is dragged, it waits. */
+	/** Draws all rows again, keeping the selected row. While a row is dragged, it waits. */
 	render(): void {
 		if (this.dragging) {
 			this.renderAfterDrag = true
@@ -168,3 +150,17 @@ class Tree {
 }
 
 export const tree = new Tree()
+
+/** Marks the repository rows whose name can't shrink more, without and with their actions. */
+function fitRepositoryRows(): void {
+	// The branch shrinks only then (styles/repository.css). CSS alone would shrink both at once.
+	for (const row of rowElements().filter(r => r.classList.contains('repository'))) {
+		row.classList.remove('narrow', 'narrow-with-actions')
+		const narrow = row.scrollWidth > row.clientWidth
+		row.classList.add('measuring')
+		const narrowWithActions = row.scrollWidth > row.clientWidth
+		row.classList.remove('measuring')
+		row.classList.toggle('narrow', narrow)
+		row.classList.toggle('narrow-with-actions', narrowWithActions)
+	}
+}

@@ -1,24 +1,11 @@
 // Moving through the rows with the keyboard, like in VS Code's trees.
 import { post } from './api.ts'
 import { findRow, rowElements } from './dom.ts'
+import { repositoryDrag } from './drag/repositories.ts'
 import { rowFocus } from './focus.ts'
 import { tree } from './tree.ts'
-import { repositoryDrag } from './drag/repositories.ts'
 
-/** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
-function openMenu(row: HTMLElement): void {
-	const { left, bottom } = row.getBoundingClientRect()
-	row.dispatchEvent(
-		new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: left, clientY: bottom }),
-	)
-}
-
-/**
- * A key pressed in the view: the arrows, Home and End move the selection, Right and Left expand and
- * collapse, Enter and Space do what a click does or run the Repositories panel's button, Shift+F10
- * opens the right-click menu, and Escape closes the Repositories panel. In the panel, Alt+Up and
- * Alt+Down move a repository.
- */
+/** Handles a key pressed in the view, like VS Code's trees, and Alt+Up and Alt+Down in the Repositories panel. */
 export function onKeydown(event: KeyboardEvent): void {
 	const rows = rowElements()
 	const index = rows.findIndex(row => row.dataset.id === rowFocus.id)
@@ -89,4 +76,12 @@ export function onKeydown(event: KeyboardEvent): void {
 	}
 
 	event.preventDefault()
+}
+
+/** Opens the right-click menu for a row from the keyboard, below the row like in VS Code's trees. */
+function openMenu(row: HTMLElement): void {
+	const { left, bottom } = row.getBoundingClientRect()
+	row.dispatchEvent(
+		new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: left, clientY: bottom }),
+	)
 }

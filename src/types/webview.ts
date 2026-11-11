@@ -20,6 +20,7 @@ export interface SyncButton {
 	readonly label: string
 }
 
+/** The icon at the end of a row in the Repositories panel, for how an operation went. */
 export interface StatusIcon {
 	readonly icon: string
 	/** Theme color ID, like `testing.iconPassed`. */
@@ -43,4 +44,11 @@ export interface DropTarget {
 	/** The other repository's root URI. */
 	readonly repository: string
 	readonly after: boolean
+}
+
+/** What dragging a row starts: what's dragged, its data for the browser, and the rows that fade. */
+export interface DragStart<Source> {
+	readonly source: Source
+	readonly data: string
+	readonly rows: readonly HTMLElement[]
 }

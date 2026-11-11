@@ -1,16 +1,62 @@
-// Dragging repositories in the Repositories panel into the order you want, which the changes follow
-// too. A repository moves with its worktrees, and a line shows where it lands. Alt+Up and Alt+Down
-// move the selected one with the keyboard. The extension saves the order.
-import { post } from '../api.ts'
-import { rowElements, rowOf } from '../dom.ts'
-import { tooltip } from '../tooltip.ts'
-import { tree } from '../tree.ts'
-import type { DropTarget } from '../../types/webview.ts'
+// Dragging a repository with its worktrees in the Repositories panel, or moving it with Alt+Up and
+// Alt+Down. The extension saves the order, which the changes follow too.
+import { Drag } from './drag.ts'
+import { post } from '#webview/api.ts'
+import { rowElements, rowOf } from '#webview/dom.ts'
+import type { DragStart, DropTarget } from '#types/webview.ts'
 
-// The drag's data type. Only this view knows it, so dropping a repository in an editor does nothing.
-const DRAG_TYPE = 'application/vnd.changelist.repository'
+/** A repository being dragged, with a line where it would land. */
+class RepositoryDrag extends Drag<string> {
+	protected readonly dragType = 'application/vnd.changelist.repository'
+	// Where it lands when it's dropped now, if anywhere.
+	private target: DropTarget | undefined
 
-/** The repositories that can be dragged, in their order on screen: every one that isn't a worktree below its own. */
+	/** Moves a repository above the one before it, or below the one after it. */
+	moveByKeyboard(repository: string, down: boolean): void {
+		const order = draggableRepositories()
+		const target = order[order.indexOf(repository) + (down ? 1 : -1)]
+
+		if (target !== undefined) {
+			post({ type: 'moveRepository', repository, target, after: down })
+		}
+	}
+
+	/** Drags a repository with its worktrees. */
+	protected start(row: HTMLElement): DragStart<string> | undefined {
+		const repository = row.dataset.repository
+		return repository ? { source: repository, data: repository, rows: blockRows(repository) } : undefined
+	}
+
+	/** Shows the line where the repository would land, unless it would stay where it is. */
+	protected show(event: DragEvent, dragged: string): boolean {
+		const target = dropTarget(event)
+		this.target = target && !staysPut(dragged, target) ? target : undefined
+		showLine(this.target)
+		return this.target !== undefined
+	}
+
+	/** Asks the extension to move the repository where the line is. */
+	protected drop(dragged: string): void {
+		if (this.target) {
+			post({
+				type: 'moveRepository',
+				repository: dragged,
+				target: this.target.repository,
+				after: this.target.after,
+			})
+		}
+	}
+
+	/** Hides the line. */
+	protected clear(): void {
+		this.target = undefined
+		showLine(undefined)
+	}
+}
+
+export const repositoryDrag = new RepositoryDrag()
+
+/** The repositories that can be dragged, in their order on screen: every one that isn't a worktree. */
 function draggableRepositories(): string[] {
 	return rowElements()
 		.filter(row => row.draggable)
@@ -22,10 +68,7 @@ function blockRows(repository: string): HTMLElement[] {
 	return rowElements().filter(row => row.dataset.repository === repository)
 }
 
-/**
- * Where a drop at the mouse lands: before or after the repository under it, whichever half of it and
- * its worktrees the mouse is in. Below the rows, it's after the last one.
- */
+/** Where a drop at the mouse lands: before or after the repository under it, or after the last one. */
 function dropTarget(event: DragEvent): DropTarget | undefined {
 	const last = rowElements().at(-1)
 	const below = last !== undefined && event.clientY > last.getBoundingClientRect().bottom
@@ -33,14 +76,12 @@ function dropTarget(event: DragEvent): DropTarget | undefined {
 
 	if (!repository) return undefined
 
+	// Whichever half of the repository and its worktrees the mouse is in.
 	const block = blockRows(repository)
 	const top = block[0].getBoundingClientRect().top
 	const bottom = block[block.length - 1].getBoundingClientRect().bottom
 
-	return {
-		repository,
-		after: event.clientY > (top + bottom) / 2,
-	}
+	return { repository, after: event.clientY > (top + bottom) / 2 }
 }
 
 /** Whether a drop would leave the repository where it is: on itself, or right next to it. */
@@ -52,112 +93,17 @@ function staysPut(dragged: string, target: DropTarget): boolean {
 	return to === from || (to === from + 1 && !target.after) || (to === from - 1 && target.after)
 }
 
-/** A repository being dragged in the Repositories panel, and the line where it would land. */
-class RepositoryDrag {
-	// The repository being dragged, by root URI.
-	private dragged: string | undefined
-	// Where it lands when it's dropped now, if anywhere.
-	private target: DropTarget | undefined
+/** Shows the line above or below where the repository would land, or hides it. */
+function showLine(target: DropTarget | undefined): void {
+	rowElements().forEach(row => row.classList.remove('drop-before', 'drop-after'))
 
-	/**
-	 * Listens for drags on the page, not just the rows, so a repository can be dropped below the last
-	 * one too.
-	 */
-	init(): void {
-		document.addEventListener('dragstart', e => this.onDragStart(e))
-		document.addEventListener('dragover', e => this.onDragOver(e))
-		document.addEventListener('drop', e => this.onDrop(e))
-		document.addEventListener('dragend', () => this.end())
-		document.addEventListener('dragleave', e => {
-			// Moving from one row to the next fires this too, so the line only goes once the mouse is
-			// outside the view.
-			if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= innerWidth || e.clientY >= innerHeight) {
-				this.showLine(undefined)
-			}
-		})
-	}
+	if (!target) return
 
-	/** Moves a repository above the one before it, or below the one after it, for Alt+Up and Alt+Down. */
-	moveByKeyboard(repository: string, down: boolean): void {
-		const order = draggableRepositories()
-		const target = order[order.indexOf(repository) + (down ? 1 : -1)]
+	const block = blockRows(target.repository)
 
-		if (target !== undefined) {
-			post({ type: 'moveRepository', repository, target, after: down })
-		}
-	}
-
-	/** Starts dragging a repository, with its worktrees. The rows aren't drawn again until it ends. */
-	private onDragStart(event: DragEvent): void {
-		const row = rowOf(event.target)
-		const repository = row?.dataset.repository
-
-		if (!row?.draggable || !repository || !event.dataTransfer) return
-
-		this.dragged = repository
-		event.dataTransfer.effectAllowed = 'move'
-		event.dataTransfer.setData(DRAG_TYPE, repository)
-		tooltip.hide()
-		tree.setDragging(true)
-		blockRows(repository).forEach(r => r.classList.add('dragging'))
-	}
-
-	/** Shows where the repository would land, and allows the drop there. */
-	private onDragOver(event: DragEvent): void {
-		// Something else, like a file from the Explorer.
-		if (this.dragged === undefined) return
-
-		const target = dropTarget(event)
-		const lands = target && !staysPut(this.dragged, target) ? target : undefined
-
-		if (lands && event.dataTransfer) {
-			event.preventDefault()
-			event.dataTransfer.dropEffect = 'move'
-		}
-
-		this.showLine(lands)
-	}
-
-	/** Asks the extension to move the repository where the line is. */
-	private onDrop(event: DragEvent): void {
-		if (this.dragged === undefined) return
-
-		event.preventDefault()
-
-		if (this.target) {
-			const { repository, after } = this.target
-			post({ type: 'moveRepository', repository: this.dragged, target: repository, after })
-		}
-
-		this.end()
-	}
-
-	/** Shows the line above or below where the repository would land, or hides it. */
-	private showLine(target: DropTarget | undefined): void {
-		this.target = target
-		rowElements().forEach(row => row.classList.remove('drop-before', 'drop-after'))
-
-		if (!target) return
-
-		const block = blockRows(target.repository)
-
-		if (target.after) {
-			block[block.length - 1].classList.add('drop-after')
-		} else {
-			block[0].classList.add('drop-before')
-		}
-	}
-
-	/** Ends the drag, dropped or not, and draws the rows that came in during it. */
-	private end(): void {
-		// Dragging files in the changes ends here too, so this only cleans up its own.
-		if (this.dragged === undefined) return
-
-		this.showLine(undefined)
-		rowElements().forEach(row => row.classList.remove('dragging'))
-		this.dragged = undefined
-		tree.setDragging(false)
+	if (target.after) {
+		block[block.length - 1].classList.add('drop-after')
+	} else {
+		block[0].classList.add('drop-before')
 	}
 }
-
-export const repositoryDrag = new RepositoryDrag()

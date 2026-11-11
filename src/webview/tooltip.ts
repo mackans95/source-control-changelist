@@ -1,6 +1,6 @@
 // The tooltip, drawn like VS Code's hovers. The browser's own `title` tooltips are slow, and often
 // don't show at all while the window isn't focused.
-import { DEFAULT_HOVER_DELAY_MS } from '../constants/shared.ts'
+import { DEFAULT_HOVER_DELAY_MS } from '#constants/shared.ts'
 import { getRoot, span } from './dom.ts'
 
 // Like VS Code: right after a tooltip hides, the next one shows without waiting.

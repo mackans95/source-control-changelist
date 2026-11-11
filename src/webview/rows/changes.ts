@@ -1,11 +1,10 @@
-// The rows for each repository, its groups, and their folders and files, with their buttons. The
-// Repositories panel (repositories.ts) builds its rows with the same functions.
-import { themeColor } from '../../helpers/shared.ts'
-import { run } from '../api.ts'
-import { collapsedRows } from '../collapse.ts'
-import { button, codicon, span } from '../dom.ts'
-import { fileIcon } from '../icons.ts'
-import { tree } from '../tree.ts'
+// The changes' rows: each repository, its groups and changelists, and their folders and files.
+import { actionButton, addTwistie, branchButton, createRow, repositoryIcon, repositoryTooltip } from './common.ts'
+import { themeColor } from '#helpers/shared.ts'
+import { run } from '#webview/api.ts'
+import { codicon, span } from '#webview/dom.ts'
+import { fileIcon } from '#webview/icons.ts'
+import { tree } from '#webview/tree.ts'
 import type {
 	ActionTarget,
 	ChangeCategory,
@@ -13,14 +12,9 @@ import type {
 	FileItem,
 	FolderItem,
 	GroupItem,
-	MenuContext,
 	RepositoryItem,
-	RepositoryKind,
-	RowSection,
-	SyncRepositoryItem,
-	WebviewAction,
-} from '../../types/shared.ts'
-import type { CategoryDisplay } from '../../types/webview.ts'
+} from '#types/shared.ts'
+import type { CategoryDisplay } from '#types/webview.ts'
 
 // In the order they're shown on the repository's row.
 const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
@@ -34,280 +28,8 @@ const CATEGORIES: Record<ChangeCategory, CategoryDisplay> = {
 	},
 }
 
-// Each kind of repository's icon, like the built-in Source Control view.
-const REPOSITORY_ICONS: Record<RepositoryKind, string> = {
-	repository: 'repo',
-	worktree: 'worktree',
-	submodule: 'archive',
-}
-
 // Staged Changes is green, like `git status` shows staged files, so it's clear which group is shown.
 const STAGED_COLOR = 'gitDecoration.addedResourceForeground'
-
-/** An icon button that runs a command on the row's target. */
-function actionButton(icon: string, title: string, action: WebviewAction, target: ActionTarget): HTMLButtonElement {
-	return button(`action codicon codicon-${icon}`, title, () => run(action, target))
-}
-
-/** A button with an icon and text, like the branch on a repository's row. */
-export function textButton(
-	icon: string,
-	text: string,
-	title: string,
-	action: WebviewAction,
-	target: ActionTarget,
-): HTMLButtonElement {
-	const element = button('text-button', title, () => run(action, target))
-	element.append(codicon(icon, 'text-button-icon'), span('text-button-label', text))
-	return element
-}
-
-/**
- * A row, added to `rows`, with its right-click menu context. The tree notes its parent and what
- * clicking it does.
- */
-export function createRow(
-	rows: HTMLElement[],
-	id: string,
-	level: number,
-	section: RowSection,
-	target: ActionTarget,
-	parentId: string | undefined,
-	onActivate: () => void,
-): HTMLDivElement {
-	const row = document.createElement('div')
-	row.className = `row ${section}`
-	row.dataset.id = id
-	const context: MenuContext = { webviewSection: section, preventDefaultContextMenuItems: true, ...target }
-	row.dataset.vscodeContext = JSON.stringify(context)
-	row.tabIndex = -1
-	row.setAttribute('role', 'treeitem')
-	row.setAttribute('aria-level', String(level))
-	row.style.setProperty('--level', String(level - 1))
-	tree.addRow(id, parentId, onActivate)
-	rows.push(row)
-	return row
-}
-
-/** Adds context keys to a row's right-click menu, for the `when` clauses of its items. */
-function addMenuContext(row: HTMLElement, keys: Partial<MenuContext>): void {
-	const context = JSON.parse(row.dataset.vscodeContext ?? '{}') as MenuContext
-	row.dataset.vscodeContext = JSON.stringify({ ...context, ...keys })
-}
-
-/** A repository row's tooltip: its folder, and for a worktree the repository it belongs to. */
-export function repositoryTooltip(repository: RepositoryItem | SyncRepositoryItem): string {
-	return repository.worktreeOf ? `${repository.path} • Worktree of ${repository.worktreeOf}` : repository.path
-}
-
-/** A repository row's icon, for a repository of its own, a worktree or a submodule. */
-export function repositoryIcon(kind: RepositoryKind): HTMLSpanElement {
-	return codicon(REPOSITORY_ICONS[kind])
-}
-
-/**
- * The branch on a repository's row, which switches branch. In the Repositories panel, its tooltip
- * also says which branch is the default.
- */
-export function branchButton(branch: string, target: ActionTarget, defaultBranch?: string): HTMLButtonElement {
-	let name = branch
-
-	if (defaultBranch !== undefined) {
-		name = branch === defaultBranch ? `${branch} (default)` : `${branch} (default is ${defaultBranch})`
-	}
-
-	return textButton('git-branch', branch, `${name}, Switch Branch...`, 'checkout', target)
-}
-
-/** Adds the arrow, and returns whether the row is expanded. */
-export function addTwistie(row: HTMLDivElement, id: string): boolean {
-	const expanded = !collapsedRows.has(id)
-	collapsedRows.addCollapsible(id)
-	row.setAttribute('aria-expanded', String(expanded))
-	row.append(codicon(expanded ? 'chevron-down' : 'chevron-right', 'twistie'))
-	return expanded
-}
-
-/** The colored counts on a repository's row, with a tooltip that spells them out. */
-function countsElement(counts: ChangeCounts): HTMLSpanElement {
-	const element = span('counts')
-	const descriptions: string[] = []
-	for (const category of Object.keys(CATEGORIES) as ChangeCategory[]) {
-		if (counts[category] > 0) {
-			const { icon, label, color } = CATEGORIES[category]
-			const count = span('count')
-			count.style.setProperty('color', themeColor(color))
-			count.append(codicon(icon, 'count-icon'), span('count-number', String(counts[category])))
-			element.append(count)
-			descriptions.push(`${counts[category]} ${label}`)
-		}
-	}
-	element.dataset.tooltip = descriptions.join(', ')
-	return element
-}
-
-/** The actions on a group's or folder's row: Discard All when it's unstaged, and Stage or Unstage All. */
-function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
-	const actions = span('actions')
-
-	if (group.kind === 'changes' || group.kind === 'untracked') {
-		actions.append(actionButton('discard', 'Discard All Changes', 'discardAll', target))
-	}
-
-	actions.append(
-		group.kind === 'staged'
-			? actionButton('remove', 'Unstage All Changes', 'unstageAll', target)
-			: actionButton('add', 'Stage All Changes', 'stageAll', target),
-	)
-
-	return actions
-}
-
-/**
- * Lets a file's or folder's row be dragged to another group, and dropped on, for its group. Merge
- * Changes is Git's own, so its files stay where they are.
- */
-function makeDraggable(row: HTMLDivElement, group: GroupItem): void {
-	row.dataset.group = group.id
-	row.draggable = group.kind !== 'merge'
-}
-
-/** A file's row: its icon, its name, its folder in list mode, its status letter and its actions. */
-function renderFile(
-	rows: HTMLElement[],
-	repository: RepositoryItem,
-	group: GroupItem,
-	file: FileItem,
-	level: number,
-	parentId: string,
-): void {
-	const target: ActionTarget = {
-		repository: repository.id,
-		kind: group.kind,
-		changelist: group.changelist,
-		uri: file.uri,
-	}
-	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
-	makeDraggable(row, group)
-	row.dataset.tooltip = file.tooltip
-	row.style.setProperty('--decoration-color', file.color)
-	if (file.strikethrough) {
-		row.classList.add('strikethrough')
-	}
-
-	const actions = span('actions')
-	actions.append(actionButton('go-to-file', 'Open File', 'openFile', target))
-	if (group.kind === 'changes' || group.kind === 'untracked') {
-		actions.append(actionButton('discard', 'Discard Changes', 'discard', target))
-	}
-	actions.append(
-		group.kind === 'staged'
-			? actionButton('remove', 'Unstage Changes', 'unstage', target)
-			: actionButton('add', 'Stage Changes', 'stage', target),
-	)
-
-	row.append(span('twistie'))
-	if (file.icon) {
-		row.append(fileIcon(file.icon))
-	}
-	row.append(span('label', file.name))
-
-	if (file.folder) {
-		row.append(span('description', file.folder))
-	}
-	row.append(span('spacer'), actions, span('letter', file.letter))
-}
-
-/** A folder's row, and the rows below it while it's expanded. */
-function renderFolder(
-	rows: HTMLElement[],
-	repository: RepositoryItem,
-	group: GroupItem,
-	folder: FolderItem,
-	level: number,
-	parentId: string,
-): void {
-	const target: ActionTarget = {
-		repository: repository.id,
-		kind: group.kind,
-		changelist: group.changelist,
-		uri: folder.uri,
-	}
-	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
-	makeDraggable(row, group)
-	const expanded = addTwistie(row, folder.id)
-	const actions = groupActions(group, target)
-	const icon = expanded ? folder.expandedIcon : folder.icon
-
-	if (icon) {
-		row.append(fileIcon(icon))
-	}
-
-	row.append(span('label', folder.label), span('spacer'), actions)
-
-	if (expanded) {
-		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
-	}
-}
-
-/** The rows for a group's or folder's folders and files. */
-function renderEntries(
-	rows: HTMLElement[],
-	repository: RepositoryItem,
-	group: GroupItem,
-	entries: readonly (FolderItem | FileItem)[],
-	level: number,
-	parentId: string,
-): void {
-	for (const entry of entries) {
-		if (entry.type === 'folder') {
-			renderFolder(rows, repository, group, entry, level, parentId)
-		} else {
-			renderFile(rows, repository, group, entry, level, parentId)
-		}
-	}
-}
-
-/** A group's or changelist's row, and the rows below it while it's expanded. */
-function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
-	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
-	const row = createRow(rows, group.id, 2, 'group', target, repository.id, () => tree.toggle(group.id))
-	// Files dropped on a group's row land in the group (drag/changes.ts).
-	row.dataset.group = group.id
-	const expanded = addTwistie(row, group.id)
-	addMenuContext(row, { active: group.active })
-	const actions = groupActions(group, target)
-
-	// A changelist commits on its own, like a repository does.
-	if (group.changelist !== undefined) {
-		actions.prepend(actionButton('check', 'Commit Changelist', 'commitChangelist', target))
-	}
-
-	const label = span('label', group.label)
-
-	if (group.kind === 'staged') {
-		label.style.setProperty('color', themeColor(STAGED_COLOR))
-	}
-
-	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
-	const active = group.active && group.changelist !== undefined
-	row.classList.toggle('active-changelist', active)
-
-	// An empty `data-tooltip` would still show an empty tooltip, so it's only set when there's text.
-	const tooltip = [group.description, active ? 'Active changelist: new changes go here' : undefined].filter(Boolean)
-
-	if (tooltip.length > 0) {
-		row.dataset.tooltip = tooltip.join(' • ')
-	}
-
-	const description = group.description ? [span('description', group.description)] : []
-
-	row.append(label, ...description, span('spacer'), actions, span('badge', String(group.count)))
-
-	if (expanded) {
-		renderEntries(rows, repository, group, group.children, 3, group.id)
-	}
-}
 
 /** A repository's row, and the rows below it while it's expanded. */
 export function renderRepository(rows: HTMLElement[], repository: RepositoryItem): void {
@@ -342,4 +64,197 @@ export function renderRepository(rows: HTMLElement[], repository: RepositoryItem
 			renderGroup(rows, repository, group)
 		}
 	}
+}
+
+/** The colored counts on a repository's row, with a tooltip that spells them out. */
+function countsElement(counts: ChangeCounts): HTMLSpanElement {
+	const element = span('counts')
+	const descriptions: string[] = []
+
+	for (const category of Object.keys(CATEGORIES) as ChangeCategory[]) {
+		if (counts[category] > 0) {
+			const { icon, label, color } = CATEGORIES[category]
+			const count = span('count')
+			count.style.setProperty('color', themeColor(color))
+			count.append(codicon(icon, 'count-icon'), span('count-number', String(counts[category])))
+			element.append(count)
+			descriptions.push(`${counts[category]} ${label}`)
+		}
+	}
+
+	element.dataset.tooltip = descriptions.join(', ')
+	return element
+}
+
+/** A group's or changelist's row, and the rows below it while it's expanded. */
+function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: GroupItem): void {
+	const target: ActionTarget = { repository: repository.id, kind: group.kind, changelist: group.changelist }
+	const context = { ...target, active: group.active }
+	const row = createRow(rows, group.id, 2, 'group', context, repository.id, () => tree.toggle(group.id))
+	// Files dropped on a group's row land in the group.
+	row.dataset.group = group.id
+	const expanded = addTwistie(row, group.id)
+	const actions = groupActions(group, target)
+
+	// A changelist commits on its own, like a repository does.
+	if (group.changelist !== undefined) {
+		actions.prepend(actionButton('check', 'Commit Changelist', 'commitChangelist', target))
+	}
+
+	const label = span('label', group.label)
+
+	if (group.kind === 'staged') {
+		label.style.setProperty('color', themeColor(STAGED_COLOR))
+	}
+
+	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
+	const active = group.active && group.changelist !== undefined
+	row.classList.toggle('active-changelist', active)
+
+	const tooltip = groupTooltip(group, active)
+
+	// An empty `data-tooltip` would still show an empty tooltip.
+	if (tooltip) {
+		row.dataset.tooltip = tooltip
+	}
+
+	const description = group.description ? [span('description', group.description)] : []
+
+	row.append(label, ...description, span('spacer'), actions, span('badge', String(group.count)))
+
+	if (expanded) {
+		renderEntries(rows, repository, group, group.children, 3, group.id)
+	}
+}
+
+/** The actions on a group's or folder's row: Discard All when it's unstaged, and Stage or Unstage All. */
+function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
+	const actions = span('actions')
+
+	if (group.kind === 'changes' || group.kind === 'untracked') {
+		actions.append(actionButton('discard', 'Discard All Changes', 'discardAll', target))
+	}
+
+	actions.append(
+		group.kind === 'staged'
+			? actionButton('remove', 'Unstage All Changes', 'unstageAll', target)
+			: actionButton('add', 'Stage All Changes', 'stageAll', target),
+	)
+
+	return actions
+}
+
+/** A group's tooltip: a changelist's description, and whether it's the active one. */
+function groupTooltip(group: GroupItem, active: boolean): string {
+	return [group.description, active ? 'Active changelist: new changes go here' : undefined]
+		.filter(Boolean)
+		.join(' • ')
+}
+
+/** The rows for a group's or folder's folders and files. */
+function renderEntries(
+	rows: HTMLElement[],
+	repository: RepositoryItem,
+	group: GroupItem,
+	entries: readonly (FolderItem | FileItem)[],
+	level: number,
+	parentId: string,
+): void {
+	for (const entry of entries) {
+		if (entry.type === 'folder') {
+			renderFolder(rows, repository, group, entry, level, parentId)
+		} else {
+			renderFile(rows, repository, group, entry, level, parentId)
+		}
+	}
+}
+
+/** A folder's row, and the rows below it while it's expanded. */
+function renderFolder(
+	rows: HTMLElement[],
+	repository: RepositoryItem,
+	group: GroupItem,
+	folder: FolderItem,
+	level: number,
+	parentId: string,
+): void {
+	const target: ActionTarget = {
+		repository: repository.id,
+		kind: group.kind,
+		changelist: group.changelist,
+		uri: folder.uri,
+	}
+	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
+	makeDraggable(row, group)
+	const expanded = addTwistie(row, folder.id)
+	const icon = expanded ? folder.expandedIcon : folder.icon
+
+	if (icon) {
+		row.append(fileIcon(icon))
+	}
+
+	row.append(span('label', folder.label), span('spacer'), groupActions(group, target))
+
+	if (expanded) {
+		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
+	}
+}
+
+/** Lets a file's or folder's row be dragged to another group. Merge Changes is Git's own, so its stay. */
+function makeDraggable(row: HTMLDivElement, group: GroupItem): void {
+	row.dataset.group = group.id
+	row.draggable = group.kind !== 'merge'
+}
+
+/** A file's row: its icon, its name, its folder in list mode, its status letter and its actions. */
+function renderFile(
+	rows: HTMLElement[],
+	repository: RepositoryItem,
+	group: GroupItem,
+	file: FileItem,
+	level: number,
+	parentId: string,
+): void {
+	const target: ActionTarget = {
+		repository: repository.id,
+		kind: group.kind,
+		changelist: group.changelist,
+		uri: file.uri,
+	}
+	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
+	makeDraggable(row, group)
+	row.dataset.tooltip = file.tooltip
+	row.style.setProperty('--decoration-color', file.color)
+	row.classList.toggle('strikethrough', file.strikethrough)
+	row.append(span('twistie'))
+
+	if (file.icon) {
+		row.append(fileIcon(file.icon))
+	}
+
+	row.append(span('label', file.name))
+
+	if (file.folder) {
+		row.append(span('description', file.folder))
+	}
+
+	row.append(span('spacer'), fileActions(group, target), span('letter', file.letter))
+}
+
+/** The actions on a file's row: Open File, Discard when it's unstaged, and Stage or Unstage. */
+function fileActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
+	const actions = span('actions')
+	actions.append(actionButton('go-to-file', 'Open File', 'openFile', target))
+
+	if (group.kind === 'changes' || group.kind === 'untracked') {
+		actions.append(actionButton('discard', 'Discard Changes', 'discard', target))
+	}
+
+	actions.append(
+		group.kind === 'staged'
+			? actionButton('remove', 'Unstage Changes', 'unstage', target)
+			: actionButton('add', 'Stage Changes', 'stage', target),
+	)
+
+	return actions
 }

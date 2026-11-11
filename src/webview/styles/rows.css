@@ -1,4 +1,4 @@
-/* What every row has (rows/changes.ts): the indent, the arrow, the icon and the name, how a row looks when
+/* What every row has (rows/common.ts): the indent, the arrow, the icon and the name, how a row looks when
    it's hovered, selected or dragged, the count on a group's row, and the active changelist's bold
    name. */
 
