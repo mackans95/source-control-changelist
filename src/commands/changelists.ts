@@ -30,8 +30,8 @@ export function changelistCommands({ changelists }: Services): CommandTable {
 		),
 		moveToChangelist: forNodes(['group', 'folder', 'resource'], node => moveToChangelist(node, changelists)),
 		// The view runs it when a file or folder is dropped on a group. It isn't in the menus.
-		dropChanges: (source: Node, target: Node) =>
-			(source.type === 'folder' || source.type === 'resource') && target.type === 'group'
+		dropChanges: (source: Node | undefined, target: Node | undefined) =>
+			(source?.type === 'folder' || source?.type === 'resource') && target?.type === 'group'
 				? dropChanges(source, target, changelists)
 				: undefined,
 	}
