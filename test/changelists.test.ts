@@ -10,6 +10,8 @@ import {
 	unlistedChanges,
 	listsOf,
 	trackHunks,
+	moveFiles,
+	moveHunks,
 } from '../src/model/changelists.ts'
 import type { Hunk, RepositoryChangelists } from '#types/extension.ts'
 
@@ -124,6 +126,26 @@ describe('trackHunks and split files', () => {
 		const tracked = trackHunks({ ...split, lists: ['Feature'] }, new Map([[uri, [top, bottom]]]), new Map(), 'abc')
 		assert.deepEqual(tracked.files, { [uri]: 'Feature' })
 		assert.equal(tracked.hunks, undefined)
+	})
+	test('splits a file when one of its changes moves to another list', () => {
+		const moved = moveHunks(base, file, [top, bottom], [bottom], 'Later', 'abc')
+		assert.deepEqual(moved.files, { [uri]: 'Feature' })
+		assert.deepEqual(moved.hunks, split.hunks)
+	})
+	test("moves a split file's part back, which puts it back together", () => {
+		const moved = moveHunks(split, file, [top, bottom], [bottom], 'Feature', 'abc')
+		assert.deepEqual(moved.files, { [uri]: 'Feature' })
+		assert.equal(moved.hunks, undefined)
+	})
+	test("moves a file's only list's changes elsewhere, which moves the file", () => {
+		const moved = moveHunks(base, file, [top, bottom], [top, bottom], undefined, 'abc')
+		assert.deepEqual(moved.files, {})
+		assert.equal(moved.hunks, undefined)
+	})
+	test('moves a split file whole', () => {
+		const moved = moveFiles(split, [file], 'Later')
+		assert.deepEqual(moved.files, { [uri]: 'Later' })
+		assert.equal(moved.hunks, undefined)
 	})
 	test('forgets the split of a file that has no changes any more', () => {
 		assert.equal(trackHunks(split, new Map(), new Map(), 'abc').hunks, undefined)

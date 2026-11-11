@@ -3,6 +3,7 @@ import * as vscode from 'vscode'
 import { changeCommands } from './changes.ts'
 import { changelistCommands } from './changelists.ts'
 import { commitCommands } from './commit.ts'
+import { hunkCommands } from './hunks.ts'
 import { repositoryCommands } from './repositories.ts'
 import { viewCommands } from './view.ts'
 import { resolveTarget } from '../view/targets.ts'
@@ -17,6 +18,7 @@ export function registerCommands(services: Services, provider: ChangelistWebview
 		...changeCommands(services),
 		...commitCommands(services),
 		...changelistCommands(services),
+		...hunkCommands(services),
 		...repositoryCommands(services),
 	}
 

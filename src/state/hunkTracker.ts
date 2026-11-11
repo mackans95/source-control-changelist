@@ -17,8 +17,9 @@ export class HunkTracker implements vscode.Disposable {
 	private readonly changelists: ChangelistStore
 	// Each repository's modified files' changes at the last check, by root URI and then file URI.
 	private readonly hunks = new Map<string, ReadonlyMap<string, readonly Hunk[]>>()
-	// The repositories being checked, by root URI, and whether another check is due once it's done.
-	private readonly checks = new Map<string, boolean>()
+	// The checks that are running, by root URI, and the repositories that need one more after them.
+	private readonly running = new Map<string, Promise<void>>()
+	private readonly again = new Set<string>()
 	private readonly changeEmitter = new vscode.EventEmitter<void>()
 
 	// When the changes have been read again.
@@ -34,24 +35,30 @@ export class HunkTracker implements vscode.Disposable {
 		return this.hunks.get(repository.rootUri.toString())?.get(uri.toString())
 	}
 
-	/** Reads a repository's changes again, after the check that's running, if any. */
-	async track(repository: Repository): Promise<void> {
+	/** Reads a repository's changes again, after the check that's running, if any, and resolves once they're read. */
+	track(repository: Repository): Promise<void> {
 		const key = repository.rootUri.toString()
+		const running = this.running.get(key)
 
 		// One check at a time, and one more for everything that came in meanwhile.
-		if (this.checks.has(key)) {
-			this.checks.set(key, true)
-			return
+		if (running) {
+			this.again.add(key)
+			return running
 		}
 
-		try {
-			do {
-				this.checks.set(key, false)
-				await this.check(repository)
-			} while (this.checks.get(key))
-		} finally {
-			this.checks.delete(key)
-		}
+		const checks = (async () => {
+			try {
+				do {
+					this.again.delete(key)
+					await this.check(repository)
+				} while (this.again.has(key))
+			} finally {
+				this.running.delete(key)
+			}
+		})()
+
+		this.running.set(key, checks)
+		return checks
 	}
 
 	/** Stops the change event. */

@@ -110,34 +110,87 @@ export function trackHunks(
 	previous: ReadonlyMap<string, readonly Hunk[]>,
 	head: string,
 ): RepositoryChangelists {
-	const files: Record<string, string> = { ...changelists.files }
 	const active = validList(changelists, changelists.active)
 	// Only the files that were read can still be split.
-	const hunks = Object.fromEntries(Object.entries(changelists.hunks ?? {}).filter(([uri]) => diffs.has(uri)))
+	const read = Object.entries(changelists.hunks ?? {}).filter(([uri]) => diffs.has(uri))
+	let tracked: RepositoryChangelists = { ...changelists, hunks: orUndefined(Object.fromEntries(read)) }
 
-	for (const [uri, current] of diffs) {
-		const fileList = validList(changelists, files[uri])
-		const lists = assignHunks(current, hunks[uri], head, previous.get(uri), fileList, active).map(list =>
-			validList(changelists, list, fileList),
+	for (const [uri, hunks] of diffs) {
+		const fileList = validList(tracked, tracked.files[uri])
+		const saved = tracked.hunks?.[uri]
+		const lists = assignHunks(hunks, saved, head, previous.get(uri), fileList, active).map(list =>
+			validList(tracked, list, fileList),
 		)
-		// A file keeps its list while any of its changes are in it.
-		const ownList = lists.length === 0 || lists.includes(fileList) ? fileList : lists[0]
-		const split = splitHunks(current, lists, ownList, head)
+		tracked = placeHunks(tracked, uri, hunks, lists, head)
+	}
 
-		if (ownList === undefined) {
-			delete files[uri]
-		} else {
-			files[uri] = ownList
-		}
+	return tracked
+}
 
-		if (split) {
-			hunks[uri] = split
+/** The changelists with some of a file's changes moved to a list, or to Changes when `to` is undefined. */
+export function moveHunks(
+	changelists: RepositoryChangelists,
+	change: Change,
+	hunks: readonly Hunk[],
+	moved: readonly Hunk[],
+	to: string | undefined,
+	head: string,
+): RepositoryChangelists {
+	const lists = hunkLists(changelists, change, hunks, head).map((list, i) => (moved.includes(hunks[i]) ? to : list))
+	return placeHunks(changelists, change.uri.toString(), hunks, lists, head)
+}
+
+/** The changelists with whole files moved to a list, or out of every list when `to` is undefined. */
+export function moveFiles(
+	changelists: RepositoryChangelists,
+	changes: readonly Change[],
+	to: string | undefined,
+): RepositoryChangelists {
+	const files: Record<string, string> = { ...changelists.files }
+	const hunks = { ...changelists.hunks }
+
+	for (const change of changes) {
+		// A split file moves with all of its changes.
+		delete hunks[change.uri.toString()]
+
+		if (to === undefined) {
+			delete files[change.uri.toString()]
 		} else {
-			delete hunks[uri]
+			files[change.uri.toString()] = to
 		}
 	}
 
 	return { ...changelists, files, hunks: orUndefined(hunks) }
+}
+
+/** The changelists with a file's changes in these lists: split, or the whole file in the one list they're all in. */
+function placeHunks(
+	changelists: RepositoryChangelists,
+	uri: string,
+	hunks: readonly Hunk[],
+	lists: readonly (string | undefined)[],
+	head: string,
+): RepositoryChangelists {
+	const files: Record<string, string> = { ...changelists.files }
+	const saved = { ...changelists.hunks }
+	const fileList = validList(changelists, files[uri])
+	// A file keeps its list while any of its changes are in it.
+	const ownList = lists.length === 0 || lists.includes(fileList) ? fileList : lists[0]
+	const split = splitHunks(hunks, lists, ownList, head)
+
+	if (ownList === undefined) {
+		delete files[uri]
+	} else {
+		files[uri] = ownList
+	}
+
+	if (split) {
+		saved[uri] = split
+	} else {
+		delete saved[uri]
+	}
+
+	return { ...changelists, files, hunks: orUndefined(saved) }
 }
 
 /** A list if it still exists, or else `fallback`. Undefined, Changes, always exists. */

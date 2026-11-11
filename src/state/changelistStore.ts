@@ -3,7 +3,7 @@
 import * as vscode from 'vscode'
 import { changedUris } from '../model/changes.ts'
 import { claimNewChanges, pruneChangelists } from '../model/changelists.ts'
-import type { Change, Repository } from '../types/git.ts'
+import type { Repository } from '../types/git.ts'
 import type { RepositoryChangelists } from '../types/extension.ts'
 
 // The workspace state's key, with every repository's changelists by the repository's root URI.
@@ -94,29 +94,6 @@ export class ChangelistStore implements vscode.Disposable {
 		}
 
 		return this.set(repository, { ...changelists, descriptions: Object.fromEntries(descriptions) })
-	}
-
-	/** Moves whole files to a changelist, or out of every changelist when `name` is undefined. */
-	move(repository: Repository, changes: readonly Change[], name: string | undefined): Promise<void> {
-		const files = { ...this.get(repository).files }
-		// A split file moves with all of its changes.
-		const hunks = { ...this.get(repository).hunks }
-
-		for (const change of changes) {
-			delete hunks[change.uri.toString()]
-
-			if (name === undefined) {
-				delete files[change.uri.toString()]
-			} else {
-				files[change.uri.toString()] = name
-			}
-		}
-
-		return this.set(repository, {
-			...this.get(repository),
-			files,
-			hunks: Object.keys(hunks).length > 0 ? hunks : undefined,
-		})
 	}
 
 	/** Changes a repository's changelists, and draws the view again when that changed anything. */

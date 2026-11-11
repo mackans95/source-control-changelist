@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { runGit } from '#helpers/git.ts'
-import { assignHunks, discardPatch, hunkAtLine, parseDiff, splitHunks, stagePatch, withHunks } from '#model/hunks.ts'
+import { assignHunks, discardPatch, hunksInLines, parseDiff, splitHunks, stagePatch, withHunks } from '#model/hunks.ts'
 import type { FileHunks, Hunk } from '#types/extension.ts'
 
 // Lines 1 to 30, one number each, like `seq 1 30`.
@@ -193,17 +193,20 @@ describe('stagePatch, discardPatch and withHunks', () => {
 	})
 })
 
-describe('hunkAtLine', () => {
+describe('hunksInLines', () => {
 	const changedLines = hunk(3, 2, 3, 2)
 	const deleted = hunk(10, 2, 7, 0)
 
 	test('finds the change on a changed line', () => {
-		assert.equal(hunkAtLine([changedLines, deleted], 4), changedLines)
-		assert.equal(hunkAtLine([changedLines, deleted], 5), undefined)
+		assert.deepEqual(hunksInLines([changedLines, deleted], 4, 4), [changedLines])
+		assert.deepEqual(hunksInLines([changedLines, deleted], 5, 5), [])
 	})
 	test('finds a deletion from the lines on either side of it', () => {
-		assert.equal(hunkAtLine([changedLines, deleted], 7), deleted)
-		assert.equal(hunkAtLine([changedLines, deleted], 8), deleted)
-		assert.equal(hunkAtLine([changedLines, deleted], 9), undefined)
+		assert.deepEqual(hunksInLines([changedLines, deleted], 7, 7), [deleted])
+		assert.deepEqual(hunksInLines([changedLines, deleted], 8, 8), [deleted])
+		assert.deepEqual(hunksInLines([changedLines, deleted], 9, 9), [])
+	})
+	test('finds every change in a selection', () => {
+		assert.deepEqual(hunksInLines([changedLines, deleted], 1, 7), [changedLines, deleted])
 	})
 })

@@ -94,6 +94,15 @@ export interface Hunk {
 	readonly lines: readonly string[]
 }
 
+/** A change as the gutter's change peek passes it to its toolbar's commands. Its lines count from 1. */
+export interface LineChange {
+	readonly originalStartLineNumber: number
+	readonly originalEndLineNumber: number
+	readonly modifiedStartLineNumber: number
+	/** 0 for a deletion, which comes after the start line. */
+	readonly modifiedEndLineNumber: number
+}
+
 /** A change saved in another list than its file's: where it is on HEAD's side, and its text. */
 export interface SavedHunk {
 	readonly oldStart: number

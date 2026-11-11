@@ -103,15 +103,16 @@ export function withHunks(head: string, hunks: readonly Hunk[]): string {
 	return lines.join('')
 }
 
-/** The hunk at a line of the working tree's file, counted from 1, where the gutter marks it. */
-export function hunkAtLine(hunks: readonly Hunk[], line: number): Hunk | undefined {
-	return hunks.find(hunk =>
+/** The hunks on lines `first` to `last` of the working tree's file, counted from 1, where the gutter marks them. */
+export function hunksInLines(hunks: readonly Hunk[], first: number, last: number): Hunk[] {
+	return hunks.filter(hunk => {
 		// A deletion is marked between the lines around it.
-		hunk.newLines === 0
-			? line === hunk.newStart || line === hunk.newStart + 1
-			: line >= hunk.newStart && line < hunk.newStart + hunk.newLines,
-	)
+		const start = hunk.newStart
+		const end = hunk.newLines === 0 ? hunk.newStart + 1 : hunk.newStart + hunk.newLines - 1
+		return start <= last && first <= end
+	})
 }
+
 
 /** The path in a `---` or `+++` line, or undefined for `/dev/null`, a file that's added or deleted. */
 function headerPath(line: string): string | undefined {
