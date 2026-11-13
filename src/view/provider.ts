@@ -115,7 +115,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/** Listens to the repositories, the services and the settings that change what the view shows. */
 	private listen(): void {
-		const { git, changelists, operations, defaultBranches, repositoryOrder } = this.services
+		const { git, changelists, hunks, operations, defaultBranches, repositoryOrder } = this.services
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -127,6 +127,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			git.onDidOpenRepository(r => this.onDidOpenRepository(r)),
 			git.onDidCloseRepository(r => this.onDidCloseRepository(r)),
 			changelists.onDidChange(() => this.postUpdate()),
+			// What's staged of a split file's parts changes the rows' buttons.
+			hunks.onDidChange(() => this.postUpdate()),
 			operations.onDidChange(() => this.postUpdate()),
 			defaultBranches.onDidChange(() => this.postUpdate()),
 			repositoryOrder.onDidChange(() => this.postUpdate()),

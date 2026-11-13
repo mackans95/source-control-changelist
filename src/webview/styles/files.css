@@ -33,3 +33,10 @@
 	margin-left: 4px;
 	color: var(--vscode-descriptionForeground);
 }
+
+/* The mark on a list's file with staged changes, in Staged Changes' green. */
+.staged-mark {
+	flex: none;
+	margin-left: 4px;
+	color: var(--vscode-gitDecoration-addedResourceForeground);
+}

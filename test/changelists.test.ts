@@ -32,6 +32,17 @@ describe('changelistOf, groupChanges and pruneChangelists', () => {
 		assert.deepEqual(groupChanges(repo, 'changes', changelists), [tracked])
 		assert.deepEqual(groupChanges(repo, 'untracked', changelists), [])
 	})
+	test('keeps a staged file in its list, and leaves it out of Changes', () => {
+		const staged = change('b.ts', Status.INDEX_MODIFIED)
+		const stagedRepo = repository({ staged: [staged], changes: [tracked] })
+		assert.deepEqual(groupChanges(stagedRepo, 'changes', changelists, 'Feature'), [staged])
+		assert.deepEqual(groupChanges(stagedRepo, 'changes', changelists), [tracked])
+	})
+	test('shows a file once in its list when it has staged and unstaged changes', () => {
+		const staged = change('b.ts', Status.INDEX_MODIFIED)
+		const both = repository({ staged: [staged], changes: [tracked, moved] })
+		assert.deepEqual(groupChanges(both, 'changes', changelists, 'Feature'), [moved])
+	})
 	test("puts a file in Changes when its changelist doesn't exist any more", () => {
 		assert.equal(changelistOf({ lists: [], files: { [moved.uri.toString()]: 'Gone' } }, moved), undefined)
 	})

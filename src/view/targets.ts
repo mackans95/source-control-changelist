@@ -7,7 +7,7 @@ import type { Change, Repository } from '../types/git.ts'
 import type { ActionTarget, GroupKind } from '../types/shared.ts'
 
 /** The repository, group, folder or file a target points at, or undefined when it's gone. */
-export function resolveTarget({ git, changelists }: Services, target: ActionTarget): Node | undefined {
+export function resolveTarget({ git, changelists, hunks }: Services, target: ActionTarget): Node | undefined {
 	// `git.repositories` makes new objects on every call, so they're found by their URI.
 	const repository = git.repositories.find(r => r.rootUri.toString() === target.repository)
 
@@ -18,7 +18,10 @@ export function resolveTarget({ git, changelists }: Services, target: ActionTarg
 	}
 
 	const { kind, changelist } = target
-	const changes = groupChanges(repository, kind, changelists.get(repository), changelist)
+
+	const diffOf = (change: Change) => hunks.diff(repository, change.uri)
+
+	const changes = groupChanges(repository, kind, changelists.get(repository), changelist, diffOf)
 
 	if (!target.uri) {
 		return { type: 'group', repository, kind, changelist, changes }

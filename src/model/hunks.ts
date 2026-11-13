@@ -1,6 +1,7 @@
 // A file's changes against HEAD, one block of changed lines each: reading them from `git diff -U0`,
 // which list each one is in, and the patches that stage or discard some of them.
-import type { FileHunks, Hunk, SavedHunk } from '#types/extension.ts'
+import type { FileDiff, FileHunks, Hunk, SavedHunk } from '#types/extension.ts'
+import type { StagedState } from '#types/shared.ts'
 
 // A hunk's header, like `@@ -3,2 +3,2 @@`. A count that's left out is 1.
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
@@ -103,16 +104,39 @@ export function withHunks(head: string, hunks: readonly Hunk[]): string {
 	return lines.join('')
 }
 
+/** The hunks that are none of `part`'s changes, by where they are on HEAD's side. */
+export function hunksOutside(hunks: readonly Hunk[], part: readonly Hunk[]): Hunk[] {
+	return hunks.filter(hunk => !part.some(p => touches(p, hunk)))
+}
+
+/** The hunks that are `part`'s changes, by where they are on HEAD's side. */
+export function hunksInside(hunks: readonly Hunk[], part: readonly Hunk[]): Hunk[] {
+	return hunks.filter(h => part.some(p => touches(p, h)))
+}
+
+/** How much of a part of a file's changes is staged, from what's staged of the file. */
+export function partStaged(part: readonly Hunk[], { staged, unstaged }: FileDiff): StagedState {
+	if (!staged || hunksInside(staged, part).length === 0) return 'none'
+
+	// The unstaged changes' lines are the working tree's, like the part's.
+	const isUnstaged = part.some(hunk => hunksInLines(unstaged ?? [], ...workingTreeLines(hunk)).length > 0)
+
+	return isUnstaged ? 'some' : 'all'
+}
+
 /** The hunks on lines `first` to `last` of the working tree's file, counted from 1, where the gutter marks them. */
 export function hunksInLines(hunks: readonly Hunk[], first: number, last: number): Hunk[] {
 	return hunks.filter(hunk => {
-		// A deletion is marked between the lines around it.
-		const start = hunk.newStart
-		const end = hunk.newLines === 0 ? hunk.newStart + 1 : hunk.newStart + hunk.newLines - 1
+		const [start, end] = workingTreeLines(hunk)
 		return start <= last && first <= end
 	})
 }
 
+/** The first and last line of a hunk in the working tree's file, where the gutter marks it. */
+export function workingTreeLines(hunk: Hunk): [number, number] {
+	// A deletion is marked between the lines around it.
+	return hunk.newLines === 0 ? [hunk.newStart, hunk.newStart + 1] : [hunk.newStart, hunk.newStart + hunk.newLines - 1]
+}
 
 /** The path in a `---` or `+++` line, or undefined for `/dev/null`, a file that's added or deleted. */
 function headerPath(line: string): string | undefined {

@@ -27,7 +27,7 @@ export function buildUpdate(
 
 /** The changes' rows, for the repositories that have changes. */
 function changesRows(
-	{ changelists }: Services,
+	{ changelists, hunks }: Services,
 	repositories: readonly Repository[],
 	icons: IconResolver,
 ): RepositoryItem[] {
@@ -36,7 +36,11 @@ function changesRows(
 	// Filtered after sorting, so a worktree stays below its repository when both have changes.
 	return repositories
 		.filter(hasChanges)
-		.map(repository => toRepositoryItem(repository, changelists.get(repository), viewMode, icons))
+		.map(repository =>
+			toRepositoryItem(repository, changelists.get(repository), viewMode, icons, change =>
+				hunks.diff(repository, change.uri),
+			),
+		)
 }
 
 /** The Repositories panel's rows, for every repository. */

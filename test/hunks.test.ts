@@ -4,7 +4,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { runGit } from '#helpers/git.ts'
-import { assignHunks, discardPatch, hunksInLines, parseDiff, splitHunks, stagePatch, withHunks } from '#model/hunks.ts'
+import {
+	assignHunks,
+	discardPatch,
+	hunksInLines,
+	hunksOutside,
+	parseDiff,
+	partStaged,
+	splitHunks,
+	stagePatch,
+	withHunks,
+} from '#model/hunks.ts'
 import type { FileHunks, Hunk } from '#types/extension.ts'
 
 // Lines 1 to 30, one number each, like `seq 1 30`.
@@ -208,5 +218,26 @@ describe('hunksInLines', () => {
 	})
 	test('finds every change in a selection', () => {
 		assert.deepEqual(hunksInLines([changedLines, deleted], 1, 7), [changedLines, deleted])
+	})
+})
+
+describe('hunksOutside', () => {
+	test("finds the staged changes that aren't a part's", () => {
+		const top = hunk(3, 1, 3, 1)
+		const bottom = hunk(20, 1, 20, 1)
+		assert.deepEqual(hunksOutside([top, bottom], [bottom]), [top])
+		assert.deepEqual(hunksOutside([bottom], [top, bottom]), [])
+	})
+})
+
+describe('partStaged', () => {
+	const top = hunk(3, 1, 3, 1)
+	const bottom = hunk(20, 1, 20, 1)
+
+	test('knows whether none, some or all of a part is staged', () => {
+		assert.equal(partStaged([bottom], { hunks: [top, bottom] }), 'none')
+		assert.equal(partStaged([bottom], { hunks: [top, bottom], staged: [top], unstaged: [bottom] }), 'none')
+		assert.equal(partStaged([bottom], { hunks: [top, bottom], staged: [bottom], unstaged: [top] }), 'all')
+		assert.equal(partStaged([top, bottom], { hunks: [top, bottom], staged: [bottom], unstaged: [top] }), 'some')
 	})
 })

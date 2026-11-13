@@ -1,7 +1,7 @@
 // Types only the extension uses, not the webview.
 import type * as vscode from 'vscode'
 import type { API, Change, Repository } from './git.ts'
-import type { FileIcon, GroupKind, IconFont } from './shared.ts'
+import type { FileIcon, GroupKind, IconFont, StagedState } from './shared.ts'
 import type { ChangelistStore } from '../state/changelistStore.ts'
 import type { DefaultBranches } from '../state/defaultBranches.ts'
 import type { HunkTracker } from '../state/hunkTracker.ts'
@@ -94,6 +94,24 @@ export interface Hunk {
 	readonly lines: readonly string[]
 }
 
+/** A file split between lists, with its changes in one of them. */
+export interface FilePart {
+	readonly change: Change
+	readonly hunks: readonly Hunk[]
+}
+
+/** Changes as Stage and Discard take them: whole files, and the parts of split files in one list. */
+export interface FileParts {
+	readonly whole: readonly Change[]
+	readonly split: readonly FilePart[]
+}
+
+/** What a file's row shows besides the file: the other lists it's split with, and what's staged. */
+export interface FileDetails {
+	readonly otherLists: readonly string[]
+	readonly staged: StagedState
+}
+
 /** A change as the gutter's change peek passes it to its toolbar's commands. Its lines count from 1. */
 export interface LineChange {
 	readonly originalStartLineNumber: number
@@ -101,6 +119,15 @@ export interface LineChange {
 	readonly modifiedStartLineNumber: number
 	/** 0 for a deletion, which comes after the start line. */
 	readonly modifiedEndLineNumber: number
+}
+
+/** A file's changes as read after Git's last check: against HEAD, and when some are staged, which. */
+export interface FileDiff {
+	readonly hunks: readonly Hunk[]
+	/** HEAD against the index, when the file has staged changes. */
+	readonly staged?: readonly Hunk[]
+	/** The index against the working tree, when the file has staged changes. */
+	readonly unstaged?: readonly Hunk[]
 }
 
 /** A change saved in another list than its file's: where it is on HEAD's side, and its text. */

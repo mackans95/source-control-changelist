@@ -4,6 +4,7 @@ import { changesOf, forNodes, paths } from './nodes.ts'
 import { GROUP_LABELS } from '#model/changes.ts'
 import { hunkLists, moveFiles, moveHunks } from '#model/changelists.ts'
 import { repositoryName } from '#model/repositories.ts'
+import { partsOf, stageParts } from './parts.ts'
 import type { ChangelistStore } from '#state/changelistStore.ts'
 import type {
 	ChangelistPick,
@@ -95,7 +96,7 @@ async function dropChanges(services: Services, source: FolderNode | ResourceNode
 	const changes = changesOf(source)
 
 	if (target.kind === 'staged') {
-		await repository.add(paths(changes))
+		await stageParts(services, repository, await partsOf(services, repository, changes, source.changelist))
 		return
 	}
 

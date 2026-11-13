@@ -7,7 +7,7 @@ import { runGit } from '#helpers/git.ts'
 import { trackHunks } from '#model/changelists.ts'
 import { parseDiff } from '#model/hunks.ts'
 import type { ChangelistStore } from '#state/changelistStore.ts'
-import type { Hunk } from '#types/extension.ts'
+import type { FileDiff, Hunk } from '#types/extension.ts'
 import type { Change, Repository } from '#types/git.ts'
 
 /** Every modified file's changes at Git's last check, and which list each one is in. */
@@ -16,7 +16,7 @@ export class HunkTracker implements vscode.Disposable {
 	private readonly gitPath: string
 	private readonly changelists: ChangelistStore
 	// Each repository's modified files' changes at the last check, by root URI and then file URI.
-	private readonly hunks = new Map<string, ReadonlyMap<string, readonly Hunk[]>>()
+	private readonly diffs = new Map<string, ReadonlyMap<string, FileDiff>>()
 	// The checks that are running, by root URI, and the repositories that need one more after them.
 	private readonly running = new Map<string, Promise<void>>()
 	private readonly again = new Set<string>()
@@ -32,7 +32,12 @@ export class HunkTracker implements vscode.Disposable {
 
 	/** A modified file's changes at the last check, or undefined when it wasn't read. */
 	get(repository: Repository, uri: vscode.Uri): readonly Hunk[] | undefined {
-		return this.hunks.get(repository.rootUri.toString())?.get(uri.toString())
+		return this.diff(repository, uri)?.hunks
+	}
+
+	/** A modified file's changes at the last check, with which are staged, or undefined when it wasn't read. */
+	diff(repository: Repository, uri: vscode.Uri): FileDiff | undefined {
+		return this.diffs.get(repository.rootUri.toString())?.get(uri.toString())
 	}
 
 	/** Reads a repository's changes again, after the check that's running, if any, and resolves once they're read. */
@@ -73,34 +78,59 @@ export class HunkTracker implements vscode.Disposable {
 
 		// Read also without lists, so a change made right after the first list is made is known to be new.
 		if (!head || !partialChangelists()) {
-			this.hunks.delete(key)
+			this.diffs.delete(key)
 			await this.changelists.update(repository, changelists => ({ ...changelists, hunks: undefined }))
 			return
 		}
 
-		const previous = this.hunks.get(key) ?? new Map<string, readonly Hunk[]>()
-		let diffs: Map<string, readonly Hunk[]>
+		const previous = new Map([...(this.diffs.get(key) ?? [])].map(([uri, diff]) => [uri, diff.hunks]))
+		let diffs: Map<string, FileDiff>
 
 		try {
-			diffs = await this.diff(repository, modifiedChanges(repository))
+			diffs = await this.read(repository)
 		} catch {
 			// Like while Git has the repository locked. The next check reads them again.
 			return
 		}
 
-		this.hunks.set(key, diffs)
-		await this.changelists.update(repository, changelists => trackHunks(changelists, diffs, previous, head))
+		this.diffs.set(key, diffs)
+		const hunks = new Map([...diffs].map(([uri, diff]) => [uri, diff.hunks]))
+		await this.changelists.update(repository, changelists => trackHunks(changelists, hunks, previous, head))
 		this.changeEmitter.fire()
 	}
 
-	/** Each file's changes against HEAD, by the file's URI. */
-	private async diff(repository: Repository, changes: readonly Change[]): Promise<Map<string, readonly Hunk[]>> {
+	/** Each modified file's changes against HEAD, and for a file with staged changes which they are. */
+	private async read(repository: Repository): Promise<Map<string, FileDiff>> {
+		const changes = modifiedChanges(repository)
+		const staged = new Set(repository.state.indexChanges.map(change => change.uri.toString()))
+		const withStaged = changes.filter(change => staged.has(change.uri.toString()))
+		const [all, cached, unstaged] = await Promise.all([
+			this.gitDiff(repository, changes, ['HEAD']),
+			this.gitDiff(repository, withStaged, ['--cached']),
+			this.gitDiff(repository, withStaged, []),
+		])
+
+		return new Map(
+			[...all].map(([uri, hunks]) =>
+				staged.has(uri)
+					? [uri, { hunks, staged: cached.get(uri) ?? [], unstaged: unstaged.get(uri) ?? [] }]
+					: [uri, { hunks }],
+			),
+		)
+	}
+
+	/** Changes from `git diff` with these arguments, like `HEAD` or `--cached`, by the file's URI. */
+	private async gitDiff(
+		repository: Repository,
+		changes: readonly Change[],
+		against: readonly string[],
+	): Promise<Map<string, Hunk[]>> {
 		if (changes.length === 0) return new Map()
 
 		const root = repository.rootUri
 		const paths = changes.map(change => path.posix.relative(root.path, change.uri.path))
 		const args = ['-c', 'core.quotePath=false', 'diff', '-U0', '--no-color', '--no-ext-diff', '--no-renames']
-		const output = await runGit(this.gitPath, root.fsPath, [...args, 'HEAD', '--', ...paths])
+		const output = await runGit(this.gitPath, root.fsPath, [...args, ...against, '--', ...paths])
 
 		return new Map(
 			[...parseDiff(output)].map(([file, hunks]) => [

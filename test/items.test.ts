@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
 import { toRepositoryItem, toSyncRepositoryItem } from '../src/view/items.ts'
 import { Status } from '../src/constants/git.ts'
-import type { IconResolver } from '../src/types/extension.ts'
+import type { FileDiff, Hunk, IconResolver, RepositoryChangelists } from '../src/types/extension.ts'
 import type { Branch, Change, Repository } from '../src/types/git.ts'
 
 // Just enough of a URI for a repository's root.
@@ -91,5 +91,64 @@ describe('toRepositoryItem', () => {
 		)
 		assert.equal(item.groups[1].id, 'file:///code/api#changelist#Feature')
 		assert.equal(item.groups[1].changelist, 'Feature')
+	})
+})
+
+describe('a split file with staged changes', () => {
+	const working = { uri: uri('/code/api/big.ts'), status: Status.MODIFIED } as Change
+	const staged = { uri: uri('/code/api/big.ts'), status: Status.INDEX_MODIFIED } as Change
+	const top: Hunk = { oldStart: 3, oldLines: 1, newStart: 3, newLines: 1, lines: ['-3', '+three'] }
+	const bottom: Hunk = { oldStart: 20, oldLines: 1, newStart: 20, newLines: 1, lines: ['-20', '+twenty'] }
+	// Line 3 is in Changes, the file's list, and line 20 in Feature.
+	const changelists: RepositoryChangelists = {
+		lists: ['Feature'],
+		files: {},
+		hunks: {
+			[working.uri.toString()]: {
+				head: 'abc',
+				hunks: [{ oldStart: 20, oldLines: 1, text: '-20\n+twenty', list: 'Feature' }],
+			},
+		},
+	}
+	// Each group with how much of it is staged, and its row's staged state and other lists.
+	const rows = (changes: { working?: boolean; staged: Hunk[]; unstaged: Hunk[] }) => {
+		const repository = {
+			rootUri: uri('/code/api'),
+			state: {
+				HEAD: { name: 'main', commit: 'abc' },
+				mergeChanges: [],
+				indexChanges: [staged],
+				workingTreeChanges: changes.working === false ? [] : [working],
+				untrackedChanges: [],
+			},
+		} as never as Repository
+		const diff: FileDiff = { hunks: [top, bottom], staged: changes.staged, unstaged: changes.unstaged }
+		const item = toRepositoryItem(repository, changelists, 'list', icons, () => diff)
+		return item.groups.map(group => [
+			`${group.label} (${group.staged})`,
+			group.children.map(file =>
+				file.type === 'file' ? `${file.staged} ${file.otherLists.join(',')}`.trim() : '',
+			),
+		])
+	}
+
+	test("keeps a list's staged part in the list, and leaves Changes when its part is staged too", () => {
+		assert.deepEqual(rows({ working: false, staged: [top, bottom], unstaged: [] }), [
+			['Staged Changes (none)', ['none']],
+			['Feature (all)', ['all']],
+		])
+	})
+	test("takes the file out of Changes when only Changes' part is staged", () => {
+		assert.deepEqual(rows({ staged: [top], unstaged: [bottom] }), [
+			['Staged Changes (none)', ['none']],
+			['Feature (none)', ['none']],
+		])
+	})
+	test("shows a list's part as staged when only it is", () => {
+		assert.deepEqual(rows({ staged: [bottom], unstaged: [top] }), [
+			['Staged Changes (none)', ['none']],
+			['Changes (none)', ['none Feature']],
+			['Feature (all)', ['all Changes']],
+		])
 	})
 })

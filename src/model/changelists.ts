@@ -1,9 +1,9 @@
 // Which changelists each change is in, and keeping a repository's saved lists up to date.
 import { changedUris, getChanges } from './changes.ts'
-import { assignHunks, splitHunks } from './hunks.ts'
+import { assignHunks, splitHunks, partStaged } from './hunks.ts'
 import type { Change, Repository } from '#types/git.ts'
-import type { Hunk, RepositoryChangelists } from '#types/extension.ts'
-import type { GroupKind } from '#types/shared.ts'
+import type { FileDiff, Hunk, RepositoryChangelists } from '#types/extension.ts'
+import type { GroupKind, StagedState } from '#types/shared.ts'
 
 // The groups a repository's Stage All and Commit take the changes from, outside the changelists.
 const UNSTAGED_KINDS: readonly GroupKind[] = ['merge', 'changes', 'untracked']
@@ -37,22 +37,49 @@ export function hunkLists(
 	)
 }
 
+/** How much of a split file's changes in a list is staged, or undefined when the file isn't split. */
+export function splitStaged(
+	changelists: RepositoryChangelists,
+	change: Change,
+	diff: FileDiff | undefined,
+	head: string | undefined,
+	list: string | undefined,
+): StagedState | undefined {
+	if (!diff || !head || !changelists.hunks?.[change.uri.toString()]) return undefined
+
+	const lists = hunkLists(changelists, change, diff.hunks, head)
+
+	return partStaged(
+		diff.hunks.filter((_, i) => lists[i] === list),
+		diff,
+	)
+}
+
 /** The changes a group or changelist shows. Merge and Staged Changes ignore the changelists. */
 export function groupChanges(
 	repository: Repository,
 	kind: GroupKind,
 	changelists: RepositoryChangelists,
 	changelist?: string,
+	diffOf?: (change: Change) => FileDiff | undefined,
 ): readonly Change[] {
 	if (changelist !== undefined) {
-		// A changelist takes both changed and untracked files.
-		return [...getChanges(repository, 'changes'), ...getChanges(repository, 'untracked')].filter(change =>
-			listsOf(changelists, change).includes(changelist),
-		)
+		// A changelist takes changed and untracked files, and staged ones with nothing left unstaged.
+		const unstaged = [...getChanges(repository, 'changes'), ...getChanges(repository, 'untracked')]
+		const uris = new Set(unstaged.map(change => change.uri.toString()))
+		const staged = getChanges(repository, 'staged').filter(change => !uris.has(change.uri.toString()))
+
+		return [...unstaged, ...staged].filter(change => listsOf(changelists, change).includes(changelist))
 	}
 
 	if (kind === 'changes' || kind === 'untracked') {
-		return getChanges(repository, kind).filter(change => listsOf(changelists, change).includes(undefined))
+		// Changes is Git's unstaged changes, so a split file's part in it leaves once it's all staged.
+		const head = repository.state.HEAD?.commit
+		return getChanges(repository, kind).filter(
+			change =>
+				listsOf(changelists, change).includes(undefined) &&
+				splitStaged(changelists, change, diffOf?.(change), head, undefined) !== 'all',
+		)
 	}
 
 	return getChanges(repository, kind)
