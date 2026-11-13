@@ -72,4 +72,4 @@ npm install
 npm run watch
 ```
 
-Press `F5` in VS Code to start an Extension Development Host, and open a folder that contains several Git repositories in that window. `npm run build` builds once; `npm test` runs the tests, and `npm run typecheck`, `npm run lint` and `npm run format:check` run the checks.
+Press `F5` in VS Code to start an Extension Development Host, and open a folder that contains several Git repositories in that window. `npm run build` builds once; `npm test` runs the tests, `npm run test:integration` runs the integration tests in a VS Code window, and `npm run typecheck`, `npm run lint` and `npm run format:check` run the checks.
