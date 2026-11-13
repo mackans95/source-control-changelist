@@ -736,6 +736,7 @@
     "release": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/release.ts",
     "fake-repos": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/fakeRepos.ts",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test test/*.test.ts",
+    "test:integration": "npm run build && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/integration.ts",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt",
     "format:check": "oxfmt --check"
@@ -744,6 +745,7 @@
     "@types/node": "24.19.2",
     "@types/vscode": "1.82.0",
     "@vscode/codicons": "0.0.46-24",
+    "@vscode/test-electron": "3.1.0",
     "esbuild": "0.28.2",
     "oxfmt": "0.73.0",
     "oxlint": "1.88.0",

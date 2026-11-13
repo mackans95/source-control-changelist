@@ -15,3 +15,5 @@ tsconfig*.json
 images/**
 # ...except the icon, which the package itself needs.
 !images/icon.png
+.vscode-test/**
+out/**

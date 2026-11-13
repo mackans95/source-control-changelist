@@ -6,3 +6,5 @@ dist/
 !.vscode/
 # Local release notes, like in markdown-toc-sidebar.
 .vscode/RELEASING.md
+.vscode-test/
+out/

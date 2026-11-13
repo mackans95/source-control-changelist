@@ -81,8 +81,13 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm run lint` | Lints with Oxlint. |
 | `npm run format` | Formats with Oxfmt; `npm run format:check` only checks. |
 | `npm test` | Runs the tests. |
+| `npm run test:integration` | Builds the extension and runs the integration tests in a VS Code window. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), split files' changes and patches in `model/hunks.ts`, the rows' data in `view/items.ts`, the icon matching, and `themeColor()` and `canDropChanges()`. `test/fakes.ts` has the fake repositories they share, and `test/hunks.test.ts` checks the patches against real Git repositories it makes in a temporary folder. Pull requests run all the checks.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), split files' changes and patches in `model/hunks.ts`, the rows' data in `view/items.ts`, the icon matching, and `themeColor()` and `canDropChanges()`. `test/fakes.ts` has the fake repositories they share, and `test/hunks.test.ts` checks the patches against real Git repositories it makes in a temporary folder.
+
+The integration tests in `test/integration/` run the built extension in a VS Code window, which `@vscode/test-electron` downloads to `.vscode-test/` the first time. Each test makes its own Git repository, runs the extension's commands with the context the view's right-click menus give them, and checks Git's state afterwards: what's staged, what's committed and what's left. The dialogs the commands open give the answers each test queues with `answer()`, and a dialog without an answer, or an answer no dialog asked for, fails the test. `scripts/integration.ts` bundles them into `out/`, inside the extension's folder, so they share the extension's `vscode` object, and starts VS Code with its own settings and Git identity in a temporary folder. It prints the results, and VS Code's own output goes to `out/integration.log`. On Linux without a display, run it with `xvfb-run -a`.
+
+Pull requests run all the checks, and the integration tests in a job of their own.
 
 ## Releasing
 
