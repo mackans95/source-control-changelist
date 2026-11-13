@@ -15,6 +15,9 @@ export function runGit(gitPath: string, cwd: string, args: readonly string[], in
 				resolve(stdout)
 			}
 		})
+		// Git can close its stdin before reading it, like `git diff`, which never does. Its exit code says
+		// whether it worked, so a closed stdin isn't an error of its own.
+		child.stdin?.on('error', () => {})
 		child.stdin?.end(input)
 	})
 }
