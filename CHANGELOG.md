@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - **Changelists, like in PyCharm.** Named lists of changes in each repository. Move files, folders and groups to a list from the right-click menu, and commit a list on its own with its _Commit_ button. The repository's own _Commit_ and _Stage All Changes_ leave the lists alone, so a list like _Don't commit_ stays out of your commits.
 - **An active changelist**, where the files you change from then on go, and a **description** for each list, which its _Commit_ suggests as the message. `changelist.deleteChangelistsAfterCommit` deletes a list once its _Commit_ has emptied it.
