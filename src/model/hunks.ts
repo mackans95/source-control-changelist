@@ -53,7 +53,8 @@ export function assignHunks(
 		// On the first check, every change is already there, so none is new.
 		const isNew = previous !== undefined && !previous.some(p => touches(p, hunk))
 
-		return isNew && active !== undefined ? active : fileList
+		// Like in PyCharm, Changes is the active list when no list is.
+		return isNew ? active : fileList
 	})
 }
 

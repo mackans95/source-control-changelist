@@ -141,6 +141,10 @@ describe('assignHunks and splitHunks', () => {
 		const added = hunk(10, 1, 10, 1, ['-10', '+ten'])
 		assert.deepEqual(assignHunks([first, added], undefined, 'abc', [first], 'A', 'B'), ['A', 'B'])
 	})
+	test('puts a new change in Changes when no list is active, also in a file in a list', () => {
+		const added = hunk(10, 1, 10, 1, ['-10', '+ten'])
+		assert.deepEqual(assignHunks([first, added], undefined, 'abc', [first], 'A', undefined), ['A', undefined])
+	})
 	test('puts nothing in the active list on the first check, when every change is already there', () => {
 		assert.deepEqual(assignHunks([first, second], undefined, 'abc', undefined, 'A', 'B'), ['A', 'A'])
 	})

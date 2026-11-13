@@ -723,7 +723,7 @@
         "changelist.partialChangelists": {
           "type": "boolean",
           "default": true,
-          "description": "Let a file's changes be in different changelists. New changes go to the active changelist, also in a file that's in another list. Turning it off moves each file's changes back to the file's own list."
+          "description": "Let a file's changes be in different changelists. New changes go to the active changelist, or to Changes when none is active, also in a file that's in another list. Turning it off moves each file's changes back to the file's own list."
         }
       }
     }
