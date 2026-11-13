@@ -1,22 +1,24 @@
 // Committing a repository's staged changes, or a changelist's files.
 import * as vscode from 'vscode'
 import { forNodes, paths } from './nodes.ts'
-import { changelistOf, groupChanges, unlistedChanges } from '../model/changelists.ts'
 import { repositoryName } from '../model/repositories.ts'
-import type { ChangelistStore } from '../state/changelistStore.ts'
-import type { CommandTable, GroupNode, Services } from '../types/extension.ts'
-import type { Repository } from '../types/git.ts'
+import { partsOf, stagedOutside, stageParts } from './parts.ts'
+import { changelistOf, groupChanges, listsOf, unlistedChanges } from '#model/changelists.ts'
+import type { ChangelistStore } from '#state/changelistStore.ts'
+import type { CommandTable, GroupNode, Services } from '#types/extension.ts'
+import type { Repository } from '#types/git.ts'
 
 /** The Commit buttons on repositories and changelists. */
-export function commitCommands({ changelists }: Services): CommandTable {
+export function commitCommands(services: Services): CommandTable {
 	return {
-		commit: forNodes(['repository'], node => commit(node.repository, changelists)),
-		commitChangelist: forNodes(['group'], node => commitChangelist(node, changelists)),
+		commit: forNodes(['repository'], node => commit(services, node.repository)),
+		commitChangelist: forNodes(['group'], node => commitChangelist(services, node)),
 	}
 }
 
 /** Commits the staged changes, or when nothing is staged, the changes outside the changelists after asking. */
-async function commit(repository: Repository, changelists: ChangelistStore): Promise<void> {
+async function commit(services: Services, repository: Repository): Promise<void> {
+	const { changelists } = services
 	const name = repositoryName(repository)
 	const nothingStaged = repository.state.indexChanges.length === 0
 
@@ -35,23 +37,37 @@ async function commit(repository: Repository, changelists: ChangelistStore): Pro
 
 	// Something may have been staged while the input box was open.
 	if (repository.state.indexChanges.length === 0) {
-		await stageUnlisted(repository, changelists)
+		await stageUnlisted(services, repository)
 	}
 
 	await commitStaged(repository, message)
 }
 
 /** Commits a changelist's files and nothing else, after offering to unstage the other staged files. */
-async function commitChangelist(node: GroupNode, changelists: ChangelistStore): Promise<void> {
+async function commitChangelist(services: Services, node: GroupNode): Promise<void> {
+	const { changelists, hunks } = services
 	const { repository, changelist, changes } = node
 
 	if (changelist === undefined) return
 
 	const lists = changelists.get(repository)
 	const staged = repository.state.indexChanges
-	const others = staged.filter(c => changelistOf(lists, c) !== changelist)
+	// A fully staged split file is only in Staged Changes, but its part in the list is still the list's.
+	const inGroup = new Set(changes.map(c => c.uri.toString()))
+	const stagedSplit = staged.filter(
+		c =>
+			lists.hunks?.[c.uri.toString()] && listsOf(lists, c).includes(changelist) && !inGroup.has(c.uri.toString()),
+	)
+	const parts = await partsOf(services, repository, [...changes, ...stagedSplit], changelist)
+	const split = new Set(parts.split.map(part => part.change.uri.toString()))
+	// What's staged and isn't the list's: other files, and other lists' changes in split files.
+	const others = [
+		...staged.filter(c => !split.has(c.uri.toString()) && changelistOf(lists, c) !== changelist),
+		...(await stagedOutside(services, repository, parts.split)),
+	]
+	const listed = parts.whole.length + parts.split.length
 
-	if (changes.length === 0 && staged.length === others.length) {
+	if (listed === 0 && staged.length === others.length) {
 		void vscode.window.showInformationMessage(`There is nothing to commit in ${changelist}.`)
 		return
 	}
@@ -66,16 +82,18 @@ async function commitChangelist(node: GroupNode, changelists: ChangelistStore): 
 
 	if (!message) return
 
-	// The Git API commits what's staged, so only the list's files may be.
-	if (others.length > 0) {
-		await repository.revert(paths(others))
+	// The Git API commits what's staged, so only the list's files and changes may be. A split file is
+	// unstaged too, so only its changes in the list are staged again.
+	const unstaging = [...others, ...parts.split.map(part => part.change)]
+
+	if (unstaging.length > 0) {
+		await repository.revert(paths(unstaging))
 	}
 
-	if (changes.length > 0) {
-		await repository.add(paths(changes))
-	}
-
+	await stageParts(services, repository, parts)
 	await commitStaged(repository, message)
+	// The list's committed changes aren't changes any more, which shows once they're read again.
+	await hunks.track(repository)
 
 	if (
 		deletesAfterCommit() &&
@@ -98,11 +116,11 @@ async function confirmStageAll(repository: Repository, changelists: ChangelistSt
 	return choice === 'Stage All & Commit'
 }
 
-/** Asks whether to unstage the staged files that aren't in the changelist. */
+/** Asks whether to unstage the staged changes that aren't in the changelist. */
 async function confirmUnstageOthers(changelist: string, others: number): Promise<boolean> {
-	const which = others === 1 ? "1 staged file isn't" : `${others} staged files aren't`
+	const which = others === 1 ? '1 staged file has changes' : `${others} staged files have changes`
 	const choice = await vscode.window.showWarningMessage(
-		`${which} in ${changelist}. Unstage the other files and commit only ${changelist}?`,
+		`${which} that aren't in ${changelist}. Unstage them and commit only ${changelist}?`,
 		{ modal: true },
 		'Unstage & Commit',
 	)
@@ -120,14 +138,10 @@ function askCommitMessage(title: string, value: string): Thenable<string | undef
 	})
 }
 
-/** Stages the changes outside the changelists. */
-async function stageUnlisted(repository: Repository, changelists: ChangelistStore): Promise<void> {
-	const changes = unlistedChanges(repository, changelists.get(repository))
-
-	// The Git API's add with no paths would stage everything.
-	if (changes.length > 0) {
-		await repository.add(paths(changes))
-	}
+/** Stages the changes outside the changelists, and split files' changes in Changes. */
+async function stageUnlisted(services: Services, repository: Repository): Promise<void> {
+	const changes = unlistedChanges(repository, services.changelists.get(repository))
+	await stageParts(services, repository, await partsOf(services, repository, changes, undefined))
 }
 
 /** Commits what's staged, and empties the Source Control input box the message may have come from. */

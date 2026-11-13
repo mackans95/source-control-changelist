@@ -13,6 +13,7 @@ import type {
 	FolderItem,
 	GroupItem,
 	RepositoryItem,
+	StagedState,
 } from '#types/shared.ts'
 import type { CategoryDisplay } from '#types/webview.ts'
 
@@ -94,7 +95,7 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	// Files dropped on a group's row land in the group.
 	row.dataset.group = group.id
 	const expanded = addTwistie(row, group.id)
-	const actions = groupActions(group, target)
+	const actions = groupActions(group, group.staged, target)
 
 	// A changelist commits on its own, like a repository does.
 	if (group.changelist !== undefined) {
@@ -127,19 +128,23 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 	}
 }
 
-/** The actions on a group's or folder's row: Discard All when it's unstaged, and Stage or Unstage All. */
-function groupActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
+/** The actions on a group's or folder's row: Discard All, Stage All and Unstage All, for what's in it. */
+function groupActions(group: GroupItem, staged: StagedState, target: ActionTarget): HTMLSpanElement {
 	const actions = span('actions')
+	// A list keeps its staged files, so it can have both staged and unstaged changes.
+	const allStaged = group.kind === 'staged' || staged === 'all'
 
-	if (group.kind === 'changes' || group.kind === 'untracked') {
+	if (!allStaged && (group.kind === 'changes' || group.kind === 'untracked')) {
 		actions.append(actionButton('discard', 'Discard All Changes', 'discardAll', target))
 	}
 
-	actions.append(
-		group.kind === 'staged'
-			? actionButton('remove', 'Unstage All Changes', 'unstageAll', target)
-			: actionButton('add', 'Stage All Changes', 'stageAll', target),
-	)
+	if (!allStaged) {
+		actions.append(actionButton('add', 'Stage All Changes', 'stageAll', target))
+	}
+
+	if (allStaged || staged === 'some') {
+		actions.append(actionButton('remove', 'Unstage All Changes', 'unstageAll', target))
+	}
 
 	return actions
 }
@@ -193,7 +198,7 @@ function renderFolder(
 		row.append(fileIcon(icon))
 	}
 
-	row.append(span('label', folder.label), span('spacer'), groupActions(group, target))
+	row.append(span('label', folder.label), span('spacer'), groupActions(group, folder.staged, target))
 
 	if (expanded) {
 		renderEntries(rows, repository, group, folder.children, level + 1, folder.id)
@@ -238,23 +243,42 @@ function renderFile(
 		row.append(span('description', file.folder))
 	}
 
-	row.append(span('spacer'), fileActions(group, target), span('letter', file.letter))
+	row.append(span('spacer'), fileActions(group, file, target))
+
+	// A file split between lists shows its changes in each of them.
+	if (file.otherLists.length > 0) {
+		const mark = codicon('split-horizontal', 'split-mark')
+		mark.dataset.tooltip = `Also has changes in ${file.otherLists.join(', ')}`
+		row.append(mark)
+	}
+
+	// A list keeps its staged files, which are in Staged Changes too.
+	if (file.staged !== 'none') {
+		const mark = codicon('pass', 'staged-mark')
+		mark.dataset.tooltip = file.staged === 'all' ? 'Staged' : 'Partly staged'
+		row.append(mark)
+	}
+
+	row.append(span('letter', file.letter))
 }
 
-/** The actions on a file's row: Open File, Discard when it's unstaged, and Stage or Unstage. */
-function fileActions(group: GroupItem, target: ActionTarget): HTMLSpanElement {
+/** The actions on a file's row: Open File, Discard, Stage and Unstage, for what it has. */
+function fileActions(group: GroupItem, file: FileItem, target: ActionTarget): HTMLSpanElement {
 	const actions = span('actions')
+	const allStaged = group.kind === 'staged' || file.staged === 'all'
 	actions.append(actionButton('go-to-file', 'Open File', 'openFile', target))
 
-	if (group.kind === 'changes' || group.kind === 'untracked') {
+	if (!allStaged && (group.kind === 'changes' || group.kind === 'untracked')) {
 		actions.append(actionButton('discard', 'Discard Changes', 'discard', target))
 	}
 
-	actions.append(
-		group.kind === 'staged'
-			? actionButton('remove', 'Unstage Changes', 'unstage', target)
-			: actionButton('add', 'Stage Changes', 'stage', target),
-	)
+	if (!allStaged) {
+		actions.append(actionButton('add', 'Stage Changes', 'stage', target))
+	}
+
+	if (allStaged || file.staged === 'some') {
+		actions.append(actionButton('remove', 'Unstage Changes', 'unstage', target))
+	}
 
 	return actions
 }

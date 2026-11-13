@@ -37,6 +37,9 @@ export interface IconFont {
 	readonly style?: string
 }
 
+/** How much of a file's changes are staged. */
+export type StagedState = 'none' | 'some' | 'all'
+
 /** A file's row. */
 export interface FileItem {
 	readonly type: 'file'
@@ -51,6 +54,10 @@ export interface FileItem {
 	readonly color: string
 	readonly strikethrough: boolean
 	readonly tooltip: string
+	/** For a file split between lists, the other lists its changes are in. */
+	readonly otherLists: readonly string[]
+	/** In a changelist, whether the file's changes are staged: none, some, or all of them. */
+	readonly staged: StagedState
 }
 
 /** A folder's row in tree mode, with the rows below it. */
@@ -61,6 +68,8 @@ export interface FolderItem {
 	readonly label: string
 	readonly icon?: FileIcon
 	readonly expandedIcon?: FileIcon
+	/** In a changelist, how much of its files' changes are staged. */
+	readonly staged: StagedState
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
@@ -76,6 +85,8 @@ export interface GroupItem {
 	readonly count: number
 	/** Whether new changes go here: the active changelist, or Changes when no list is active. */
 	readonly active: boolean
+	/** For a changelist, how much of its files' changes are staged. */
+	readonly staged: StagedState
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 

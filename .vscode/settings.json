@@ -27,5 +27,7 @@
   },
   "files.insertFinalNewline": true,
   // The fake repositories (scripts/fakeRepos.ts) are for the test window, not this one.
-  "git.repositoryScanIgnoredFolders": ["node_modules", ".fake-repos"]
+  "git.repositoryScanIgnoredFolders": ["node_modules", ".fake-repos"],
+  "js/ts.tsdk.path": "node_modules/typescript",
+  "js/ts.experimental.useTsgo": true
 }

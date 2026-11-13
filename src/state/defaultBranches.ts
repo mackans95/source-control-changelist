@@ -1,9 +1,8 @@
 // Each repository's default branch, for Checkout Default. The Git API doesn't have it, so this runs
 // git itself.
-import { execFile } from 'child_process'
 import * as vscode from 'vscode'
+import { runGit } from '#helpers/git.ts'
 import type { Repository } from '../types/git.ts'
-
 // The branches to look for when the remote doesn't say, in this order.
 const FALLBACK_BRANCHES = ['main', 'master']
 
@@ -45,7 +44,7 @@ async function findDefaultBranch(gitPath: string, repository: Repository): Promi
 	const remote = repository.state.HEAD?.upstream?.remote ?? repository.state.remotes[0]?.name
 
 	if (remote) {
-		const head = await runGit(gitPath, repository, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`])
+		const head = await tryGit(gitPath, repository, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`])
 
 		if (head?.startsWith(`${remote}/`)) {
 			return head.slice(remote.length + 1)
@@ -63,16 +62,15 @@ async function findDefaultBranch(gitPath: string, repository: Repository): Promi
 	return undefined
 }
 
-/** Runs git in a repository, and returns its output, or undefined when it fails. */
-function runGit(gitPath: string, repository: Repository, args: string[]): Promise<string | undefined> {
-	return new Promise(resolve => {
-		execFile(gitPath, args, { cwd: repository.rootUri.fsPath }, (error, stdout) =>
-			resolve(error ? undefined : stdout.trim()),
-		)
-	})
+async function tryGit(gitPath: string, repository: Repository, args: string[]): Promise<string | undefined> {
+	try {
+		return (await runGit(gitPath, repository.rootUri.fsPath, args)).trim()
+	} catch {
+		return undefined
+	}
 }
 
 /** Whether a ref exists in the repository, like `refs/heads/main`. */
 async function hasRef(gitPath: string, repository: Repository, ref: string): Promise<boolean> {
-	return (await runGit(gitPath, repository, ['rev-parse', '--verify', '--quiet', ref])) !== undefined
+	return (await tryGit(gitPath, repository, ['rev-parse', '--verify', '--quiet', ref])) !== undefined
 }

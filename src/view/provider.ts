@@ -115,7 +115,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 
 	/** Listens to the repositories, the services and the settings that change what the view shows. */
 	private listen(): void {
-		const { git, changelists, operations, defaultBranches, repositoryOrder } = this.services
+		const { git, changelists, hunks, operations, defaultBranches, repositoryOrder } = this.services
 
 		for (const repository of git.repositories) {
 			this.onDidOpenRepository(repository)
@@ -127,6 +127,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 			git.onDidOpenRepository(r => this.onDidOpenRepository(r)),
 			git.onDidCloseRepository(r => this.onDidCloseRepository(r)),
 			changelists.onDidChange(() => this.postUpdate()),
+			// What's staged of a split file's parts changes the rows' buttons.
+			hunks.onDidChange(() => this.postUpdate()),
 			operations.onDidChange(() => this.postUpdate()),
 			defaultBranches.onDidChange(() => this.postUpdate()),
 			repositoryOrder.onDidChange(() => this.postUpdate()),
@@ -136,24 +138,32 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				if (VIEW_SETTINGS.some(setting => e.affectsConfiguration(setting))) {
 					this.postUpdate()
 				}
+				// Turning it off puts every split file back together, in its own list.
+				if (e.affectsConfiguration('changelist.partialChangelists')) {
+					git.repositories.forEach(r => void this.services.hunks.track(r))
+				}
 			}),
 		)
 	}
 
 	/** Listens to a repository Git opened, which keeps its changelists up to date. */
 	private onDidOpenRepository(repository: Repository): void {
-		const { changelists } = this.services
-
 		// Now for a repository Git has checked already, and after each check from then on.
-		changelists.track(repository)
+		this.track(repository)
 		this.repositoryListeners.set(
 			repository.rootUri.toString(),
 			repository.state.onDidChange(() => {
-				changelists.track(repository)
+				this.track(repository)
 				this.scheduleUpdate()
 			}),
 		)
 		this.scheduleUpdate()
+	}
+
+	/** Puts a repository's new changes in the active list, first its files and then their changes. */
+	private track(repository: Repository): void {
+		this.services.changelists.track(repository)
+		void this.services.hunks.track(repository)
 	}
 
 	/** Stops listening to a repository Git closed. */

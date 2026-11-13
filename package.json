@@ -152,6 +152,12 @@
         "category": "Changelist"
       },
       {
+        "command": "changelist.moveChangeToChangelist",
+        "title": "Move Change to Changelist...",
+        "category": "Changelist",
+        "icon": "$(checklist)"
+      },
+      {
         "command": "changelist.commit",
         "title": "Commit",
         "category": "Changelist",
@@ -533,7 +539,24 @@
           "group": "3_changelist@6"
         }
       ],
+      "editor/context": [
+        {
+          "command": "changelist.moveChangeToChangelist",
+          "when": "changelist.active && config.changelist.partialChangelists && resourceScheme == file",
+          "group": "changelist@1"
+        }
+      ],
+      "scm/change/title": [
+        {
+          "command": "changelist.moveChangeToChangelist",
+          "when": "changelist.active && config.changelist.partialChangelists && originalResource =~ /^git\\:/"
+        }
+      ],
       "commandPalette": [
+        {
+          "command": "changelist.moveChangeToChangelist",
+          "when": "changelist.active && config.changelist.partialChangelists && editorIsOpen"
+        },
         {
           "command": "changelist.showRepositories",
           "when": "changelist.active"
@@ -696,6 +719,11 @@
           "type": "boolean",
           "default": false,
           "description": "Delete a changelist once its Commit has committed all of its files."
+        },
+        "changelist.partialChangelists": {
+          "type": "boolean",
+          "default": true,
+          "description": "Let a file's changes be in different changelists. New changes go to the active changelist, or to Changes when none is active, also in a file that's in another list. Turning it off moves each file's changes back to the file's own list."
         }
       }
     }
