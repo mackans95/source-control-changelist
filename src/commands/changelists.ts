@@ -1,6 +1,6 @@
 // Making, renaming, describing and deleting changelists, and moving files between them.
 import * as vscode from 'vscode'
-import { changesOf, forNodes, paths } from './nodes.ts'
+import { forNodes, forSelected, groupsOf, paths } from './nodes.ts'
 import { GROUP_LABELS } from '#model/changes.ts'
 import { hunkLists, moveFiles, moveHunks } from '#model/changelists.ts'
 import { repositoryName } from '#model/repositories.ts'
@@ -16,6 +16,14 @@ import type {
 	Services,
 } from '#types/extension.ts'
 import type { Change, Repository } from '#types/git.ts'
+import type { GroupKind } from '#types/shared.ts'
+
+// The rows with files, which Move to Changelist takes the files of.
+const FILE_ROWS = ['group', 'folder', 'resource'] as const
+// The groups whose files can move to a changelist. Merge Changes is Git's own, and Staged Changes is staged.
+const MOVE_KINDS: readonly GroupKind[] = ['changes', 'untracked']
+// The groups whose files can be dropped on another group. Merge Changes is Git's own.
+const DROP_KINDS: readonly GroupKind[] = ['staged', 'changes', 'untracked']
 
 /** The commands on changelists, and the ones that move files into and out of them. */
 export function changelistCommands(services: Services): CommandTable {
@@ -32,12 +40,14 @@ export function changelistCommands(services: Services): CommandTable {
 			['group'],
 			node => node.changelist && changelists.remove(node.repository, node.changelist),
 		),
-		moveToChangelist: forNodes(['group', 'folder', 'resource'], node => moveToChangelist(services, node)),
-		// The view runs it when a file or folder is dropped on a group. It isn't in the menus.
-		dropChanges: (source: Node | undefined, target: Node | undefined) =>
-			(source?.type === 'folder' || source?.type === 'resource') && target?.type === 'group'
-				? dropChanges(services, source, target)
-				: undefined,
+		moveToChangelist: forSelected(FILE_ROWS, nodes => moveToChangelist(services, groupsOf(nodes, MOVE_KINDS))),
+		// The view runs it when files or folders are dropped on a group. It isn't in the menus.
+		dropChanges: (target: Node | undefined, sources: readonly Node[] = []) => {
+			const files = sources.filter(
+				(n): n is FolderNode | ResourceNode => n.type === 'folder' || n.type === 'resource',
+			)
+			return target?.type === 'group' ? dropChanges(services, groupsOf(files, DROP_KINDS), target) : undefined
+		},
 	}
 }
 
@@ -80,44 +90,49 @@ async function editDescription(node: GroupNode, changelists: ChangelistStore): P
 	}
 }
 
-/** Moves files to a changelist picked from a list, which can also make a new one. */
-async function moveToChangelist(services: Services, node: GroupNode | FolderNode | ResourceNode): Promise<void> {
-	const { repository, changelist } = node
-	const target = await pickChangelist(repository, services.changelists, changelist, 'Move to Changelist')
+/** Moves the groups' files to a changelist picked from a list, which can also make a new one, once per repository. */
+async function moveToChangelist(services: Services, groups: readonly GroupNode[]): Promise<void> {
+	const repositories = new Map(groups.map(group => [group.repository.rootUri.toString(), group.repository]))
 
-	if (target) {
-		await moveChanges(services, repository, changesOf(node), changelist, target.list)
+	for (const [root, repository] of repositories) {
+		const inRepo = groups.filter(group => group.repository.rootUri.toString() === root)
+		// The lists differ between repositories, so the question says which one it's for.
+		const title =
+			repositories.size > 1 ? `Move to Changelist in ${repositoryName(repository)}` : 'Move to Changelist'
+		const from = inRepo.map(group => group.changelist)
+		const target = await pickChangelist(repository, services.changelists, from, title)
+
+		if (!target) return
+
+		for (const { changes, changelist } of inRepo) {
+			await moveChanges(services, repository, changes, changelist, target.list)
+		}
 	}
 }
 
-/** Drops files on a group: Staged Changes stages them, and any other group moves them there. */
-async function dropChanges(services: Services, source: FolderNode | ResourceNode, target: GroupNode): Promise<void> {
-	const { repository } = source
-	const changes = changesOf(source)
-
-	if (target.kind === 'staged') {
-		await stageParts(services, repository, await partsOf(services, repository, changes, source.changelist))
-		return
+/** Drops the groups' files on a group: Staged Changes stages them, and any other group moves them there. */
+async function dropChanges(services: Services, sources: readonly GroupNode[], target: GroupNode): Promise<void> {
+	for (const { repository, kind, changes, changelist } of sources) {
+		if (target.kind === 'staged') {
+			await stageParts(services, repository, await partsOf(services, repository, changes, changelist))
+		} else if (kind === 'staged') {
+			await repository.revert(paths(changes))
+			await services.changelists.update(repository, lists => moveFiles(lists, changes, target.changelist))
+		} else {
+			// Changes and Untracked Changes have no list, so the files leave theirs.
+			await moveChanges(services, repository, changes, changelist, target.changelist)
+		}
 	}
-
-	if (source.kind === 'staged') {
-		await repository.revert(paths(changes))
-		await services.changelists.update(repository, changelists => moveFiles(changelists, changes, target.changelist))
-		return
-	}
-
-	// Changes and Untracked Changes have no list, so the files leave theirs.
-	await moveChanges(services, repository, changes, source.changelist, target.changelist)
 }
 
-/** Asks which changelist to move to, which can also be a new one. Undefined when nothing was picked. */
+/** Asks which changelist to move to from the lists in `from`, which can also be a new one. Undefined when nothing was picked. */
 export async function pickChangelist(
 	repository: Repository,
 	changelists: ChangelistStore,
-	current: string | undefined,
+	from: readonly (string | undefined)[],
 	title: string,
 ): Promise<{ list: string | undefined } | undefined> {
-	const picks = changelistPicks(changelists.get(repository).lists, current)
+	const picks = changelistPicks(changelists.get(repository).lists, from)
 	const pick = await vscode.window.showQuickPick(picks, { title, placeHolder: 'Changelist' })
 
 	if (!pick) return undefined
@@ -155,12 +170,14 @@ async function moveChanges(
 	)
 }
 
-/** The lists Move to Changelist offers: Changes, the other lists, and a new one. */
-function changelistPicks(lists: readonly string[], current: string | undefined): ChangelistPick[] {
+/** The lists Move to Changelist offers: Changes, the lists that not everything is in already, and a new one. */
+function changelistPicks(lists: readonly string[], from: readonly (string | undefined)[]): ChangelistPick[] {
 	return [
 		// Only files in a list can go back to Changes. Untracked files go back to Untracked Changes.
-		...(current === undefined ? [] : [{ label: GROUP_LABELS.changes, isNew: false }]),
-		...lists.filter(list => list !== current).map(list => ({ label: list, changelist: list, isNew: false })),
+		...(from.some(list => list !== undefined) ? [{ label: GROUP_LABELS.changes, isNew: false }] : []),
+		...lists
+			.filter(list => from.some(current => current !== list))
+			.map(list => ({ label: list, changelist: list, isNew: false })),
 		{ label: '$(add) New Changelist...', isNew: true },
 	]
 }

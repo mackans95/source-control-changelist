@@ -29,14 +29,14 @@
    fit as it is, `narrow-with-actions` when it doesn't fit once its actions show. */
 .repository.narrow .label,
 .repository.narrow-with-actions:hover .label,
-#root:focus-within .repository.narrow-with-actions.focused .label {
+#root:focus-within .repository.narrow-with-actions.selected .label {
 	flex-shrink: 0;
 	max-width: 48px;
 }
 
 .repository.narrow .toolbar,
 .repository.narrow-with-actions:hover .toolbar,
-#root:focus-within .repository.narrow-with-actions.focused .toolbar {
+#root:focus-within .repository.narrow-with-actions.selected .toolbar {
 	flex: 0 1 auto;
 	min-width: 0;
 	overflow: hidden;
@@ -44,7 +44,7 @@
 
 .repository.narrow .toolbar .text-button,
 .repository.narrow-with-actions:hover .toolbar .text-button,
-#root:focus-within .repository.narrow-with-actions.focused .toolbar .text-button {
+#root:focus-within .repository.narrow-with-actions.selected .toolbar .text-button {
 	flex: 0 1 auto;
 	min-width: 22px;
 }

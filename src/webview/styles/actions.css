@@ -13,11 +13,11 @@
 	margin-left: 2px;
 }
 
-/* Like the inline actions in VS Code's trees: shown on hover and on the selected row, taking their
+/* Like the inline actions in VS Code's trees: shown on hover and on the selected rows, taking their
    space from the name and the branch. With `scm.alwaysShowActions`, they're always shown. */
 .always-show-actions .actions,
 .row:hover .actions,
-#root:focus-within .row.focused .actions {
+#root:focus-within .row.selected .actions {
 	display: flex;
 }
 

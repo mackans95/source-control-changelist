@@ -44,7 +44,7 @@ async function moveChangesAt(services: Services, file: vscode.Uri, lines: readon
 	// A new, deleted or renamed file has one change, the whole file, so it moves whole.
 	if (!head || !fileHunks) {
 		const current = changelistOf(changelists.get(repository), change)
-		const target = await pickChangelist(repository, changelists, current, 'Move to Changelist')
+		const target = await pickChangelist(repository, changelists, [current], 'Move to Changelist')
 
 		if (target) {
 			await changelists.update(repository, c => moveFiles(c, [change], target.list))
@@ -62,7 +62,8 @@ async function moveChangesAt(services: Services, file: vscode.Uri, lines: readon
 
 	const lists = hunkLists(changelists.get(repository), change, fileHunks, head)
 	const title = moved.length === 1 ? 'Move Change to Changelist' : `Move ${moved.length} Changes to Changelist`
-	const target = await pickChangelist(repository, changelists, lists[fileHunks.indexOf(moved[0])], title)
+	const from = moved.map(hunk => lists[fileHunks.indexOf(hunk)])
+	const target = await pickChangelist(repository, changelists, from, title)
 
 	if (target) {
 		await changelists.update(repository, c => moveHunks(c, change, fileHunks, moved, target.list, head))

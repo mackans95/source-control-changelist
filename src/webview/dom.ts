@@ -1,5 +1,6 @@
 // The elements the view is drawn with, and what the files creating them share.
 import { ROOT_ELEMENT_ID } from '#constants/shared.ts'
+import type { ActionTarget, MenuContext } from '#types/shared.ts'
 
 // Every row in the tree: repositories, groups, folders and files.
 const ROW_SELECTOR = '.row'
@@ -22,6 +23,15 @@ export function findRow(id: string | undefined): HTMLElement | undefined {
 /** The row an event happened in, like a click on one of its buttons. */
 export function rowOf(target: EventTarget | null): HTMLElement | undefined {
 	return (target instanceof Element && target.closest<HTMLElement>(ROW_SELECTOR)) || undefined
+}
+
+/** What a row's actions run on, read back from its right-click menu context. */
+export function targetOf(row: HTMLElement | undefined): ActionTarget | undefined {
+	if (!row?.dataset.vscodeContext) return undefined
+
+	const { repository, kind, changelist, uri } = JSON.parse(row.dataset.vscodeContext) as MenuContext
+
+	return { repository, kind, changelist, uri }
 }
 
 /** A span with a class, and text when it's given. */

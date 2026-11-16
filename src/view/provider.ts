@@ -1,7 +1,8 @@
 // The Changelist view: keeps the webview's rows up to date, and runs what its rows ask for.
 import * as vscode from 'vscode'
 import { viewHtml } from './html.ts'
-import { resolveTarget } from './targets.ts'
+import { selectedTargets } from './selection.ts'
+import { resolveTarget, resolveTargets } from './targets.ts'
 import { buildUpdate } from './update.ts'
 import { canDropChanges } from '../helpers/shared.ts'
 import { FileIcons } from '../icons/fileIcons.ts'
@@ -32,6 +33,8 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	// The last update sent, as JSON, so the same one isn't sent again.
 	private lastUpdate: string | undefined
 	private lastNeedsSync = false
+	// The rows selected in the page, which a right-click menu or a row's button on one of them acts on.
+	private selection: readonly ActionTarget[] = []
 	private updateTimer: NodeJS.Timeout | undefined
 
 	// For as long as the provider lives.
@@ -103,6 +106,11 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 
 		this.postUpdate()
+	}
+
+	/** The rows a command on a row runs on: the selected rows when the row is one of them, or else the row alone */
+	selectionFor(target: ActionTarget): readonly ActionTarget[] {
+		return selectedTargets(this.selection, target)
 	}
 
 	/** Stops listening to the repositories, the settings and the view. */
@@ -264,8 +272,11 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 				return turnOnAutoFetch()
 			case 'moveRepository':
 				return this.moveRepository(message.repository, message.target, message.after)
+			case 'select':
+				this.selection = message.targets
+				return
 			case 'dropChanges':
-				return this.dropChanges(message.source, message.target)
+				return this.dropChanges(message.sources, message.target)
 			case 'run':
 				return this.runAction(message.action, message.target)
 		}
@@ -275,6 +286,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 	private onPageReady(): void {
 		this.ready = true
 		this.lastUpdate = undefined
+		this.selection = []
 		this.postUpdate()
 	}
 
@@ -290,30 +302,33 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		}
 	}
 
-	/** Drops a file's or folder's changes on another group, if they can go there. */
-	private async dropChanges(source: ActionTarget, target: ActionTarget): Promise<void> {
-		const sourceNode = resolveTarget(this.services, source)
+	/** Drops a file's or folder's changes on another group, the ones that can go there. */
+	private async dropChanges(sources: readonly ActionTarget[], target: ActionTarget): Promise<void> {
 		const targetNode = resolveTarget(this.services, target)
-
 		// The page only allows these drops too, but its rows can be out of date.
-		if (sourceNode && targetNode && canDropChanges(source, target)) {
-			await this.runCommand('dropChanges', sourceNode, targetNode)
+		const sourceNodes = resolveTargets(
+			this.services,
+			sources.filter(source => canDropChanges(source, target)),
+		)
+
+		if (targetNode && sourceNodes.length > 0) {
+			await this.runCommand('dropChanges', targetNode, sourceNodes)
 		}
 	}
 
-	/** Runs a row's action on the row. */
+	/** Runs a row's action on the row, or on all the selected rows when it's one of them. */
 	private async runAction(action: WebviewAction, target: ActionTarget): Promise<void> {
 		const node = resolveTarget(this.services, target)
 
 		if (node) {
-			await this.runCommand(action, node)
+			await this.runCommand(action, node, resolveTargets(this.services, this.selectionFor(target)))
 		}
 	}
 
 	/** Runs a `changelist.*` command, and shows its error if it fails. */
-	private async runCommand(command: string, ...nodes: Node[]): Promise<void> {
+	private async runCommand(command: string, ...args: (Node | readonly Node[])[]): Promise<void> {
 		try {
-			await vscode.commands.executeCommand(`changelist.${command}`, ...nodes)
+			await vscode.commands.executeCommand(`changelist.${command}`, ...args)
 		} catch (error) {
 			// Commands run from the webview don't get VS Code's own error notification.
 			void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error))

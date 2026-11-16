@@ -2,10 +2,11 @@
 import { changelistScenarios } from './changelists.ts'
 import { runScenarios } from './harness.ts'
 import { partialChangelistScenarios } from './partialChangelists.ts'
+import { selectionScenarios } from './selection.ts'
 
 /** Called by VS Code once the window is open. Throwing fails the run. */
 export async function run(): Promise<void> {
-	const scenarios = [...changelistScenarios, ...partialChangelistScenarios]
+	const scenarios = [...changelistScenarios, ...partialChangelistScenarios, ...selectionScenarios]
 	const failed = await runScenarios(scenarios)
 
 	if (failed > 0) {

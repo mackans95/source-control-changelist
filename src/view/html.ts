@@ -18,7 +18,7 @@ export function viewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): str
 	// The body's `data-vscode-context` leaves out the Cut, Copy and Paste items VS Code adds to the
 	// right-click menu.
 	const body = `<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-	<div id="${ROOT_ELEMENT_ID}" role="tree" aria-label="Changelist"></div>
+	<div id="${ROOT_ELEMENT_ID}" role="tree" aria-label="Changelist" aria-multiselectable="true"></div>
 	<script nonce="${nonce}" src="${script}"></script>
 </body>`
 	return page(webview, extensionUri, csp, body)

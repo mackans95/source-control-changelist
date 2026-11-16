@@ -1,14 +1,14 @@
-// Moving through the rows with the keyboard, like in VS Code's trees.
+// Moving through the rows with the keyboard, and selecting them with Shift, like in VS Code's trees.
 import { post } from './api.ts'
 import { findRow, rowElements } from './dom.ts'
 import { repositoryDrag } from './drag/repositories.ts'
-import { rowFocus } from './focus.ts'
+import { selection } from './selection.ts'
 import { tree } from './tree.ts'
 
 /** Handles a key pressed in the view, like VS Code's trees, and Alt+Up and Alt+Down in the Repositories panel. */
 export function onKeydown(event: KeyboardEvent): void {
 	const rows = rowElements()
-	const index = rows.findIndex(row => row.dataset.id === rowFocus.id)
+	const index = rows.findIndex(row => row.dataset.id === selection.id)
 	const row = rows[index]
 
 	if (!row?.dataset.id) return
@@ -36,31 +36,35 @@ export function onKeydown(event: KeyboardEvent): void {
 		return
 	}
 
+	// With Shift, the rows in between are selected too. The Repositories panel selects one row at a time.
+	const moveTo = (to: HTMLElement | undefined) =>
+		event.shiftKey && !tree.showingRepositories ? selection.extend(to) : selection.set(to)
+
 	switch (event.key) {
 		case 'ArrowDown':
-			rowFocus.set(rows[index + 1])
+			moveTo(rows[index + 1])
 			break
 		case 'ArrowUp':
-			rowFocus.set(rows[index - 1])
+			moveTo(rows[index - 1])
 			break
 		case 'Home':
-			rowFocus.set(rows[0])
+			moveTo(rows[0])
 			break
 		case 'End':
-			rowFocus.set(rows[rows.length - 1])
+			moveTo(rows[rows.length - 1])
 			break
 		case 'ArrowRight':
 			if (expanded === 'false') {
 				tree.toggle(id)
 			} else if (expanded === 'true') {
-				rowFocus.set(rows[index + 1])
+				selection.set(rows[index + 1])
 			}
 			break
 		case 'ArrowLeft':
 			if (expanded === 'true') {
 				tree.toggle(id)
 			} else {
-				rowFocus.set(findRow(tree.parentOf(id)))
+				selection.set(findRow(tree.parentOf(id)))
 			}
 			break
 		case 'Enter':
@@ -68,8 +72,12 @@ export function onKeydown(event: KeyboardEvent): void {
 			tree.activate(id)
 			break
 		case 'Escape':
-			if (!tree.showingRepositories) return
-			post({ type: 'closeRepositories' })
+			// The Repositories panel goes back to the changes, and the changes keep only the focused row selected.
+			if (tree.showingRepositories) {
+				post({ type: 'closeRepositories' })
+			} else if (!selection.selectOnlyFocused()) {
+				return
+			}
 			break
 		default:
 			return
