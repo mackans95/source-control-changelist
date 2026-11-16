@@ -108,7 +108,7 @@ export class ChangelistWebviewProvider implements vscode.WebviewViewProvider, vs
 		this.postUpdate()
 	}
 
-	/** The rows a command on a row runs on: the selected rows when the row is one of them, or else the row alone */
+	/** The rows a command on a row runs on: the selected rows when the row is one of them, or else the row alone. */
 	selectionFor(target: ActionTarget): readonly ActionTarget[] {
 		return selectedTargets(this.selection, target)
 	}

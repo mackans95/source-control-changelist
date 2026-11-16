@@ -8,7 +8,7 @@ import { selection } from '#webview/selection.ts'
 import type { ActionTarget } from '#types/shared.ts'
 import type { DragStart } from '#types/webview.ts'
 
-/** Files or folders being dragged, with the group it would land in highlighted. */
+/** Files or folders being dragged, with the group they would land in highlighted. */
 class ChangeDrag extends Drag<readonly ActionTarget[]> {
 	protected readonly dragType = 'application/vnd.changelist.changes'
 	// The group they land in when they're dropped now, if some of them can.

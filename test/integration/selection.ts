@@ -85,7 +85,7 @@ export const selectionScenarios = [
 	}),
 ]
 
-/** A repository with a.ts in Changes and b.ts in Features, both changed, and c.ts unchanged. */
+/** A repository with a.ts in Changes and b.ts in Feature, both changed, and c.ts unchanged. */
 async function twoLists(): Promise<TestRepository> {
 	const repo = await repository({ 'a.ts': 'a\n', 'b.ts': 'b\n', 'c.ts': 'c\n' })
 
