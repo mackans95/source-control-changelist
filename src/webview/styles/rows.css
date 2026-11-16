@@ -17,14 +17,18 @@
 	background-color: var(--vscode-list-hoverBackground);
 }
 
-.row.focused {
+.row.selected {
 	background-color: var(--vscode-list-inactiveSelectionBackground);
 	color: var(--vscode-list-inactiveSelectionForeground);
 }
 
-#root:focus-within .row.focused {
+#root:focus-within .row.selected {
 	background-color: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* The row with the keyboard focus, which Ctrl/Cmd+click can take out of the selection. */
+#root:focus-within .row.focused {
 	outline: 1px solid var(--vscode-list-focusOutline);
 	outline-offset: -1px;
 }

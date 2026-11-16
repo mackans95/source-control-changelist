@@ -40,6 +40,11 @@ export function resolveTarget({ git, changelists, hunks }: Services, target: Act
 	return folder.changes.length > 0 ? folder : undefined
 }
 
+/** The nodes of the targets whose rows are still there. */
+export function resolveTargets(services: Services, targets: readonly ActionTarget[]): Node[] {
+	return targets.flatMap(t => resolveTarget(services, t) ?? [])
+}
+
 /** A folder's node with the group's changes below it. The commands don't need its rows. */
 function folderNode(
 	repository: Repository,

@@ -1,9 +1,9 @@
 // The tree of rows: draws the extension's latest update, and knows each row's parent and click.
 import { collapsedRows } from './collapse.ts'
 import { getRoot, rowElements, rowOf, span } from './dom.ts'
-import { rowFocus } from './focus.ts'
 import { renderRepository } from './rows/changes.ts'
 import { autoFetchNotice, renderSyncRepositories } from './rows/repositories.ts'
+import { selection } from './selection.ts'
 import { tooltip } from './tooltip.ts'
 import type { RepositoryItem, SyncRepositoryItem } from '#types/shared.ts'
 
@@ -38,7 +38,19 @@ class Tree {
 
 			if (!row?.dataset.id) return
 
-			rowFocus.set(row)
+			// Ctrl/Cmd+click and Shift+click select rows without opening them, like in VS Code's trees. The
+			// Repositories panel selects one row at a time.
+			if (!this.showingRepositories && (e.shiftKey || e.ctrlKey || e.metaKey)) {
+				if (e.shiftKey) {
+					selection.extend(row)
+				} else {
+					selection.toggle(row)
+				}
+
+				return
+			}
+
+			selection.set(row)
 
 			// In the Repositories panel, a click only selects the row, so a stray click doesn't push or
 			// pull, or folds a repository's worktrees. Enter runs its button.
@@ -49,9 +61,9 @@ class Tree {
 			}
 		})
 
-		// Right-clicking a row selects it, like in VS Code's trees. VS Code shows the menu itself, from
-		// the row's `data-vscode-context`.
-		root.addEventListener('contextmenu', e => rowFocus.set(rowOf(e.target)))
+		// Right-clicking a row selects it, unless it's selected already, like in VS Code's trees. VS Code
+		// shows the menu itself, from the row's `data-vscode-context`.
+		root.addEventListener('contextmenu', e => selection.openMenu(rowOf(e.target)))
 
 		new ResizeObserver(fitRepositoryRows).observe(root)
 	}
@@ -143,7 +155,7 @@ class Tree {
 			root.replaceChildren(...rows)
 		}
 
-		rowFocus.restore(rows, hadFocus)
+		selection.restore(rows, hadFocus)
 		fitRepositoryRows()
 		collapsedRows.reportAllCollapsed(this.repositories.map(repository => repository.id))
 	}

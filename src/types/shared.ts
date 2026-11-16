@@ -213,8 +213,10 @@ export interface MenuContext extends RowContext {
 export type WebviewMessage =
 	| { readonly type: 'ready' }
 	| { readonly type: 'run'; readonly action: WebviewAction; readonly target: ActionTarget }
+	/** The selected rows, which a right-click menu or a row's button on one of them acts on together. */
+	| { readonly type: 'select'; readonly targets: readonly ActionTarget[] }
 	| { readonly type: 'allCollapsed'; readonly value: boolean }
 	| { readonly type: 'closeRepositories' }
 	| { readonly type: 'turnOnAutoFetch' }
 	| { readonly type: 'moveRepository'; readonly repository: string; readonly target: string; readonly after: boolean }
-	| { readonly type: 'dropChanges'; readonly source: ActionTarget; readonly target: ActionTarget }
+	| { readonly type: 'dropChanges'; readonly sources: readonly ActionTarget[]; readonly target: ActionTarget }

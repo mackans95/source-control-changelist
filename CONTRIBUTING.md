@@ -24,7 +24,8 @@ src/
 │   └── operations.ts        Fetch All, Pull All, Checkout Default and a row's sync button, with each status
 ├── commands/         the changelist.* commands
 │   ├── index.ts          registers the tables below, and turns a right-click menu's context into a node
-│   ├── nodes.ts          forNodes(), and what the tables share
+│   ├── nodes.ts          forNodes() and forSelected(), groupsOf() for the selected rows, and what the tables share
+│   ├── discardQuestion.ts   what Discard asks, for one file or several; no vscode
 │   ├── parts.ts          staging, unstaging and discarding a list's part of split files with `git apply`
 │   └── view.ts, changes.ts, commit.ts, changelists.ts, hunks.ts, repositories.ts
 ├── view/             the extension's side of the webview
@@ -32,6 +33,7 @@ src/
 │   ├── update.ts         the update message
 │   ├── items.ts          a repository as the plain data the rows are drawn from; no vscode
 │   ├── targets.ts        turns a row's target back into the node the commands take
+│   ├── selection.ts      which rows a command on a row runs on: the selection, when the row is in it; no vscode
 │   ├── hunkDocuments.ts  the left side of a split file's diff: HEAD with the other lists' changes
 │   └── html.ts           the view's pages
 ├── icons/            the file icon theme, which VS Code doesn't share with extensions
@@ -41,14 +43,15 @@ src/
 │   ├── index.ts, tree.ts      start the page, and draw the rows from each update
 │   ├── rows/                  common.ts, changes.ts, and repositories.ts for the Repositories panel
 │   ├── drag/                  drag.ts shared by repositories.ts and changes.ts
-│   ├── keyboard.ts, focus.ts, collapse.ts, tooltip.ts, icons.ts, dom.ts, api.ts
+│   ├── selection.ts           the selected rows and the focused one, which it tells the extension
+│   ├── keyboard.ts, collapse.ts, tooltip.ts, icons.ts, dom.ts, api.ts
 │   └── styles/                one CSS file per part; index.css imports them all
 ├── types/            every type: extension.ts, webview.ts, shared.ts (both sides), git.ts, iconTheme.ts
 ├── constants/        git.ts (the Git API's enums as objects), statusDecorations.ts, shared.ts
 └── helpers/          shared.ts: themeColor() and canDropChanges() for both sides; git.ts: runGit()
 ```
 
-When Git reports a change, the provider waits until it's quiet, builds the update and sends it to the page, unless it's the same as the last one. The page draws the rows. A click, a drop or a right-click menu item comes back as a target, which `view/targets.ts` turns into a node, and a `changelist.*` command runs on it.
+When Git reports a change, the provider waits until it's quiet, builds the update and sends it to the page, unless it's the same as the last one. The page draws the rows. A click, a drop or a right-click menu item comes back as a target, which `view/targets.ts` turns into a node, and a `changelist.*` command runs on it. The page also tells the provider which rows are selected, so a command on a selected row gets the nodes of all of them after its own, like the built-in Source Control's commands.
 
 ### Partial changelists
 
@@ -83,7 +86,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 | `npm test` | Runs the tests. |
 | `npm run test:integration` | Builds the extension and runs the integration tests in a VS Code window. |
 
-The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), split files' changes and patches in `model/hunks.ts`, the rows' data in `view/items.ts`, the icon matching, and `themeColor()` and `canDropChanges()`. `test/fakes.ts` has the fake repositories they share, and `test/hunks.test.ts` checks the patches against real Git repositories it makes in a temporary folder.
+The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), split files' changes and patches in `model/hunks.ts`, the rows' data in `view/items.ts`, which rows a command runs on and how their changes are grouped, Discard's question, the icon matching, and `themeColor()` and `canDropChanges()`. `test/rowSelection.test.ts` runs the page's selection on a fake page from `@happy-dom/global-registrator`: what clicks, right-clicks and keys select, and what the page tells the extension. `test/fakes.ts` has the fake repositories they share, and `test/hunks.test.ts` checks the patches against real Git repositories it makes in a temporary folder.
 
 The integration tests in `test/integration/` run the built extension in a VS Code window, which `@vscode/test-electron` downloads to `.vscode-test/` the first time. Each test makes its own Git repository, runs the extension's commands with the context the view's right-click menus give them, and checks Git's state afterwards: what's staged, what's committed and what's left. The dialogs the commands open give the answers each test queues with `answer()`, and a dialog without an answer, or an answer no dialog asked for, fails the test. `scripts/integration.ts` bundles them into `out/`, inside the extension's folder, so they share the extension's `vscode` object, and starts VS Code with its own settings and Git identity in a temporary folder. It prints the results, and VS Code's own output goes to `out/integration.log`. On Linux without a display, run it with `xvfb-run -a`.
 

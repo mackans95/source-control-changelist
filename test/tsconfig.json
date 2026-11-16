@@ -1,8 +1,9 @@
 {
-  // The tests, which Node runs straight from TypeScript.
+  // The tests, which Node runs straight from TypeScript. The DOM's types are for the webview's tests,
+  // which run the view's script with a fake page.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["."]
