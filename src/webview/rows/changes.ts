@@ -108,8 +108,9 @@ function renderGroup(rows: HTMLElement[], repository: RepositoryItem, group: Gro
 		label.style.setProperty('color', themeColor(STAGED_COLOR))
 	}
 
-	// The active changelist is bold, like in PyCharm. Changes isn't, even when no list is active.
-	const active = group.active && group.changelist !== undefined
+	// The active changelist is bold, like in PyCharm, and Changes when no list is. Without lists, there's
+	// no choice, so nothing is.
+	const active = group.active && repository.groups.some(other => other.changelist !== undefined)
 	row.classList.toggle('active-changelist', active)
 
 	const tooltip = groupTooltip(group, active)
@@ -189,7 +190,8 @@ function renderFolder(
 		changelist: group.changelist,
 		uri: folder.uri,
 	}
-	const row = createRow(rows, folder.id, level, 'folder', target, parentId, () => tree.toggle(folder.id))
+	const context = { ...target, untracked: folder.untracked }
+	const row = createRow(rows, folder.id, level, 'folder', context, parentId, () => tree.toggle(folder.id))
 	makeDraggable(row, group)
 	const expanded = addTwistie(row, folder.id)
 	const icon = expanded ? folder.expandedIcon : folder.icon
@@ -226,7 +228,8 @@ function renderFile(
 		changelist: group.changelist,
 		uri: file.uri,
 	}
-	const row = createRow(rows, file.id, level, 'file', target, parentId, () => run('openChange', target))
+	const context = { ...target, untracked: file.untracked }
+	const row = createRow(rows, file.id, level, 'file', context, parentId, () => run('openChange', target))
 	makeDraggable(row, group)
 	row.dataset.tooltip = file.tooltip
 	row.style.setProperty('--decoration-color', file.color)

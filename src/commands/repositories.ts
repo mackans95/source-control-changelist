@@ -39,13 +39,8 @@ export function repositoryCommands({ git, operations, defaultBranches, repositor
 	}
 }
 
-/** Runs a Git extension command on the repository, which then skips its repository picker. */
-function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown> {
-	return vscode.commands.executeCommand(command, node.repository)
-}
-
 /** Publishes the branch to the repository's only remote, or else lets the Git extension ask where to. */
-function publish(node: RepositoryNode, operations: Operations): Thenable<unknown> {
+export function publish(node: RepositoryNode, operations: Operations): Thenable<unknown> {
 	const { remotes, HEAD } = node.repository.state
 
 	if (remotes.length === 1 && HEAD?.name) {
@@ -55,6 +50,11 @@ function publish(node: RepositoryNode, operations: Operations): Thenable<unknown
 
 	// The Git extension's Publish Branch only shows the progress bar, not a status on the row.
 	return vscode.window.withProgress(VIEW_PROGRESS, () => runGitCommand('git.publish', node))
+}
+
+/** Runs a Git extension command on the repository, which then skips its repository picker. */
+function runGitCommand(command: string, node: RepositoryNode): Thenable<unknown> {
+	return vscode.commands.executeCommand(command, node.repository)
 }
 
 /** Fetches every repository that has a remote, so the Repositories panel knows what there is to pull. */

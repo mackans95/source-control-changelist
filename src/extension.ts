@@ -9,6 +9,7 @@ import { RepositoryOrder } from './state/repositoryOrder.ts'
 import { HunkDocuments, PART_SCHEME } from './view/hunkDocuments.ts' // before html.ts
 import { unavailableHtml } from './view/html.ts'
 import { ChangelistWebviewProvider } from './view/provider.ts'
+import { ActiveChangelistStatus } from './view/statusBar.ts'
 import type { Services } from './types/extension.ts'
 import type { API, GitExtension } from './types/git.ts'
 
@@ -49,6 +50,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		provider,
 		vscode.window.registerWebviewViewProvider('changelist.view', provider),
 		documents,
+		new ActiveChangelistStatus(services),
 		vscode.workspace.registerTextDocumentContentProvider(PART_SCHEME, documents),
 		...registerCommands(services, provider),
 	)

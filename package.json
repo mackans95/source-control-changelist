@@ -122,6 +122,16 @@
         "icon": "$(check)"
       },
       {
+        "command": "changelist.commitChangelistAmend",
+        "title": "Commit Changelist (Amend)",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.commitChangelistAndPush",
+        "title": "Commit Changelist & Push",
+        "category": "Changelist"
+      },
+      {
         "command": "changelist.newChangelist",
         "title": "New Changelist...",
         "category": "Changelist"
@@ -134,6 +144,11 @@
       {
         "command": "changelist.setActiveChangelist",
         "title": "Set as Active Changelist",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.pickActiveChangelist",
+        "title": "Set Active Changelist...",
         "category": "Changelist"
       },
       {
@@ -162,6 +177,16 @@
         "title": "Commit",
         "category": "Changelist",
         "icon": "$(check)"
+      },
+      {
+        "command": "changelist.commitAmend",
+        "title": "Commit (Amend)",
+        "category": "Changelist"
+      },
+      {
+        "command": "changelist.commitAndPush",
+        "title": "Commit & Push",
+        "category": "Changelist"
       },
       {
         "command": "changelist.stageAll",
@@ -198,6 +223,11 @@
         "title": "Discard All Changes",
         "category": "Changelist",
         "icon": "$(discard)"
+      },
+      {
+        "command": "changelist.addToGitignore",
+        "title": "Add to .gitignore",
+        "category": "Changelist"
       },
       {
         "command": "changelist.openChange",
@@ -449,9 +479,19 @@
           "group": "1_commit@1"
         },
         {
-          "command": "changelist.stageAll",
+          "command": "changelist.commitAmend",
           "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
           "group": "1_commit@2"
+        },
+        {
+          "command": "changelist.commitAndPush",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "1_commit@3"
+        },
+        {
+          "command": "changelist.stageAll",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'repository'",
+          "group": "1_commit@4"
         },
         {
           "command": "changelist.checkout",
@@ -499,9 +539,24 @@
           "group": "1_modification@2"
         },
         {
+          "command": "changelist.addToGitignore",
+          "when": "webviewId == 'changelist.view' && webviewSection =~ /^(folder|file)$/ && untracked",
+          "group": "1_modification@3"
+        },
+        {
           "command": "changelist.commitChangelist",
           "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
           "group": "1_commit@1"
+        },
+        {
+          "command": "changelist.commitChangelistAmend",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "1_commit@2"
+        },
+        {
+          "command": "changelist.commitChangelistAndPush",
+          "when": "webviewId == 'changelist.view' && webviewSection == 'group' && changelist",
+          "group": "1_commit@3"
         },
         {
           "command": "changelist.newChangelist",
@@ -606,6 +661,14 @@
           "when": "false"
         },
         {
+          "command": "changelist.commitAmend",
+          "when": "false"
+        },
+        {
+          "command": "changelist.commitAndPush",
+          "when": "false"
+        },
+        {
           "command": "changelist.stageAll",
           "when": "false"
         },
@@ -627,6 +690,10 @@
         },
         {
           "command": "changelist.discardAll",
+          "when": "false"
+        },
+        {
+          "command": "changelist.addToGitignore",
           "when": "false"
         },
         {
@@ -666,6 +733,14 @@
           "when": "false"
         },
         {
+          "command": "changelist.commitChangelistAmend",
+          "when": "false"
+        },
+        {
+          "command": "changelist.commitChangelistAndPush",
+          "when": "false"
+        },
+        {
           "command": "changelist.newChangelist",
           "when": "false"
         },
@@ -679,6 +754,10 @@
         },
         {
           "command": "changelist.setActiveChangelist",
+          "when": "false"
+        },
+        {
+          "command": "changelist.pickActiveChangelist",
           "when": "false"
         },
         {

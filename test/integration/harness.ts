@@ -1,7 +1,8 @@
 // What the integration tests share: a Git repository of its own for each test, the commands run with the
 // context the view's right-click menus give them, and dialogs that give the answers each test queues.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import * as path from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 import * as vscode from 'vscode'
@@ -120,9 +121,15 @@ export class TestRepository {
 		return vscode.Uri.file(path.join(this.root, file))
 	}
 
-	/** Writes a file. */
+	/** Writes a file, and makes its folder when there's none. */
 	write(file: string, text: string): void {
+		mkdirSync(path.dirname(path.join(this.root, file)), { recursive: true })
 		writeFileSync(path.join(this.root, file), text)
+	}
+
+	/** Reads a file. */
+	read(file: string): string {
+		return readFileSync(path.join(this.root, file), 'utf8')
 	}
 
 	/** Runs git in the repository and returns its output, trimmed. */
@@ -136,17 +143,32 @@ export class TestRepository {
 		await setTimeout(SETTLE_MS)
 	}
 
-	/** The context a row's right-click menu gives a command: the repository's row, a group's or a file's. */
-	row(target: { kind?: MenuContext['kind']; changelist?: string; file?: string } = {}): MenuContext {
-		const { kind, changelist, file } = target
+	/** Adds a remote in a folder of its own, and pushes the branch there unless `push` is false. */
+	async addRemote(push = true): Promise<void> {
+		const remote = mkdtempSync(path.join(tmpdir(), 'remote-'))
+
+		git(remote, 'init', '-q', '--bare')
+		this.git('remote', 'add', 'origin', remote)
+
+		if (push) {
+			this.git('push', '-q', '-u', 'origin', 'HEAD')
+		}
+
+		await this.settle()
+	}
+
+	/** The context a row's right-click menu gives a command: the repository's row, a group's, a folder's or a file's. */
+	row(target: { kind?: MenuContext['kind']; changelist?: string; folder?: string; file?: string } = {}): MenuContext {
+		const { kind, changelist, folder, file } = target
+		const entry = file ?? folder
 
 		return {
-			webviewSection: file ? 'file' : kind ? 'group' : 'repository',
+			webviewSection: file ? 'file' : folder ? 'folder' : kind ? 'group' : 'repository',
 			preventDefaultContextMenuItems: true,
 			repository: this.repository.rootUri.toString(),
 			kind,
 			changelist,
-			uri: file ? this.uri(file).toString() : undefined,
+			uri: entry ? this.uri(entry).toString() : undefined,
 		}
 	}
 
@@ -163,6 +185,21 @@ export class TestRepository {
 	/** The files the last commit changed. */
 	committedFiles(): string[] {
 		return this.git('show', '--name-only', '--format=', 'HEAD').split('\n').filter(Boolean)
+	}
+
+	/** The last commit's message. */
+	committedMessage(): string {
+		return this.git('log', '-1', '--format=%B')
+	}
+
+	/** How many commits the branch has. */
+	commitCount(): number {
+		return Number(this.git('rev-list', '--count', 'HEAD'))
+	}
+
+	/** Whether the branch has an upstream with all its commits. */
+	pushed(): boolean {
+		return this.git('rev-parse', 'HEAD') === this.git('rev-parse', '@{upstream}')
 	}
 
 	/** The lines the last commit added. */

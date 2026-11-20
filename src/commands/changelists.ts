@@ -34,6 +34,8 @@ export function changelistCommands(services: Services): CommandTable {
 			newChangelist(node.repository, changelists),
 		),
 		setActiveChangelist: forNodes(['group'], node => changelists.setActive(node.repository, node.changelist)),
+		// The status bar's active list runs it.
+		pickActiveChangelist: forNodes(['repository'], node => pickActiveChangelist(node.repository, changelists)),
 		renameChangelist: forNodes(['group'], node => renameChangelist(node, changelists)),
 		editChangelistDescription: forNodes(['group'], node => editDescription(node, changelists)),
 		deleteChangelist: forNodes(
@@ -61,6 +63,30 @@ async function newChangelist(repository: Repository, changelists: ChangelistStor
 	}
 
 	return name
+}
+
+/** Asks which changelist new changes go to: Changes for none, a list, or a new one. */
+async function pickActiveChangelist(repository: Repository, changelists: ChangelistStore): Promise<void> {
+	const { lists, active } = changelists.get(repository)
+	// The quick pick can't start on the active one, so it says it's active.
+	const description = (list: string | undefined) => (list === active ? 'Active' : undefined)
+	const picks: ChangelistPick[] = [
+		{ label: GROUP_LABELS.changes, description: description(undefined), isNew: false },
+		...lists.map(list => ({ label: list, changelist: list, description: description(list), isNew: false })),
+		{ label: '$(add) New Changelist...', isNew: true },
+	]
+	const pick = await vscode.window.showQuickPick(picks, {
+		title: `Active Changelist in ${repositoryName(repository)}`,
+		placeHolder: 'Where new changes go',
+	})
+
+	if (!pick) return
+
+	const list = pick.isNew ? await newChangelist(repository, changelists) : pick.changelist
+
+	if (!pick.isNew || list) {
+		await changelists.setActive(repository, list)
+	}
 }
 
 /** Renames a changelist. */

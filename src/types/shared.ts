@@ -58,6 +58,8 @@ export interface FileItem {
 	readonly otherLists: readonly string[]
 	/** In a changelist, whether the file's changes are staged: none, some, or all of them. */
 	readonly staged: StagedState
+	/** Whether Git doesn't track the file yet, so it can be added to .gitignore. */
+	readonly untracked: boolean
 }
 
 /** A folder's row in tree mode, with the rows below it. */
@@ -70,6 +72,8 @@ export interface FolderItem {
 	readonly expandedIcon?: FileIcon
 	/** In a changelist, how much of its files' changes are staged. */
 	readonly staged: StagedState
+	/** Whether Git tracks none of its files yet, so it can be added to .gitignore. */
+	readonly untracked: boolean
 	readonly children: readonly (FolderItem | FileItem)[]
 }
 
@@ -201,6 +205,8 @@ export type RowSection = 'repository' | 'group' | 'folder' | 'file' | 'sync'
 export interface RowContext extends ActionTarget {
 	/** On a group's row, whether new changes go there, so Set as Active Changelist is left out. */
 	readonly active?: boolean
+	/** On a file's or folder's row, whether Git tracks none of it yet, so Add to .gitignore is offered. */
+	readonly untracked?: boolean
 }
 
 /** A row's `data-vscode-context`, which VS Code passes to the menu item's command. */
