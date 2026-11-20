@@ -1,4 +1,4 @@
-// Changelists in a repository: a list's Commit and the repository's Stage All.
+// Changelists in a repository: a list's Commit, the active list, and the repository's Stage All.
 import * as assert from 'node:assert/strict'
 import { answer, repository, run, scenario } from './harness.ts'
 import type { TestRepository } from './harness.ts'
@@ -13,7 +13,20 @@ export const changelistScenarios = [
 		assert.deepEqual(repo.committedFiles(), ['b.ts'])
 		assert.deepEqual(repo.unstaged('a.ts'), ['a2'])
 	}),
+	scenario("The status bar's Set Active Changelist... sends new changes to the list it picks", async () => {
+		const repo = await repository({ 'a.ts': 'a\n' })
+		answer({ input: ['Feature'] })
+		await run('newChangelist', repo.row())
 
+		answer({ pick: ['Feature'] })
+		await run('pickActiveChangelist', repo.row())
+		repo.write('a.ts', 'a2\n')
+		await repo.settle()
+		answer({ input: ['Change a'] })
+		await run('commitChangelist', repo.row({ kind: 'changes', changelist: 'Feature' }))
+
+		assert.deepEqual(repo.committedFiles(), ['a.ts'])
+	}),
 	scenario("The repository's Stage All leaves the lists' files unstaged", async () => {
 		const repo = await listWithOneFile()
 

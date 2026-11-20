@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import type * as vscode from 'vscode'
-import { toRepositoryItem, toSyncRepositoryItem } from '../src/view/items.ts'
-import { Status } from '../src/constants/git.ts'
-import type { FileDiff, Hunk, IconResolver, RepositoryChangelists } from '../src/types/extension.ts'
-import type { Branch, Change, Repository } from '../src/types/git.ts'
+import { toRepositoryItem, toSyncRepositoryItem } from '#view/items.ts'
+import { Status } from '#constants/git.ts'
+import { change, repository } from './fakes.ts'
+import type { FileDiff, Hunk, IconResolver, RepositoryChangelists } from '#types/extension.ts'
+import type { Branch, Change, Repository } from '#types/git.ts'
+import type { FileItem, FolderItem } from '#types/shared.ts'
 
 // Just enough of a URI for a repository's root.
 function uri(path: string): vscode.Uri {
@@ -20,6 +22,9 @@ function onBranch(head: Partial<Branch> | undefined, workingTreeChanges: Change[
 }
 
 const upstream = { remote: 'origin', name: 'main' }
+
+// A repository without changelists.
+const NO_CHANGELISTS: RepositoryChangelists = { lists: [], files: {} }
 // No file icon theme.
 const icons: IconResolver = { fonts: () => [], file: () => undefined, folder: () => undefined }
 
@@ -91,6 +96,23 @@ describe('toRepositoryItem', () => {
 		)
 		assert.equal(item.groups[1].id, 'file:///code/api#changelist#Feature')
 		assert.equal(item.groups[1].changelist, 'Feature')
+	})
+	test('marks the untracked files, and the folders with only untracked files, for Add to .gitignore', () => {
+		const repo = repository({
+			changes: [change('src/a.ts'), change('src/new.ts', Status.UNTRACKED)],
+			untracked: [change('gen/one.js', Status.UNTRACKED), change('gen/two.js', Status.UNTRACKED)],
+		})
+		const untracked = (entries: readonly (FileItem | FolderItem)[]) =>
+			entries.map(entry => [entry.type === 'file' ? entry.name : entry.label, entry.untracked])
+		const [changes, untrackedChanges] = toRepositoryItem(repo, NO_CHANGELISTS, 'tree', icons).groups
+		const [src] = changes.children as FolderItem[]
+
+		assert.deepEqual(untracked(changes.children), [['src', false]])
+		assert.deepEqual(untracked(src.children), [
+			['a.ts', false],
+			['new.ts', true],
+		])
+		assert.deepEqual(untracked(untrackedChanges.children), [['gen', true]])
 	})
 })
 

@@ -21,6 +21,9 @@ export interface Services {
 /** The handlers of some `changelist.*` commands, by their names without `changelist.`. */
 export type CommandTable = Readonly<Record<string, (...args: any[]) => unknown>>
 
+/** What a Commit does: commit, amend the last commit, or commit and then push. */
+export type CommitKind = 'commit' | 'amend' | 'push'
+
 /** How the view lays out a group's files: a flat list that shows their folders, or a folder tree. */
 export type ViewMode = 'list' | 'tree'
 

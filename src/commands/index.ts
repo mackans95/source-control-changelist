@@ -3,6 +3,7 @@ import * as vscode from 'vscode'
 import { changeCommands } from './changes.ts'
 import { changelistCommands } from './changelists.ts'
 import { commitCommands } from './commit.ts'
+import { gitignoreCommands } from './gitignore.ts'
 import { hunkCommands } from './hunks.ts'
 import { repositoryCommands } from './repositories.ts'
 import { viewCommands } from './view.ts'
@@ -18,6 +19,7 @@ export function registerCommands(services: Services, provider: ChangelistWebview
 		...changeCommands(services),
 		...commitCommands(services),
 		...changelistCommands(services),
+		...gitignoreCommands(),
 		...hunkCommands(services),
 		...repositoryCommands(services),
 	}

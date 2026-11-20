@@ -184,6 +184,7 @@ function toEntry(
 		icon: icons.folder(node.uri, false),
 		expandedIcon: icons.folder(node.uri, true),
 		staged: combineStaged(children.map(child => child.staged)),
+		untracked: children.every(child => child.untracked),
 		children,
 	}
 }
@@ -216,6 +217,7 @@ function toFileItem(
 		tooltip: `${relativePath} • ${decoration.text}${split}${stagedText}`,
 		otherLists,
 		staged,
+		untracked: change.status === Status.UNTRACKED,
 	}
 }
 

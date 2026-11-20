@@ -27,7 +27,9 @@ src/
 │   ├── nodes.ts          forNodes() and forSelected(), groupsOf() for the selected rows, and what the tables share
 │   ├── discardQuestion.ts   what Discard asks, for one file or several; no vscode
 │   ├── parts.ts          staging, unstaging and discarding a list's part of split files with `git apply`
-│   └── view.ts, changes.ts, commit.ts, changelists.ts, hunks.ts, repositories.ts
+│   ├── commit.ts         a repository's and a list's Commit, Commit (Amend) and Commit & Push
+│   ├── gitignore.ts      Add to .gitignore, which writes the repository's .gitignore like the Git extension
+│   └── view.ts, changes.ts, changelists.ts, hunks.ts, repositories.ts
 ├── view/             the extension's side of the webview
 │   ├── provider.ts       listens to the repositories and settings, sends updates, and handles the page's messages
 │   ├── update.ts         the update message
@@ -35,6 +37,7 @@ src/
 │   ├── targets.ts        turns a row's target back into the node the commands take
 │   ├── selection.ts      which rows a command on a row runs on: the selection, when the row is in it; no vscode
 │   ├── hunkDocuments.ts  the left side of a split file's diff: HEAD with the other lists' changes
+│   ├── statusBar.ts      the active changelist in the status bar, for the repository being edited in
 │   └── html.ts           the view's pages
 ├── icons/            the file icon theme, which VS Code doesn't share with extensions
 │   ├── fileIcons.ts      reads the theme and gives the icons as webview URIs
@@ -88,7 +91,7 @@ The TypeScript in `src/` is built into `dist/` with esbuild. `F5` starts `npm ru
 
 The tests run in Node straight from TypeScript and cover the parts that don't need VS Code: `src/model/` (groups, changelists and the active list, counts, sync state, sorting, Git's error lines and the folder tree), split files' changes and patches in `model/hunks.ts`, the rows' data in `view/items.ts`, which rows a command runs on and how their changes are grouped, Discard's question, the icon matching, and `themeColor()` and `canDropChanges()`. `test/rowSelection.test.ts` runs the page's selection on a fake page from `@happy-dom/global-registrator`: what clicks, right-clicks and keys select, and what the page tells the extension. `test/fakes.ts` has the fake repositories they share, and `test/hunks.test.ts` checks the patches against real Git repositories it makes in a temporary folder.
 
-The integration tests in `test/integration/` run the built extension in a VS Code window, which `@vscode/test-electron` downloads to `.vscode-test/` the first time. Each test makes its own Git repository, runs the extension's commands with the context the view's right-click menus give them, and checks Git's state afterwards: what's staged, what's committed and what's left. The dialogs the commands open give the answers each test queues with `answer()`, and a dialog without an answer, or an answer no dialog asked for, fails the test. `scripts/integration.ts` bundles them into `out/`, inside the extension's folder, so they share the extension's `vscode` object, and starts VS Code with its own settings and Git identity in a temporary folder. It prints the results, and VS Code's own output goes to `out/integration.log`. On Linux without a display, run it with `xvfb-run -a`.
+The integration tests in `test/integration/` run the built extension in a VS Code window, which `@vscode/test-electron` downloads to `.vscode-test/` the first time. Each test makes its own Git repository, runs the extension's commands with the context the view's right-click menus give them, and checks Git's state afterwards: what's staged, what's committed, what's pushed and what's left. A test that pushes gets a bare remote of its own from `addRemote()`. The dialogs the commands open give the answers each test queues with `answer()`, and a dialog without an answer, or an answer no dialog asked for, fails the test. `scripts/integration.ts` bundles them into `out/`, inside the extension's folder, so they share the extension's `vscode` object, and starts VS Code with its own settings and Git identity in a temporary folder. It prints the results, and VS Code's own output goes to `out/integration.log`. On Linux without a display, run it with `xvfb-run -a`.
 
 Pull requests run all the checks, and the integration tests in a job of their own.
 

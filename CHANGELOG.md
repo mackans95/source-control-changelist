@@ -3,6 +3,9 @@
 ## Unreleased
 
 - **Select several rows** with `Ctrl`+click (`Cmd`+click on macOS), `Shift`+click, or `Shift` with the arrow keys, `Home` and `End`. A right-click menu or a hover button on a selected row stages, unstages, discards or moves all of them, and dragging one drags them all. _Discard_ asks once for all of them, _Move to Changelist..._ once per repository, and opening several files opens each in its own tab. `Escape` keeps only the focused row selected. The Repositories panel still selects one row at a time.
+- **The active changelist in the status bar,** for the repository you're editing in. Click it to pick another list, Changes for none, or a new one. It's hidden in repositories without lists. Changes now turns bold when no list is active, like an active list.
+- **Commit (Amend) and Commit & Push** in the right-click menus of repositories and lists. A list's versions commit only the list's files, like its _Commit_. _Commit (Amend)_ suggests the last commit's message and asks first when that commit is pushed already. _Commit & Push_ offers to publish a branch that has no upstream.
+- **Add to .gitignore** on untracked files and folders, also several at once.
 
 ## 0.3.0
 
