@@ -135,6 +135,10 @@ function openChangeCommand(
 			: ['vscode.diff', git.toGitUri(change.originalUri, 'HEAD'), change.uri, `${name} (${changelist})`, options]
 	}
 
+	if (kind === 'merge' && opensInMergeEditor(change)) {
+		return ['git.openMergeEditor', change.uri]
+	}
+
 	// There's nothing to compare these with.
 	if (
 		kind === 'merge' ||
@@ -155,6 +159,14 @@ function openChangeCommand(
 	}
 
 	return ['vscode.diff', git.toGitUri(change.uri, '~'), change.uri, `${name} (Working Tree)`, options]
+}
+
+/** Whether a conflict opens in the merge editor, like in the built-in view: when `git.mergeEditor` is on, for a file both sides changed or added. */
+function opensInMergeEditor(change: Change): boolean {
+	return (
+		(change.status === Status.BOTH_MODIFIED || change.status === Status.BOTH_ADDED) &&
+		vscode.workspace.getConfiguration('git').get<boolean>('mergeEditor', false)
+	)
 }
 
 /** The command that opens a staged change: HEAD against the index. */
