@@ -6,6 +6,7 @@
 - **The active changelist in the status bar,** for the repository you're editing in. Click it to pick another list, Changes for none, or a new one. It's hidden in repositories without lists. Changes now turns bold when no list is active, like an active list.
 - **Commit (Amend) and Commit & Push** in the right-click menus of repositories and lists. A list's versions commit only the list's files, like its _Commit_. _Commit (Amend)_ suggests the last commit's message and asks first when that commit is pushed already. _Commit & Push_ offers to publish a branch that has no upstream.
 - **Add to .gitignore** on untracked files and folders, also several at once.
+- **Conflicts open in the merge editor.** Clicking a file in Merge Changes opens the merge editor when `git.mergeEditor` is on, like in the built-in view, instead of the file with its conflict markers.
 
 ## 0.3.0
 
