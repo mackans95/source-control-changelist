@@ -15,6 +15,8 @@ export const mergeScenarios = [
 
 			assert.equal(result.fsPath, repo.uri('a.ts').fsPath)
 		} finally {
+			// The merge editor can change the file before it's saved, and closing it would then ask to save it.
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor')
 			await setMergeEditor(undefined)
 		}
 	}),
