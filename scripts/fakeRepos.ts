@@ -19,7 +19,7 @@ const remotes = join(root, 'remotes')
 const workspaceFile = join(root, 'fake.code-workspace')
 // The workspace's folders. They aren't in alphabetical order, so the view shows whether it follows
 // them, and feature-x comes first, so it shows whether a worktree stays below its repository.
-const workspaceFolders = ['feature-x', 'web', 'mobile', 'api', 'tools', 'docs', 'infra', 'scratch']
+const workspaceFolders = ['feature-x', 'web', 'mobile', 'api', 'tools', 'docs', 'infra', 'merging', 'scratch']
 // The same author for every commit, whatever your Git config says.
 const env = {
 	...process.env,
@@ -35,7 +35,7 @@ let remoteCount = 0
  * Runs git without signing commits, with `main` as the first branch. Throws with Git's error if it fails.
  */
 function git(...args: string[]): void {
-	execFileSync('git', ['-c', 'commit.gpsign=false', '-c', 'init.defaultBranch=main', ...args], {
+	execFileSync('git', ['-c', 'commit.gpgsign=false', '-c', 'init.defaultBranch=main', ...args], {
 		env,
 		stdio: 'pipe',
 	})
@@ -156,5 +156,19 @@ const scratch = join(repos, 'scratch')
 git('init', '-q', scratch)
 commit(scratch, 'idea.md', 'First idea')
 writeFileSync(join(scratch, 'todo.md'), 'untracked\n')
+
+// merging: a merge that stopped on a conflict, so Merge Changes shows it. No remote.
+const merging = join(repos, 'merging')
+git('init', '-q', merging)
+commit(merging, 'config.ts', 'First version')
+git('-C', merging, 'switch', '-q', '-c', 'theirs')
+commit(merging, 'config.ts', 'Their version')
+git('-C', merging, 'switch', '-q', 'main')
+commit(merging, 'config.ts', 'Our version')
+try {
+	git('-C', merging, 'merge', '-q', 'theirs')
+} catch {
+	// Git fails the merge because of the conflict, which is what this repository is for.
+}
 
 console.log(`Made the fake repositories in ${resolve(repos)}`)

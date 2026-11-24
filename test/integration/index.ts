@@ -2,6 +2,7 @@
 import { changelistScenarios } from './changelists.ts'
 import { commitScenarios } from './commit.ts'
 import { gitignoreScenarios } from './gitignore.ts'
+import { mergeScenarios } from './merge.ts'
 import { runScenarios } from './harness.ts'
 import { partialChangelistScenarios } from './partialChangelists.ts'
 import { selectionScenarios } from './selection.ts'
@@ -14,6 +15,7 @@ export async function run(): Promise<void> {
 		...selectionScenarios,
 		...commitScenarios,
 		...gitignoreScenarios,
+		...mergeScenarios,
 	]
 
 	const failed = await runScenarios(scenarios)
